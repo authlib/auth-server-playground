@@ -1,0 +1,160 @@
+---
+name: tests
+on:
+  push:
+    branches:
+      - main
+      - '*.*.*'
+  pull_request:
+    branches:
+      - main
+      - '*.*.*'
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: py${{ matrix.python }} unit tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - '3.15'
+          - '3.14'
+          - '3.13'
+          - '3.12'
+          - '3.11'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python }}
+      - name: Run tests
+        run: |
+          export TZ=UTC
+          uv sync
+          uv run pytest --cov --cov-report term-missing:skip-covered
+
+  minversions:
+    name: minimum dependency versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          python-version: '3.11'
+      - name: Run tests
+        run: |
+          export TZ=UTC
+          uv sync --resolution=lowest-direct
+          uv run --no-sync pytest
+
+  style:
+    name: style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+      - name: Run prek
+        run: |
+          export TZ=UTC
+          uv sync
+          uv run prek run --all-files
+
+  commits:
+    name: check commit messages
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+      - name: Check each commit message
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          uv sync --only-group dev
+          shas=$(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA")
+          status=0
+          for sha in $shas; do
+            echo "Checking commit $sha"
+            git log -1 --format=%B "$sha" > "$RUNNER_TEMP/commit-msg"
+            uv run --no-sync prek run --stage commit-msg --commit-msg-filename "$RUNNER_TEMP/commit-msg" || status=1
+          done
+          exit $status
+
+  docker:
+    name: docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build Docker image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: false
+          load: true
+          tags: auth-server-playground:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Test Docker image
+        run: |
+          docker run -d --name test-app -p 5000:5000 \
+            -e SECRET_KEY="test-secret-key-for-ci" \
+            auth-server-playground:test
+
+          timeout 30 sh -c 'until docker inspect --format="{{.State.Health.Status}}" test-app | grep -qx "healthy"; do sleep 1; done' || {
+            echo "Container failed to become healthy"
+            docker logs test-app
+            exit 1
+          }
+
+          curl -fsSL -o /dev/null http://localhost:5000/ || {
+            echo "App failed to respond"
+            docker logs test-app
+            exit 1
+          }
+
+          docker stop test-app
+          docker rm test-app
+
+  check:
+    name: check
+    if: always()
+    needs:
+      - tests
+      - minversions
+      - style
+      - commits
+      - docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
+        with:
+          allowed-skips: commits
+          jobs: ${{ toJSON(needs) }}
