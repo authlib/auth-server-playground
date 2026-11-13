@@ -4,10 +4,13 @@ import pytest
 from flask_webtest import TestApp
 
 from auth_server_playground import create_app
-from auth_server_playground.models import OAuth2Client
-from auth_server_playground.models import User
+from auth_server_playground.models import Client
+from auth_server_playground.models import Persona
 from auth_server_playground.models import db
+from auth_server_playground.personas import COMPLETE_SUB
+from auth_server_playground.personas import MINIMAL_SUB
 from tests.utils import REDIRECT_URI
+from tests.utils import select_persona
 
 
 @pytest.fixture
@@ -23,24 +26,33 @@ def insecure_transport():
 
 
 @pytest.fixture
-def app(monkeypatch, proxy_fix, insecure_transport):
+def make_app(monkeypatch, proxy_fix, insecure_transport):
+    """Create applications, and close their database at the end of the test."""
     monkeypatch.setenv("PROXY_FIX", str(proxy_fix))
     if insecure_transport:
         monkeypatch.setenv("AUTHLIB_INSECURE_TRANSPORT", "1")
     else:
         monkeypatch.delenv("AUTHLIB_INSECURE_TRANSPORT", raising=False)
 
-    app = create_app(
-        {
-            "TESTING": True,
-            "SECRET_KEY": "test-secret-key",
-            "SQLALCHEMY_DATABASE_URI": "sqlite://",
-        }
-    )
-    yield app
+    apps = []
 
-    with app.app_context():
-        db.engine.dispose()
+    def make(database="sqlite://", **config):
+        app = create_app(
+            {"TESTING": True, "SQLALCHEMY_DATABASE_URI": database, **config}
+        )
+        apps.append(app)
+        return app
+
+    yield make
+
+    for app in apps:
+        with app.app_context():
+            db.engine.dispose()
+
+
+@pytest.fixture
+def app(make_app):
+    return make_app(SECRET_KEY="test-secret-key")
 
 
 @pytest.fixture
@@ -48,29 +60,41 @@ def testapp(app):
     return TestApp(app)
 
 
+def persona_dict(persona):
+    return {
+        "id": persona.id,
+        "sub": persona.sub,
+        "preferred_username": persona.preferred_username,
+    }
+
+
 @pytest.fixture
-def user(app):
+def persona(app):
+    """Return the complete default persona."""
     with app.app_context():
-        user = User(username="alice")
-        db.session.add(user)
-        db.session.commit()
-        return {"id": user.id, "username": user.username}
+        return persona_dict(Persona.query.filter_by(sub=COMPLETE_SUB).one())
 
 
 @pytest.fixture
-def logged_in(testapp, user):
-    """Log the user in the test application session."""
-    testapp.post("/", {"username": user["username"]})
+def other_persona(app):
+    """Return the minimal default persona."""
+    with app.app_context():
+        return persona_dict(Persona.query.filter_by(sub=MINIMAL_SUB).one())
+
+
+@pytest.fixture
+def logged_in(testapp, persona):
+    """Select the persona in the test application session."""
+    select_persona(testapp, persona)
     return testapp
 
 
-def make_client(app, user, *, client_id, client_secret, metadata):
+def make_client(app, *, client_id, client_secret, metadata):
     with app.app_context():
-        client = OAuth2Client(
+        client = Client(
             client_id=client_id,
             client_secret=client_secret,
             client_id_issued_at=int(time.time()),
-            user_id=user["id"],
         )
         client.set_client_metadata(
             {
@@ -86,11 +110,10 @@ def make_client(app, user, *, client_id, client_secret, metadata):
 
 
 @pytest.fixture
-def client(app, user):
+def client(app):
     """Confidential client for every grant except the implicit one."""
     return make_client(
         app,
-        user,
         client_id="confidential-client",
         client_secret="confidential-secret",
         metadata={
@@ -107,11 +130,10 @@ def client(app, user):
 
 
 @pytest.fixture
-def public_client(app, user):
+def public_client(app):
     """Public client, without a secret."""
     return make_client(
         app,
-        user,
         client_id="public-client",
         client_secret="",
         metadata={

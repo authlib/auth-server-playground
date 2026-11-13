@@ -1,0 +1,10 @@
+{% extends "layout.html" %}
+{% from "_form.html" import render_form %}
+{% block title %}{% trans %}Choose a persona{% endtrans %}{% endblock %}
+{% block content %}
+    <h2>{% trans %}Choose a persona{% endtrans %}</h2>
+    {% call render_form(form, request.script_root + request.full_path, id="select-persona") %}
+        {{ form.persona() }}
+        {{ form.select() }}
+    {% endcall %}
+{% endblock %}

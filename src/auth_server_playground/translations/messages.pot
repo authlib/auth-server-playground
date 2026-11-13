@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-13 16:08+0100\n"
+"POT-Creation-Date: 2026-11-13 16:19+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,6 +16,40 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
+
+#: src/auth_server_playground/forms.py:97
+msgid "Persona"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:98
+msgid "Continue as this persona"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:103
+msgid "Accept"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:104
+msgid "Deny"
+msgstr ""
+
+#: src/auth_server_playground/routes.py:93
+msgid "The persona changed since this page was shown."
+msgstr ""
+
+#: src/auth_server_playground/templates/home.html:5
+#: src/auth_server_playground/templates/interaction/consent.html:8
+#, python-format
+msgid "You act as %(persona)s."
+msgstr ""
+
+#: src/auth_server_playground/templates/home.html:6
+msgid "Forget persona"
+msgstr ""
+
+#: src/auth_server_playground/templates/home.html:22
+msgid "Create a client"
+msgstr ""
 
 #: src/auth_server_playground/templates/layout.html:17
 msgid "OAuth 2.0 demonstration server"
@@ -39,5 +73,27 @@ msgstr ""
 
 #: src/auth_server_playground/templates/layout.html:39
 msgid "Powered by"
+msgstr ""
+
+#: src/auth_server_playground/templates/interaction/consent.html:3
+msgid "Consent"
+msgstr ""
+
+#: src/auth_server_playground/templates/interaction/consent.html:6
+#, python-format
+msgid "%(client)s asks for access"
+msgstr ""
+
+#: src/auth_server_playground/templates/interaction/consent.html:9
+msgid "Change persona"
+msgstr ""
+
+#: src/auth_server_playground/templates/interaction/consent.html:12
+msgid "Requested scopes:"
+msgstr ""
+
+#: src/auth_server_playground/templates/interaction/select_persona.html:3
+#: src/auth_server_playground/templates/interaction/select_persona.html:5
+msgid "Choose a persona"
 msgstr ""
 

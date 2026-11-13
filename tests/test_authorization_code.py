@@ -29,24 +29,24 @@ def code_url(client, **params):
     )
 
 
-def test_anonymous_user_is_sent_to_login(testapp, client):
+def test_authorization_asks_for_a_persona(testapp, client):
     url = code_url(client)
     res = testapp.get(url)
-    assert urlparse(res.location).path == "/"
+    assert urlparse(res.location).path == "/interaction/persona"
 
     next_url = urlparse(parse_qs(urlparse(res.location).query)["next"][0])
     assert next_url.path == "/oauth/authorize"
     assert parse_qs(next_url.query) == parse_qs(urlparse(url).query)
 
 
-def test_consent_page(logged_in, client, user):
+def test_consent_page(logged_in, client, persona):
     res = logged_in.get(code_url(client))
     assert "Test client" in res
     assert "profile" in res
-    assert user["username"] in res
+    assert "Alice Martin" in res
 
 
-def test_authorization_code_flow(logged_in, client, user):
+def test_authorization_code_flow(logged_in, client, persona):
     params = callback_params(consent(logged_in, code_url(client)))
     assert params["state"] == "xyz"
 
@@ -65,7 +65,10 @@ def test_authorization_code_flow(logged_in, client, user):
     assert res.json["refresh_token"]
 
     res = logged_in.get("/api/me", headers=bearer(res.json["access_token"]))
-    assert res.json == {"id": user["id"], "username": user["username"]}
+    assert res.json == {
+        "sub": persona["sub"],
+        "preferred_username": persona["preferred_username"],
+    }
 
 
 def test_consent_denied(logged_in, client):

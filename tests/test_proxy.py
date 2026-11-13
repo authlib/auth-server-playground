@@ -44,13 +44,14 @@ def login_next(res):
 
 def test_forwarded_prefix_is_ignored_by_default(testapp):
     res = testapp.get("/oauth/authorize", headers={"X-Forwarded-Prefix": "/auth"})
+    assert urlsplit(res.location).path == "/interaction/persona"
     assert login_next(res) == "/oauth/authorize?"
 
 
 @pytest.mark.parametrize("proxy_fix", [True])
 def test_forwarded_prefix_is_used_behind_a_proxy(testapp):
     res = testapp.get("/oauth/authorize", headers={"X-Forwarded-Prefix": "/auth"})
-    assert urlsplit(res.location).path == "/auth/"
+    assert urlsplit(res.location).path == "/auth/interaction/persona"
     assert login_next(res) == "/auth/oauth/authorize?"
 
 
@@ -82,6 +83,6 @@ def test_proxy_fix_invalid_value(monkeypatch):
 
 
 @pytest.mark.parametrize("proxy_fix", [True])
-def test_logout_stays_under_the_prefix(testapp):
-    res = testapp.get("/logout", headers={"X-Forwarded-Prefix": "/auth"})
+def test_forget_persona_stays_under_the_prefix(testapp):
+    res = testapp.get("/interaction/forget", headers={"X-Forwarded-Prefix": "/auth"})
     assert urlsplit(res.location).path == "/auth/"

@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% from "_form.html" import render_form %}
+{% block title %}{% trans %}Consent{% endtrans %}{% endblock %}
+{% block content %}
+    {% set client = grant.client.client_name or grant.client.client_id %}
+    <h2>{% trans %}{{ client }} asks for access{% endtrans %}</h2>
+    <p>
+        {% trans %}You act as {{ persona }}.{% endtrans %}
+        <a href="{{ url_for('interaction.select_persona', next=request.script_root + request.full_path) }}">{% trans %}Change persona{% endtrans %}</a>
+    </p>
+    {% if grant.request.scope %}
+        <p>{% trans %}Requested scopes:{% endtrans %}</p>
+        <ul>
+            {% for scope in grant.request.scope.split() %}
+                <li><code>{{ scope }}</code></li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    {% call render_form(form, request.script_root + request.full_path, id="consent") %}
+        <div role="group">
+            {{ form.accept() }}
+            {{ form.deny(class="secondary") }}
+        </div>
+    {% endcall %}
+{% endblock %}

@@ -1,14 +1,15 @@
 import importlib.metadata
 import os
-import secrets
 
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+from . import interaction
 from .i18n import setup_i18n
 from .models import db
 from .oauth2 import config_oauth
 from .routes import bp
+from .store import init_database
 
 
 def is_proxy_fix_enabled():
@@ -25,9 +26,6 @@ def create_app(config=None):
     """Create the Flask application, configured from the environment."""
     app = Flask(__name__)
 
-    # Without SECRET_KEY, a random key is used, and the sessions do not
-    # survive a restart.
-    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or secrets.token_hex()
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
         "DATABASE_URL", "sqlite:///db.sqlite"
     )
@@ -41,6 +39,13 @@ def create_app(config=None):
 
     if is_proxy_fix_enabled():
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_prefix=1)
+
+    db.init_app(app)
+    stored_key = init_database(app)
+    # Without SECRET_KEY, all the workers share the key stored in the database.
+    app.config["SECRET_KEY"] = (
+        app.config.get("SECRET_KEY") or os.environ.get("SECRET_KEY") or stored_key
+    )
 
     setup_app(app)
     return app
@@ -56,8 +61,6 @@ def setup_app(app):
             "repository_url": "https://github.com/authlib/auth-server-playground",
         }
 
-    db.init_app(app)
-    with app.app_context():
-        db.create_all()
     config_oauth(app)
     app.register_blueprint(bp)
+    app.register_blueprint(interaction.bp)

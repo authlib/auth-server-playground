@@ -1,14 +1,20 @@
 from flask import current_app
+from flask_babel import lazy_gettext as _
+from flask_wtf import FlaskForm
 from flask_wtforms_htmx import HtmxFlaskForm
 from markupsafe import Markup
 from wtforms import ButtonField
 from wtforms import HiddenField
+from wtforms import IntegerField
+from wtforms import RadioField
 from wtforms import SelectMultipleField
 from wtforms import SubmitField
 from wtforms.csrf.core import CSRFTokenField
 from wtforms.fields import SelectFieldBase
 from wtforms.meta import clean_key
+from wtforms.validators import InputRequired
 from wtforms.widgets import CheckboxInput
+from wtforms.widgets import HiddenInput
 from wtforms.widgets import ListWidget
 
 # The render_kw keys that field_wrapper reads, and that are not HTML attributes.
@@ -85,3 +91,14 @@ class MultiCheckboxField(SelectMultipleField):
 
     widget = ListWidget(prefix_label=False)
     option_widget = CheckboxInput()
+
+
+class SelectPersonaForm(BaseForm):
+    persona = RadioField(_("Persona"), coerce=int, validators=[InputRequired()])
+    select = SubmitField(_("Continue as this persona"))
+
+
+class ConsentForm(FlaskForm):
+    persona_id = IntegerField(widget=HiddenInput())
+    accept = SubmitField(_("Accept"))
+    deny = SubmitField(_("Deny"))

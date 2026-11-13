@@ -22,11 +22,17 @@ def authorize_url(**params):
     return "/oauth/authorize?" + urlencode(query)
 
 
-def consent(testapp, url, *, accept=True):
-    """Open the consent page and submit the form."""
-    form = testapp.get(url).forms[0]
-    form["confirm"].checked = accept
+def select_persona(testapp, persona):
+    """Choose the persona in the persona selector."""
+    form = testapp.get("/interaction/persona").forms["select-persona"]
+    form["persona"] = str(persona["id"])
     return form.submit()
+
+
+def consent(testapp, url, *, accept=True):
+    """Open the consent page and accept or deny."""
+    form = testapp.get(url).forms["consent"]
+    return form.submit("accept" if accept else "deny")
 
 
 def callback_params(res, *, fragment=False):
@@ -37,14 +43,14 @@ def callback_params(res, *, fragment=False):
     return {key: values[0] for key, values in parse_qs(query).items()}
 
 
-def password_token(testapp, client, user, *, status=200, **params):
-    """Request a token with the password grant."""
+def password_token(testapp, client, persona, *, status=200, **params):
+    """Request a token with the password grant. Any password is accepted."""
     return testapp.post(
         "/oauth/token",
         {
             "grant_type": "password",
-            "username": user["username"],
-            "password": "valid",
+            "username": persona["preferred_username"],
+            "password": "anything",
             "scope": "profile",
             **params,
         },

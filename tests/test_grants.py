@@ -7,22 +7,21 @@ from tests.utils import consent
 from tests.utils import password_token
 
 
-def test_password_grant(testapp, client, user):
-    res = password_token(testapp, client, user)
+def test_password_grant(testapp, client, persona):
+    res = password_token(testapp, client, persona)
     assert res.json["token_type"] == "Bearer"
     assert res.json["refresh_token"]
 
     res = testapp.get("/api/me", headers=bearer(res.json["access_token"]))
-    assert res.json["username"] == user["username"]
+    assert res.json["sub"] == persona["sub"]
 
 
-def test_password_grant_wrong_password(testapp, client, user):
-    res = password_token(testapp, client, user, password="invalid", status=400)
-    assert res.json["error"] == "invalid_request"
+def test_password_grant_accepts_any_password(testapp, client, persona):
+    password_token(testapp, client, persona, password="")
 
 
-def test_password_grant_unknown_user(testapp, client, user):
-    res = password_token(testapp, client, user, username="unknown", status=400)
+def test_password_grant_unknown_user(testapp, client, persona):
+    res = password_token(testapp, client, persona, username="unknown", status=400)
     assert res.json["error"] == "invalid_request"
 
 
@@ -46,8 +45,8 @@ def test_wrong_client_secret(testapp, client):
     assert res.json["error"] == "invalid_client"
 
 
-def test_refresh_token_grant(testapp, client, user):
-    first = password_token(testapp, client, user).json
+def test_refresh_token_grant(testapp, client, persona):
+    first = password_token(testapp, client, persona).json
 
     res = testapp.post(
         "/oauth/token",
@@ -69,7 +68,7 @@ def test_refresh_token_grant(testapp, client, user):
     assert res.json["error"] == "invalid_grant"
 
 
-def test_implicit_grant(logged_in, public_client, user):
+def test_implicit_grant(logged_in, public_client, persona):
     url = authorize_url(
         response_type="token",
         client_id=public_client["client_id"],
@@ -82,4 +81,4 @@ def test_implicit_grant(logged_in, public_client, user):
     assert "refresh_token" not in params
 
     res = logged_in.get("/api/me", headers=bearer(params["access_token"]))
-    assert res.json["username"] == user["username"]
+    assert res.json["sub"] == persona["sub"]
