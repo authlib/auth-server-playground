@@ -45,7 +45,13 @@ repos:
     hooks:
       - id: pybabel-extract
         name: Extract translatable strings
-        entry: bash -c 'uv run pybabel extract --mapping-file pyproject.toml --copyright-holder="Yaal Coop" -o src/auth_server_playground/translations/messages.pot src && git add src/auth_server_playground/translations/messages.pot'
+        # Only stage the catalog when its messages change, not its dates or line numbers.
+        entry: >-
+          bash -c 'pot=src/auth_server_playground/translations/messages.pot;
+          uv run pybabel extract --mapping-file pyproject.toml --copyright-holder="Yaal Coop" -o "$pot" src || exit 1;
+          if git diff --no-ext-diff --quiet -I "^\"POT-Creation-Date:" -I "^\"Generated-By:" -I "^#[:,]" -- "$pot";
+          then git checkout --quiet -- "$pot";
+          else git add "$pot"; fi'
         language: system
         pass_filenames: false
         files: '\.(py|html)$'
