@@ -7,7 +7,6 @@ from flask import request
 from flask import url_for
 from werkzeug.security import gen_salt
 
-from .interaction import current_persona
 from .models import Client
 from .models import db
 
@@ -16,12 +15,6 @@ bp = Blueprint("home", __name__)
 
 def split_by_crlf(s):
     return [v for v in s.splitlines() if v]
-
-
-@bp.route("/")
-def home():
-    clients = Client.query.order_by(Client.id).all()
-    return render_template("home.html", persona=current_persona(), clients=clients)
 
 
 @bp.route("/create_client", methods=("GET", "POST"))
@@ -53,4 +46,4 @@ def create_client():
 
     db.session.add(client)
     db.session.commit()
-    return redirect(url_for("home.home"))
+    return redirect(url_for("admin.index"))

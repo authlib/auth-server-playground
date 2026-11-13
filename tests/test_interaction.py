@@ -38,7 +38,7 @@ def test_selected_persona_comes_back_to_the_authorization(testapp, client, perso
 
 def test_selection_without_next_goes_home(testapp, persona):
     res = select_form(testapp, "/interaction/persona", persona).submit()
-    assert urlparse(res.location).path == "/"
+    assert urlparse(res.location).path == "/en/"
 
 
 @pytest.mark.parametrize(
@@ -58,7 +58,7 @@ def test_external_next_is_ignored(testapp, persona, next_url):
     res = select_form(testapp, url, persona).submit()
     location = urlparse(res.location)
     assert location.netloc in ("", "localhost")
-    assert location.path == "/"
+    assert location.path == "/en/"
 
 
 def test_selector_lists_the_personas(testapp, other_persona):
@@ -90,14 +90,14 @@ def test_consent_without_csrf_token_is_refused(logged_in, client):
 
 def test_forget_persona(logged_in, client):
     res = logged_in.get("/interaction/forget")
-    assert urlparse(res.location).path == "/"
+    assert urlparse(res.location).path == "/en/"
     res = logged_in.get(code_url(client))
     assert urlparse(res.location).path == "/interaction/persona"
 
 
 def test_forget_without_persona(testapp):
     res = testapp.get("/interaction/forget")
-    assert urlparse(res.location).path == "/"
+    assert urlparse(res.location).path == "/en/"
 
 
 def test_deleted_persona_counts_as_no_persona(app, logged_in, client, persona):
@@ -114,3 +114,36 @@ def test_consent_for_another_persona_is_refused(logged_in, client, other_persona
     res = form.submit("accept")
     assert res.status_int == 200
     assert "consent" in res.forms
+
+
+def test_consent_shows_the_authorization_request(logged_in, client):
+    res = logged_in.get(code_url(client))
+    details = res.html.select_one("details").get_text(" ", strip=True)
+    assert "redirect_uri" in details
+    assert REDIRECT_URI in details
+
+
+def test_consent_request_leaves_out_the_form_fields(logged_in, client, other_persona):
+    form = logged_in.get(code_url(client)).forms["consent"]
+    select_form(logged_in, "/interaction/persona", other_persona).submit()
+    res = form.submit("accept")
+    details = res.html.select_one("details").get_text(" ", strip=True)
+    assert "redirect_uri" in details
+    assert "csrf_token" not in details
+    assert "persona_id" not in details
+
+
+def test_selector_names_the_client(testapp, client):
+    res = testapp.get(code_url(client)).follow()
+    assert "Test client" in res.html.select_one("main").get_text()
+
+
+def test_selector_does_not_name_an_unknown_client(testapp):
+    url = authorize_url(response_type="code", client_id="Your Bank")
+    res = testapp.get(url).follow()
+    assert "Your Bank" not in res.html.select_one("main").get_text()
+
+
+def test_selector_without_a_client(testapp):
+    res = testapp.get("/interaction/persona?next=/en/")
+    assert "asks you" not in res.html.select_one("main").get_text()

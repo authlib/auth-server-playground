@@ -2,10 +2,14 @@ import importlib.metadata
 import os
 
 from flask import Flask
+from flask import redirect
+from flask import url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+from . import admin
 from . import endpoints
 from . import interaction
+from .i18n import preferred_language
 from .i18n import setup_i18n
 from .models import db
 from .routes import bp
@@ -25,6 +29,8 @@ def is_proxy_fix_enabled():
 def create_app(config=None):
     """Create the Flask application, configured from the environment."""
     app = Flask(__name__)
+    # Serve the metadata in the order of RFC 8414 examples: issuer and endpoints first.
+    app.json.sort_keys = False
 
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
         "DATABASE_URL", "sqlite:///db.sqlite"
@@ -62,4 +68,11 @@ def setup_app(app):
 
     app.register_blueprint(bp)
     app.register_blueprint(endpoints.bp)
+    app.register_blueprint(admin.bp)
+
+    @app.route("/")
+    def root():
+        """Send the browser to the admin home page, in its language."""
+        return redirect(url_for("admin.index", lang_code=preferred_language()))
+
     app.register_blueprint(interaction.bp)

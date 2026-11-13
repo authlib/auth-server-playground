@@ -85,4 +85,4 @@ def test_proxy_fix_invalid_value(monkeypatch):
 @pytest.mark.parametrize("proxy_fix", [True])
 def test_forget_persona_stays_under_the_prefix(testapp):
     res = testapp.get("/interaction/forget", headers={"X-Forwarded-Prefix": "/auth"})
-    assert urlsplit(res.location).path == "/auth/"
+    assert urlsplit(res.location).path == "/auth/en/"

@@ -90,21 +90,26 @@ def published_metadata(document, issuer, endpoint_urls):
     endpoint metadata keys to their URLs.
     """
     stored = document["metadata"]
-    # RFC 8414 §2 marks response_types_supported as REQUIRED, even when empty.
-    metadata = {
-        key: value
-        for key, value in stored.items()
-        if key == "response_types_supported" or value not in (None, [])
-    }
-    metadata["issuer"] = stored["issuer"] or issuer
-
+    settings = document["settings"]
     grant_types = set(stored["grant_types_supported"])
+    # The issuer and the endpoints first, as in the examples of RFC 8414.
+    metadata = {"issuer": stored["issuer"] or issuer}
     if grant_types & {"authorization_code", "implicit"}:
         metadata["authorization_endpoint"] = endpoint_urls["authorization_endpoint"]
     if grant_types - {"implicit"}:
         metadata["token_endpoint"] = endpoint_urls["token_endpoint"]
-    if document["settings"]["revocation_enabled"]:
+    if settings["revocation_enabled"]:
         metadata["revocation_endpoint"] = endpoint_urls["revocation_endpoint"]
+
+    # RFC 8414 §2 marks response_types_supported as REQUIRED, even when empty.
+    metadata.update(
+        {
+            key: value
+            for key, value in stored.items()
+            if key != "issuer" and (key == "response_types_supported" or value != [])
+        }
+    )
+    if settings["revocation_enabled"]:
         metadata["revocation_endpoint_auth_methods_supported"] = stored[
             "token_endpoint_auth_methods_supported"
         ]

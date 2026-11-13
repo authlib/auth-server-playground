@@ -1,10 +1,23 @@
 {% extends "layout.html" %}
 {% from "_form.html" import render_form %}
 {% block title %}{% trans %}Choose a persona{% endtrans %}{% endblock %}
+{% block container_class %} narrow{% endblock %}
 {% block content %}
-    <h2>{% trans %}Choose a persona{% endtrans %}</h2>
-    {% call render_form(form, request.script_root + request.full_path, id="select-persona") %}
-        {{ form.persona() }}
-        {{ form.select() }}
-    {% endcall %}
+    <article>
+        <header>
+            <h2>{% trans %}Choose a persona{% endtrans %}</h2>
+            <p>
+                <small>
+                    {% if client_name %}
+                        {% trans %}<strong>{{ client_name }}</strong> asks you to sign in.{% endtrans %}
+                    {% endif %}
+                    {% trans %}The playground does not check passwords: pick who you act as.{% endtrans %}
+                </small>
+            </p>
+        </header>
+        {% call render_form(form, request.script_root + request.full_path, id="select-persona") %}
+            {{ form.persona() }}
+            {{ form.select() }}
+        {% endcall %}
+    </article>
 {% endblock %}

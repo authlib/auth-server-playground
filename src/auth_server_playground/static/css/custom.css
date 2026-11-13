@@ -27,3 +27,78 @@ header h1 a {
 header h1 a:hover {
     text-decoration: underline;
 }
+
+/* A page title with its actions on the same line. */
+.page-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--pico-spacing);
+}
+
+/* A main column and a side column, stacked on narrow screens. */
+.with-aside {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: calc(var(--pico-spacing) * 2);
+}
+
+.with-aside > :first-child {
+    flex: 999 1 520px;
+    min-width: 0;
+}
+
+.with-aside > :last-child {
+    flex: 1 1 440px;
+    min-width: 0;
+}
+
+/* Interaction pages hold a single narrow card. */
+.narrow {
+    max-width: 640px;
+}
+
+/* Name, value and copy button on each row. */
+.copy-list {
+    display: grid;
+    grid-template-columns: minmax(0, max-content) minmax(0, 1fr) auto;
+    gap: calc(var(--pico-spacing) / 2) var(--pico-spacing);
+    align-items: center;
+}
+
+.copy-list code {
+    overflow-wrap: anywhere;
+}
+
+.copy-list button {
+    margin: 0;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--pico-spacing);
+}
+
+.stats p {
+    font-size: 2rem;
+    margin: 0;
+}
+
+pre.metadata {
+    margin: 0;
+    overflow-x: auto;
+    font-size: 0.8rem;
+}
+
+/* Lists of checkboxes and radio buttons. */
+fieldset ul {
+    list-style: none;
+    padding-inline-start: 0;
+}
+
+fieldset ul li {
+    list-style: none;
+}

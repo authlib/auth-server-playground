@@ -1,3 +1,4 @@
+from flask import current_app
 from flask import g
 from flask import has_request_context
 from flask import request
@@ -28,17 +29,22 @@ class LangConverter(BaseConverter):
         return value
 
 
+def preferred_language():
+    """Return the language of the URL, else the last one used, else the browser one."""
+    return (
+        g.get("lang_code")
+        or session.get("lang_code")
+        or request.accept_languages.best_match(available_language_codes())
+        or current_app.config["BABEL_DEFAULT_LOCALE"]
+    )
+
+
 def setup_i18n(app):
     @app.url_defaults
     def add_language_code(endpoint, values):
         if not endpoint or not endpoint.startswith(f"{LOCALIZED_BLUEPRINT}."):
             return
-        values.setdefault(
-            "lang_code",
-            g.get("lang_code")
-            or session.get("lang_code")
-            or app.config["BABEL_DEFAULT_LOCALE"],
-        )
+        values.setdefault("lang_code", preferred_language())
 
     @app.url_value_preprocessor
     def pull_lang_code(endpoint, values):
@@ -56,15 +62,9 @@ def setup_i18n(app):
         }
 
     def locale_selector():
-        """Use the language of the URL, else the last one used, else the browser one."""
         if not has_request_context():
             return app.config["BABEL_DEFAULT_LOCALE"]
-        return (
-            g.get("lang_code")
-            or session.get("lang_code")
-            or request.accept_languages.best_match(available_language_codes())
-            or app.config["BABEL_DEFAULT_LOCALE"]
-        )
+        return preferred_language()
 
     app.config.setdefault("BABEL_DEFAULT_LOCALE", "en")
     app.config.setdefault("BABEL_DEFAULT_TIMEZONE", "UTC")

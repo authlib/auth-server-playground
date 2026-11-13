@@ -8,18 +8,19 @@
         <link rel="stylesheet" href="{{ url_for('static', filename='vendor/blades/blades.min.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
         <script src="{{ url_for('static', filename='vendor/htmx/htmx.min.js') }}" defer></script>
+        <script src="{{ url_for('static', filename='js/copy.js') }}" defer></script>
     </head>
 
     <body>
-        <header class="container">
+        <header class="container{% block container_class %}{% endblock %}">
             <hgroup>
-                <h1><a href="{{ request.script_root }}/">Auth Server Playground</a></h1>
+                <h1><a href="{{ url_for('admin.index') }}">Auth Server Playground</a></h1>
                 <p>{% trans %}OAuth 2.0 demonstration server{% endtrans %}</p>
             </hgroup>
             {% block navigation %}{% endblock %}
         </header>
 
-        <main class="container">
+        <main class="container{{ self.container_class() }}">
             {#- A title, so the kind of message does not rely on its colour only. -#}
             {% set flash_titles = {"error": _("Error:"), "warning": _("Warning:"), "success": _("Success:"), "info": _("Information:")} %}
             {% for category, message in get_flashed_messages(with_categories=true) %}
@@ -32,7 +33,7 @@
             {% block content %}{% endblock %}
         </main>
 
-        <footer class="container">
+        <footer class="container{{ self.container_class() }}">
             <p>
                 <small>Auth Server Playground <a href="{{ repository_url }}" target="_blank" rel="noopener noreferrer">v{{ app_version }}</a></small>
                 •

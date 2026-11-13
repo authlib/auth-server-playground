@@ -28,11 +28,14 @@ def endpoint_urls():
     }
 
 
-def current_metadata():
-    """Return the metadata of the server, with URLs for this request."""
-    return published_metadata(
-        current_document(), request.url_root.rstrip("/"), endpoint_urls()
-    )
+def current_metadata(document=None):
+    """Return the metadata of the document, with URLs for this request.
+
+    Without a document, use the stored one.
+    """
+    if document is None:
+        document = current_document()
+    return published_metadata(document, request.url_root.rstrip("/"), endpoint_urls())
 
 
 @bp.route("/oauth/authorize", methods=["GET", "POST"])

@@ -1,0 +1,50 @@
+{% extends "admin/layout.html" %}
+{% from "_copy.html" import copy_button %}
+{% block title %}{% trans %}Home{% endtrans %}{% endblock %}
+{% block content %}
+    <article>
+        <header><h2>{% trans %}Server{% endtrans %}</h2></header>
+        <div class="copy-list">
+            <span>{% trans %}Issuer{% endtrans %}</span>
+            <code>{{ metadata.issuer }}</code>
+            {{ copy_button(metadata.issuer, _("Copy the issuer")) }}
+            <span>{% trans %}Metadata{% endtrans %}</span>
+            <code>{{ metadata_url }}</code>
+            {{ copy_button(metadata_url, _("Copy the metadata URL")) }}
+            {% for key in endpoints if metadata[key] %}
+                <span><code>{{ key }}</code></span>
+                <code>{{ metadata[key] }}</code>
+                {{ copy_button(metadata[key], _("Copy %(endpoint)s", endpoint=key)) }}
+            {% endfor %}
+        </div>
+        <footer>
+            {% trans %}Grants:{% endtrans %}
+            {% for grant in metadata.grant_types_supported %}<mark>{{ grant }}</mark> {% endfor %}
+            <a href="{{ url_for('admin.server') }}">{% trans %}Configure the server{% endtrans %}</a>
+        </footer>
+    </article>
+
+    <div class="stats">
+        <article>
+            <header><h3>{% trans %}Clients{% endtrans %}</h3></header>
+            <p><strong id="client-count">{{ client_count }}</strong></p>
+        </article>
+        <article>
+            <header><h3>{% trans %}Personas{% endtrans %}</h3></header>
+            <p><strong id="persona-count">{{ persona_count }}</strong></p>
+        </article>
+    </div>
+
+    {% for client, values in warnings %}
+        <article role="alert" data-type="warning">
+            <strong>{% trans %}Warning:{% endtrans %}</strong>
+            {% trans client=client.client_name or client.client_id %}The server does not support these values of {{ client }}:{% endtrans %}
+            <code>{{ client.client_id }}</code>
+            <ul>
+                {% for key, unsupported in values.items() %}
+                    <li><code>{{ key }}</code>: {{ unsupported|join(", ") }}</li>
+                {% endfor %}
+            </ul>
+        </article>
+    {% endfor %}
+{% endblock %}

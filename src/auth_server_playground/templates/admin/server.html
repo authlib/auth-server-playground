@@ -1,0 +1,39 @@
+{% extends "admin/layout.html" %}
+{% from "_form.html" import render_form %}
+{% block title %}{% trans %}Server{% endtrans %}{% endblock %}
+{% block content %}
+    <div class="page-title">
+        <h2>{% trans %}Server{% endtrans %}</h2>
+        {% call render_form(defaults_form, url_for('admin.server_defaults'), id="defaults") %}
+            {{ defaults_form.submit(value=_("Restore the defaults"), class="outline secondary") }}
+        {% endcall %}
+    </div>
+    <div class="with-aside">
+        {#- The preview follows the form. The save button still submits the form. -#}
+        <form method="POST" action="{{ url_for('admin.server') }}" id="server"
+              hx-post="{{ url_for('admin.server_preview') }}"
+              hx-trigger="input delay:500ms"
+              hx-target="#metadata-preview">
+            {{ form.hidden_tag() }}
+            {% for message in form.form_errors %}
+                <p role="alert" data-type="error">{{ message }}</p>
+            {% endfor %}
+            {{ form.issuer() }}
+            {{ form.grant_types_supported() }}
+            {{ form.token_endpoint_auth_methods_supported() }}
+            {{ form.code_challenge_methods_supported() }}
+            {{ form.pkce_required() }}
+            <div class="grid">
+                {{ form.access_token_lifetime() }}
+                {{ form.refresh_token_lifetime() }}
+            </div>
+            {{ form.refresh_token_rotation() }}
+            {{ form.revocation_enabled() }}
+            {{ form.scopes_supported() }}
+            {{ form.save() }}
+        </form>
+        <section id="metadata-preview" aria-live="polite">
+            {% include "admin/_metadata_preview.html" %}
+        </section>
+    </div>
+{% endblock %}

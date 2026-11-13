@@ -1,0 +1,3 @@
+{% macro copy_button(value, label) -%}
+    <button type="button" class="outline secondary" data-copy="{{ value }}" data-copied="{% trans %}Copied!{% endtrans %}" data-failed="{% trans %}Copy failed{% endtrans %}" aria-label="{{ label }}">{% trans %}Copy{% endtrans %}</button>
+{%- endmacro %}

@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+{% block navigation %}
+    {% set links = [("admin.index", _("Home")), ("admin.server", _("Server"))] %}
+    <nav>
+        <ul>
+            {% for endpoint, label in links %}
+                {% if request.endpoint == endpoint %}
+                    <li><a href="{{ url_for(endpoint) }}" aria-current="page"><strong>{{ label }}</strong></a></li>
+                {% else %}
+                    <li><a href="{{ url_for(endpoint) }}">{{ label }}</a></li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+        {% set persona = current_persona() %}
+        {% if persona %}
+            <ul>
+                <li><small>{% trans persona=persona %}Acting as <strong>{{ persona }}</strong>{% endtrans %}</small></li>
+                <li><a href="{{ url_for('interaction.forget') }}" class="secondary">{% trans %}Forget persona{% endtrans %}</a></li>
+            </ul>
+        {% endif %}
+    </nav>
+{% endblock %}

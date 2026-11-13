@@ -27,6 +27,16 @@
             {{ button() }}
         </div>
         {{ errors() }}
+    {% elif field.type == "BooleanField" %}
+        {#- Blades draws checkboxes and switches before their label. -#}
+        <label for="{{ field_id }}">
+            {{ field.widget(field, **render_kw) }}
+            {{ label_text() }}
+        </label>
+        {{ errors() }}
+        {% if field.description %}
+            <small>{{ field.description }}</small>
+        {% endif %}
     {% else %}
         <label for="{{ field_id }}">
             {{ label_text() }}

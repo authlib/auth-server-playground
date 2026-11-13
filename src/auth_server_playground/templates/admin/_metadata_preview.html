@@ -1,0 +1,14 @@
+<article>
+    <header><h3>{% trans %}Published metadata{% endtrans %}</h3></header>
+    {% if errors %}
+        <div role="alert" data-type="error">
+            <ul>
+                {% for key, messages in errors.items() %}
+                    <li><code>{{ key }}</code>: {{ messages if messages is string else messages|join(" ") }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% else %}
+        <pre class="metadata"><code>{{ metadata|pretty_json }}</code></pre>
+    {% endif %}
+</article>
