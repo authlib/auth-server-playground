@@ -1,8 +1,12 @@
+import time
+
 import pytest
 from authlib.common.security import generate_token
 from authlib.oauth2.rfc7636 import create_s256_code_challenge
 from webtest import AppError
 
+from auth_server_playground.models import Token
+from auth_server_playground.models import db
 from auth_server_playground.store import settings_row
 from tests.utils import REDIRECT_URI
 from tests.utils import authorize_url
@@ -228,3 +232,27 @@ def test_revision_goes_up_on_each_save(app, configure):
     configure(settings={"access_token_lifetime": 120})
     with app.app_context():
         assert settings_row().revision == before + 2
+
+
+def test_refresh_token_lifetime(app, logged_in, client, configure):
+    configure(settings={"refresh_token_lifetime": 600})
+    token = authorization_code_token(logged_in, client, verifier=generate_token(48))
+    with app.app_context():
+        row = Token.query.filter_by(refresh_token=token["refresh_token"]).one()
+        assert row.refresh_token_expires_at == row.issued_at + 600
+        row.refresh_token_expires_at = int(time.time()) - 1
+        db.session.commit()
+    res = refresh(logged_in, client, token["refresh_token"], status=400)
+    assert res.json["error"] == "invalid_grant"
+
+
+def test_refresh_token_lifetime_does_not_follow_the_access_token(
+    app, logged_in, client, configure
+):
+    configure(settings={"access_token_lifetime": 1, "refresh_token_lifetime": 600})
+    token = authorization_code_token(logged_in, client, verifier=generate_token(48))
+    with app.app_context():
+        row = Token.query.filter_by(refresh_token=token["refresh_token"]).one()
+        row.issued_at -= 10
+        db.session.commit()
+    assert refresh(logged_in, client, token["refresh_token"]).json["access_token"]

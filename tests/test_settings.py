@@ -37,6 +37,7 @@ def test_default_document_follows_rfc_9700():
     assert document["metadata"]["code_challenge_methods_supported"] == ["S256"]
     assert document["settings"]["pkce_required"] == "all"
     assert document["settings"]["refresh_token_rotation"] is True
+    assert document["settings"]["refresh_token_lifetime"] == 14 * 24 * 3600
     validate_document(document)
 
 
@@ -81,6 +82,10 @@ def test_invalid_metadata_values_are_refused(key, value):
         ("access_token_lifetime", 0),
         ("access_token_lifetime", True),
         ("access_token_lifetime", "3600"),
+        ("refresh_token_lifetime", 0),
+        ("refresh_token_lifetime", None),
+        ("refresh_token_lifetime", 366 * 24 * 3600),
+        ("access_token_lifetime", 10**10),
     ],
 )
 def test_invalid_settings_are_refused(key, value):

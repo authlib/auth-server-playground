@@ -98,12 +98,22 @@ GRANTS = {
 }
 
 
-def save_token(token, request):
-    persona_id = request.user.id if request.user else None
-    db.session.add(
-        Token(client_id=request.client.client_id, persona_id=persona_id, **token)
-    )
-    db.session.commit()
+def token_saver(refresh_token_lifetime):
+    """Return a save_token function that sets the expiration of refresh tokens."""
+
+    def save_token(token, request):
+        now = int(time.time())
+        item = Token(
+            client_id=request.client.client_id,
+            persona_id=request.user.id if request.user else None,
+            **{**token, "issued_at": now},
+        )
+        if item.refresh_token:
+            item.refresh_token_expires_at = now + refresh_token_lifetime
+        db.session.add(item)
+        db.session.commit()
+
+    return save_token
 
 
 def configured(cls, **attributes):
@@ -126,7 +136,7 @@ def build_server(document):
 
     server = AuthorizationServer(
         query_client=create_query_client_func(db.session, Client),
-        save_token=save_token,
+        save_token=token_saver(settings["refresh_token_lifetime"]),
     )
     server.load_config(
         {

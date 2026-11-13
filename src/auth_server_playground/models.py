@@ -67,9 +67,9 @@ class Token(db.Model, OAuth2TokenMixin):
     # Tokens of the client credentials grant have no persona.
     persona_id = db.Column(db.Integer, db.ForeignKey("persona.id"))
     persona = db.relationship("Persona", back_populates="tokens")
+    refresh_token_expires_at = db.Column(db.Integer)
 
     def is_refresh_token_active(self):
         if self.refresh_token_revoked_at:
             return False
-        expires_at = self.issued_at + self.expires_in * 2
-        return expires_at >= time.time()
+        return self.refresh_token_expires_at >= time.time()

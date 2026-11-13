@@ -25,6 +25,9 @@ DEFAULT_ISSUER = "http://localhost"
 
 ENDPOINTS = ["authorization_endpoint", "token_endpoint", "revocation_endpoint"]
 
+#: The longest token lifetime, so that expiration dates fit in the database.
+MAX_LIFETIME = 365 * 24 * 3600
+
 # Defaults per RFC 9700.
 DEFAULT_DOCUMENT = {
     "metadata": {
@@ -43,6 +46,7 @@ DEFAULT_DOCUMENT = {
         "pkce_required": "all",
         "revocation_enabled": True,
         "access_token_lifetime": 3600,
+        "refresh_token_lifetime": 14 * 24 * 3600,
         "refresh_token_rotation": True,
     },
 }
@@ -192,9 +196,14 @@ def _settings_errors(settings):
         if not isinstance(settings.get(key), bool):
             errors[key] = "true or false."
 
-    lifetime = settings.get("access_token_lifetime")
-    if isinstance(lifetime, bool) or not isinstance(lifetime, int) or lifetime < 1:
-        errors["access_token_lifetime"] = "A number of seconds, at least 1."
+    for key in ("access_token_lifetime", "refresh_token_lifetime"):
+        lifetime = settings.get(key)
+        if (
+            isinstance(lifetime, bool)
+            or not isinstance(lifetime, int)
+            or not 1 <= lifetime <= MAX_LIFETIME
+        ):
+            errors[key] = f"A number of seconds, from 1 to {MAX_LIFETIME}."
     return errors
 
 
