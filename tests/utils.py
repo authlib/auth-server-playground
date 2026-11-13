@@ -57,3 +57,13 @@ def password_token(testapp, client, persona, *, status=200, **params):
         headers=basic_auth(client),
         status=status,
     )
+
+
+def client_credentials_token(testapp, client, *, status=200, **params):
+    """Request a token with the client credentials grant."""
+    return testapp.post(
+        "/oauth/token",
+        {"grant_type": "client_credentials", **params},
+        headers=basic_auth(client),
+        status=status,
+    )

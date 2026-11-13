@@ -191,3 +191,8 @@ def test_no_unsupported_values():
 def test_any_scope_is_supported_without_scopes_supported():
     document = changed(metadata={"scopes_supported": []})
     assert unsupported_values({"scope": "admin"}, document) == {}
+
+
+def test_client_credentials_needs_a_confidential_method():
+    document = changed(metadata={"token_endpoint_auth_methods_supported": ["none"]})
+    assert "token_endpoint_auth_methods_supported" in errors_of(document)

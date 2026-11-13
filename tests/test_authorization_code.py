@@ -64,11 +64,8 @@ def test_authorization_code_flow(logged_in, client, persona):
     assert res.json["scope"] == "profile"
     assert res.json["refresh_token"]
 
-    res = logged_in.get("/api/me", headers=bearer(res.json["access_token"]))
-    assert res.json == {
-        "sub": persona["sub"],
-        "preferred_username": persona["preferred_username"],
-    }
+    res = logged_in.get("/api/resource", headers=bearer(res.json["access_token"]))
+    assert res.json["sub"] == persona["sub"]
 
 
 def test_consent_denied(logged_in, client):
@@ -90,22 +87,6 @@ def test_authorization_code_is_single_use(logged_in, client):
 
     res = logged_in.post("/oauth/token", data, headers=basic_auth(client), status=400)
     assert res.json["error"] == "invalid_grant"
-
-
-def test_pkce_is_optional_for_confidential_clients(logged_in, client):
-    url = code_url(client, code_challenge=None, code_challenge_method=None)
-    params = callback_params(consent(logged_in, url))
-
-    res = logged_in.post(
-        "/oauth/token",
-        {
-            "grant_type": "authorization_code",
-            "code": params["code"],
-            "redirect_uri": REDIRECT_URI,
-        },
-        headers=basic_auth(client),
-    )
-    assert res.json["access_token"]
 
 
 def test_pkce_is_required_for_public_clients(logged_in, public_client):

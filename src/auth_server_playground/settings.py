@@ -127,6 +127,21 @@ def validate_document(document):
             {"response_types_supported": f"The grants give {expected}."}
         )
 
+    # Only confidential clients use this grant (RFC 6749 §4.4).
+    confidential_methods = set(metadata["token_endpoint_auth_methods_supported"]) - {
+        "none"
+    }
+    if "client_credentials" in metadata["grant_types_supported"] and not (
+        confidential_methods
+    ):
+        raise InvalidDocument(
+            {
+                "token_endpoint_auth_methods_supported": (
+                    "The client_credentials grant needs a method for confidential clients."
+                )
+            }
+        )
+
     errors = _rfc8414_errors(document)
     if errors:
         raise InvalidDocument(errors)

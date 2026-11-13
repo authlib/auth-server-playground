@@ -7,20 +7,20 @@ from tests.utils import consent
 from tests.utils import password_token
 
 
-def test_password_grant(testapp, client, persona):
+def test_password_grant(testapp, client, persona, legacy_grants):
     res = password_token(testapp, client, persona)
     assert res.json["token_type"] == "Bearer"
     assert res.json["refresh_token"]
 
-    res = testapp.get("/api/me", headers=bearer(res.json["access_token"]))
+    res = testapp.get("/api/resource", headers=bearer(res.json["access_token"]))
     assert res.json["sub"] == persona["sub"]
 
 
-def test_password_grant_accepts_any_password(testapp, client, persona):
+def test_password_grant_accepts_any_password(testapp, client, persona, legacy_grants):
     password_token(testapp, client, persona, password="")
 
 
-def test_password_grant_unknown_user(testapp, client, persona):
+def test_password_grant_unknown_user(testapp, client, persona, legacy_grants):
     res = password_token(testapp, client, persona, username="unknown", status=400)
     assert res.json["error"] == "invalid_request"
 
@@ -45,7 +45,7 @@ def test_wrong_client_secret(testapp, client):
     assert res.json["error"] == "invalid_client"
 
 
-def test_refresh_token_grant(testapp, client, persona):
+def test_refresh_token_grant(testapp, client, persona, legacy_grants):
     first = password_token(testapp, client, persona).json
 
     res = testapp.post(
@@ -56,8 +56,8 @@ def test_refresh_token_grant(testapp, client, persona):
     second = res.json
     assert second["access_token"] != first["access_token"]
 
-    testapp.get("/api/me", headers=bearer(second["access_token"]))
-    testapp.get("/api/me", headers=bearer(first["access_token"]), status=401)
+    testapp.get("/api/resource", headers=bearer(second["access_token"]))
+    testapp.get("/api/resource", headers=bearer(first["access_token"]), status=401)
 
     res = testapp.post(
         "/oauth/token",
@@ -68,7 +68,7 @@ def test_refresh_token_grant(testapp, client, persona):
     assert res.json["error"] == "invalid_grant"
 
 
-def test_implicit_grant(logged_in, public_client, persona):
+def test_implicit_grant(logged_in, public_client, persona, legacy_grants):
     url = authorize_url(
         response_type="token",
         client_id=public_client["client_id"],
@@ -80,5 +80,5 @@ def test_implicit_grant(logged_in, public_client, persona):
     assert params["state"] == "xyz"
     assert "refresh_token" not in params
 
-    res = logged_in.get("/api/me", headers=bearer(params["access_token"]))
+    res = logged_in.get("/api/resource", headers=bearer(params["access_token"]))
     assert res.json["sub"] == persona["sub"]

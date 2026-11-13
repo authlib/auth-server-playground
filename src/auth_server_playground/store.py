@@ -1,3 +1,4 @@
+import copy
 import secrets
 
 from sqlalchemy.exc import DatabaseError
@@ -8,6 +9,7 @@ from .models import Settings
 from .models import db
 from .personas import default_personas
 from .settings import default_document
+from .settings import validate_document
 
 
 def init_database(app):
@@ -51,3 +53,19 @@ def create_tables():
 
 def settings_row():
     return db.session.get(Settings, SETTINGS_ID)
+
+
+def current_document():
+    """Return a copy of the document, that the caller may change."""
+    return copy.deepcopy(settings_row().document)
+
+
+def save_document(document):
+    """Validate and store the document. The server is rebuilt on the next request."""
+    validate_document(document)
+    row = settings_row()
+    row.document = copy.deepcopy(document)
+    # Computed by the database, so that two saves at the same time do not
+    # write the same revision.
+    row.revision = Settings.revision + 1
+    db.session.commit()

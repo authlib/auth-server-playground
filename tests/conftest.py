@@ -9,6 +9,8 @@ from auth_server_playground.models import Persona
 from auth_server_playground.models import db
 from auth_server_playground.personas import COMPLETE_SUB
 from auth_server_playground.personas import MINIMAL_SUB
+from auth_server_playground.store import current_document
+from auth_server_playground.store import save_document
 from tests.utils import REDIRECT_URI
 from tests.utils import select_persona
 
@@ -58,6 +60,37 @@ def app(make_app):
 @pytest.fixture
 def testapp(app):
     return TestApp(app)
+
+
+@pytest.fixture
+def configure(app):
+    """Change the server configuration, as the admin page would."""
+
+    def configure(metadata=None, settings=None):
+        with app.app_context():
+            document = current_document()
+            document["metadata"].update(metadata or {})
+            document["settings"].update(settings or {})
+            save_document(document)
+
+    return configure
+
+
+@pytest.fixture
+def legacy_grants(configure):
+    """Enable the implicit and password grants, off by default per RFC 9700."""
+    configure(
+        metadata={
+            "grant_types_supported": [
+                "authorization_code",
+                "implicit",
+                "password",
+                "client_credentials",
+                "refresh_token",
+            ],
+            "response_types_supported": ["code", "token"],
+        }
+    )
 
 
 def persona_dict(persona):

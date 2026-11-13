@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-13 16:19+0100\n"
+"POT-Creation-Date: 2026-11-13 16:32+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,6 +16,10 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
+
+#: src/auth_server_playground/endpoints.py:64
+msgid "The persona changed since this page was shown."
+msgstr ""
 
 #: src/auth_server_playground/forms.py:97
 msgid "Persona"
@@ -31,10 +35,6 @@ msgstr ""
 
 #: src/auth_server_playground/forms.py:104
 msgid "Deny"
-msgstr ""
-
-#: src/auth_server_playground/routes.py:93
-msgid "The persona changed since this page was shown."
 msgstr ""
 
 #: src/auth_server_playground/templates/home.html:5

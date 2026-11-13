@@ -1,24 +1,15 @@
 import time
 
-from authlib.integrations.flask_oauth2 import current_token
-from authlib.oauth2 import OAuth2Error
 from flask import Blueprint
-from flask import abort
-from flask import flash
-from flask import jsonify
 from flask import redirect
 from flask import render_template
 from flask import request
 from flask import url_for
-from flask_babel import gettext as _
 from werkzeug.security import gen_salt
 
-from .forms import ConsentForm
 from .interaction import current_persona
 from .models import Client
 from .models import db
-from .oauth2 import authorization
-from .oauth2 import require_oauth
 
 bp = Blueprint("home", __name__)
 
@@ -63,55 +54,3 @@ def create_client():
     db.session.add(client)
     db.session.commit()
     return redirect(url_for("home.home"))
-
-
-@bp.route("/oauth/authorize", methods=["GET", "POST"])
-def authorize():
-    persona = current_persona()
-    if persona is None:
-        return redirect(
-            url_for(
-                "interaction.select_persona",
-                next=request.script_root + request.full_path,
-            )
-        )
-
-    try:
-        grant = authorization.get_consent_grant(end_user=persona)
-    except OAuth2Error as error:
-        return authorization.handle_error_response(request, error)
-
-    form = ConsentForm(persona_id=persona.id)
-    if request.method == "POST":
-        if not form.validate():
-            abort(400)
-        if form.persona_id.data == persona.id:
-            grant_user = persona if form.accept.data else None
-            return authorization.create_authorization_response(
-                grant=grant, grant_user=grant_user
-            )
-        flash(_("The persona changed since this page was shown."), "warning")
-        form.persona_id.data = persona.id
-    return render_template(
-        "interaction/consent.html", form=form, grant=grant, persona=persona
-    )
-
-
-@bp.route("/oauth/token", methods=["POST"])
-def issue_token():
-    return authorization.create_token_response()
-
-
-@bp.route("/oauth/revoke", methods=["POST"])
-def revoke_token():
-    return authorization.create_endpoint_response("revocation")
-
-
-@bp.route("/api/me")
-@require_oauth("profile")
-def api_me():
-    persona = current_token.persona
-    if persona is None:
-        return jsonify({})
-    claims = {"sub": persona.sub, "preferred_username": persona.preferred_username}
-    return jsonify({key: value for key, value in claims.items() if value})

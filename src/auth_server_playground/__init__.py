@@ -4,10 +4,10 @@ import os
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+from . import endpoints
 from . import interaction
 from .i18n import setup_i18n
 from .models import db
-from .oauth2 import config_oauth
 from .routes import bp
 from .store import init_database
 
@@ -29,7 +29,6 @@ def create_app(config=None):
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
         "DATABASE_URL", "sqlite:///db.sqlite"
     )
-    app.config["OAUTH2_REFRESH_TOKEN_GENERATOR"] = True
     # Browsers do not send the session cookie with cross-site POST requests,
     # such as a forged consent form.
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
@@ -61,6 +60,6 @@ def setup_app(app):
             "repository_url": "https://github.com/authlib/auth-server-playground",
         }
 
-    config_oauth(app)
     app.register_blueprint(bp)
+    app.register_blueprint(endpoints.bp)
     app.register_blueprint(interaction.bp)
