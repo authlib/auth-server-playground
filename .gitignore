@@ -10,3 +10,5 @@ htmlcov
 *.egg-info
 build
 dist
+*.mo
+node_modules

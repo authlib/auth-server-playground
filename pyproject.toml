@@ -15,8 +15,12 @@ maintainers = [{name="Éloi Rivard", email="eloi@yaal.coop"}]
 
 dependencies = [
     "authlib>=1.10.0b1",
+    "babel>=2.18.0",
     "flask>=3.1.2",
+    "flask-babel>=4.0.0",
     "flask-sqlalchemy>=3.1.1",
+    "flask-wtf>=1.3.0",
+    "flask-wtforms-htmx>=0.1.0",
     "python-dotenv>=1.2.4",
 ]
 
@@ -38,6 +42,27 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/auth_server_playground"]
+
+[tool.hatch.build]
+include = [
+    "src/auth_server_playground/**/*.py",
+    "src/auth_server_playground/templates/",
+    "src/auth_server_playground/static/",
+    "src/auth_server_playground/translations/",
+]
+exclude = [
+    "tests/",
+    "**/__pycache__",
+    "**/*.pyc",
+]
+artifacts = [
+    "src/auth_server_playground/translations/*/LC_MESSAGES/*.mo",
+]
+
+[tool.hatch.build.hooks.custom]
+dependencies = [
+    "Babel>=2.14.0",
+]
 
 [tool.coverage.run]
 source = [
@@ -131,6 +156,15 @@ commands = [
     ["pytest", "--cov", "--cov-report", "term:skip-covered", "{posargs}"],
     ["coverage", "html"],
 ]
+
+[[tool.babel.mappings]]
+method = "python"
+pattern = "**.py"
+
+[[tool.babel.mappings]]
+method = "jinja2"
+pattern = "**/templates/**.html"
+trimmed = "true"
 
 [tool.pytest.ini_options]
 filterwarnings = [

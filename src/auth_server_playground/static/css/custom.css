@@ -1,0 +1,29 @@
+/* Auth Server Playground custom styles */
+
+/* Mauve color theme. The shades are provisional until the mockups. */
+:root {
+    --pico-primary: light-dark(#9236a4, #c77dd6);
+    --pico-primary-background: light-dark(#9236a4, #c77dd6);
+    --pico-primary-hover: light-dark(#712a7f, #dba6e4);
+    --pico-primary-hover-background: light-dark(#712a7f, #dba6e4);
+    --pico-primary-focus: light-dark(#e7c6ee, #4a1d53);
+    --pico-primary-inverse: light-dark(#fff, #000);
+    --pico-primary-underline: light-dark(#9236a4, #c77dd6);
+}
+
+/* blades.css leaves out the spacing of the landmarks that pico.css has. */
+body > header,
+body > main,
+body > footer {
+    padding-block: var(--pico-block-spacing-vertical);
+}
+
+/* Header title link styling */
+header h1 a {
+    color: inherit;
+    text-decoration: none;
+}
+
+header h1 a:hover {
+    text-decoration: underline;
+}

@@ -1,0 +1,11 @@
+{
+  "name": "auth-server-playground",
+  "private": true,
+  "scripts": {
+    "vendor": "rm -rf src/auth_server_playground/static/vendor && mkdir -p src/auth_server_playground/static/vendor/blades src/auth_server_playground/static/vendor/htmx && cp node_modules/@anyblades/blades/css/blades.min.css src/auth_server_playground/static/vendor/blades/ && cp node_modules/htmx.org/dist/htmx.min.js src/auth_server_playground/static/vendor/htmx/"
+  },
+  "dependencies": {
+    "@anyblades/blades": "3.1.3",
+    "htmx.org": "4.0.1"
+  }
+}

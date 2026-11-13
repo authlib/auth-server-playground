@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="{{ locale }}" data-compact>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="color-scheme" content="light dark">
+        <title>{% block title %}{% endblock %} - Auth Server Playground</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='vendor/blades/blades.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+        <script src="{{ url_for('static', filename='vendor/htmx/htmx.min.js') }}" defer></script>
+    </head>
+
+    <body>
+        <header class="container">
+            <hgroup>
+                <h1><a href="{{ request.script_root }}/">Auth Server Playground</a></h1>
+                <p>{% trans %}OAuth 2.0 demonstration server{% endtrans %}</p>
+            </hgroup>
+            {% block navigation %}{% endblock %}
+        </header>
+
+        <main class="container">
+            {#- A title, so the kind of message does not rely on its colour only. -#}
+            {% set flash_titles = {"error": _("Error:"), "warning": _("Warning:"), "success": _("Success:"), "info": _("Information:")} %}
+            {% for category, message in get_flashed_messages(with_categories=true) %}
+                <article role="{{ 'alert' if category in ('error', 'warning') else 'status' }}" data-type="{{ category }}">
+                    <strong>{{ flash_titles[category] }}</strong>
+                    {{ message }}
+                </article>
+            {% endfor %}
+
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="container">
+            <p>
+                <small>Auth Server Playground <a href="{{ repository_url }}" target="_blank" rel="noopener noreferrer">v{{ app_version }}</a></small>
+                •
+                <small>{% trans %}Powered by{% endtrans %} <a href="https://authlib.org" target="_blank" rel="noopener noreferrer">Authlib</a></small>
+            </p>
+            {#- Only the admin pages have a language prefix in their URL. -#}
+            {% if request.blueprint == "admin" %}
+                <p>
+                    <small>
+                        {% for lang in available_languages %}
+                            {% if not loop.first %} • {% endif %}
+                            {% if lang.language == locale.language %}
+                                <strong>{{ lang.get_language_name(lang.language).title() }}</strong>
+                            {% else %}
+                                {% set view_args = dict(request.view_args or {}, lang_code=lang.language) %}
+                                <a href="{{ url_for(request.endpoint, **view_args) }}">{{ lang.get_language_name(lang.language).title() }}</a>
+                            {% endif %}
+                        {% endfor %}
+                    </small>
+                </p>
+            {% endif %}
+        </footer>
+    </body>
+</html>

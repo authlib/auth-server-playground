@@ -1,16 +1,19 @@
-<p>The application <strong>{{grant.client.client_name}}</strong> is requesting:
-  <strong>{{ grant.request.scope }}</strong>
-</p>
+{% extends "layout.html" %}
+{% block content %}
+  <p>The application <strong>{{grant.client.client_name}}</strong> is requesting:
+    <strong>{{ grant.request.scope }}</strong>
+  </p>
 
-<p>
-  from You - a.k.a. <strong>{{ user.username }}</strong>
-</p>
+  <p>
+    from You - a.k.a. <strong>{{ user.username }}</strong>
+  </p>
 
-<form action="" method="post">
-  <label>
-    <input type="checkbox" name="confirm">
-    <span>Consent?</span>
-  </label>
-  <br>
-  <button>Submit</button>
-</form>
+  <form action="" method="post">
+    <label>
+      <input type="checkbox" name="confirm">
+      <span>Consent?</span>
+    </label>
+    <br>
+    <button>Submit</button>
+  </form>
+{% endblock %}

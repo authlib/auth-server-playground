@@ -1,9 +1,11 @@
+import importlib.metadata
 import os
 import secrets
 
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+from .i18n import setup_i18n
 from .models import db
 from .oauth2 import config_oauth
 from .routes import bp
@@ -45,6 +47,15 @@ def create_app(config=None):
 
 
 def setup_app(app):
+    setup_i18n(app)
+
+    @app.context_processor
+    def version_context():
+        return {
+            "app_version": importlib.metadata.version("auth-server-playground"),
+            "repository_url": "https://github.com/authlib/auth-server-playground",
+        }
+
     db.init_app(app)
     with app.app_context():
         db.create_all()

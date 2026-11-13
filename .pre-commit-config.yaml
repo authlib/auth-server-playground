@@ -15,9 +15,9 @@ repos:
     hooks:
       - id: fix-byte-order-marker
       - id: trailing-whitespace
-        exclude: "\\.svg$|\\.map$|\\.min\\.css$|\\.min\\.js$"
+        exclude: "\\.svg$|\\.map$|\\.min\\.css$|\\.min\\.js$|\\.po$|\\.pot$"
       - id: end-of-file-fixer
-        exclude: "\\.svg$|\\.map$|\\.min\\.css$|\\.min\\.js$"
+        exclude: "\\.svg$|\\.map$|\\.min\\.css$|\\.min\\.js$|\\.po$|\\.pot$"
       - id: check-toml
   - repo: https://github.com/rtts/djhtml
     rev: 8577ec017145d76a0b954ebb7cb3169d4303014c  # frozen: 3.0.11
@@ -29,7 +29,7 @@ repos:
     - id: codespell
       additional_dependencies:
         - tomli
-      exclude: ".*\\.min\\..*|\\.css$|^tests"
+      exclude: ".*\\.min\\..*|translations|\\.css$|^tests"
       args: [--write-changes]
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
     rev: 06a39750ec31860bb44f2acf67182c40016cd1e7  # frozen: v1.32.0
@@ -41,3 +41,12 @@ repos:
       - id: conventional-pre-commit
         stages: [commit-msg]
         args: [--verbose]
+  - repo: local
+    hooks:
+      - id: pybabel-extract
+        name: Extract translatable strings
+        entry: bash -c 'uv run pybabel extract --mapping-file pyproject.toml --copyright-holder="Yaal Coop" -o src/auth_server_playground/translations/messages.pot src && git add src/auth_server_playground/translations/messages.pot'
+        language: system
+        pass_filenames: false
+        files: '\.(py|html)$'
+        exclude: '^tests/'
