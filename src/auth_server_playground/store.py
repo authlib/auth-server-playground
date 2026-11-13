@@ -5,7 +5,9 @@ from sqlalchemy.exc import DatabaseError
 from sqlalchemy.exc import IntegrityError
 
 from .models import SETTINGS_ID
+from .models import AuthorizationCode
 from .models import Settings
+from .models import Token
 from .models import db
 from .personas import default_personas
 from .settings import default_document
@@ -68,4 +70,12 @@ def save_document(document):
     # Computed by the database, so that two saves at the same time do not
     # write the same revision.
     row.revision = Settings.revision + 1
+    db.session.commit()
+
+
+def delete_client(client):
+    """Delete the client with its codes and tokens."""
+    AuthorizationCode.query.filter_by(client_id=client.client_id).delete()
+    Token.query.filter_by(client_id=client.client_id).delete()
+    db.session.delete(client)
     db.session.commit()

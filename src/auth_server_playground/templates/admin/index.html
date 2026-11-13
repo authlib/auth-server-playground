@@ -28,6 +28,7 @@
         <article>
             <header><h3>{% trans %}Clients{% endtrans %}</h3></header>
             <p><strong id="client-count">{{ client_count }}</strong></p>
+            <footer><a href="{{ url_for('admin.clients') }}">{% trans %}Manage the clients{% endtrans %}</a></footer>
         </article>
         <article>
             <header><h3>{% trans %}Personas{% endtrans %}</h3></header>

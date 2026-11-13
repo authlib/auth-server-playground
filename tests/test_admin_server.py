@@ -144,3 +144,11 @@ def test_restore_defaults_needs_a_csrf_token(testapp, configure):
     testapp.post("/en/server/defaults")
     form = testapp.get("/en/server").forms["server"]
     assert form["access_token_lifetime"].value == "60"
+
+
+def test_document_error_without_a_field_goes_on_top(testapp):
+    """Authlib refuses an empty response_types_supported, see RFC 8414 §2."""
+    form = testapp.get("/en/server").forms["server"]
+    form["grant_types_supported"] = ["client_credentials"]
+    res = form.submit()
+    assert "response_types_supported" in text(res, "#server")

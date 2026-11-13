@@ -1,4 +1,5 @@
 import json
+import secrets
 
 from flask import Blueprint
 from flask import flash
@@ -10,16 +11,19 @@ from flask_babel import gettext as _
 
 from .endpoints import current_metadata
 from .forms import ActionForm
+from .forms import ClientForm
 from .forms import ServerForm
 from .interaction import current_persona
 from .models import Client
 from .models import Persona
+from .models import db
 from .settings import ENDPOINTS
 from .settings import InvalidDocument
 from .settings import default_document
 from .settings import unsupported_values
 from .settings import validate_document
 from .store import current_document
+from .store import delete_client
 from .store import save_document
 
 bp = Blueprint("admin", __name__, url_prefix="/<lang:lang_code>")
@@ -37,14 +41,12 @@ def pretty_json(value):
     return json.dumps(value, indent=2)
 
 
-def client_warnings(document):
-    """Return the clients with values that the server does not support."""
-    warnings = []
-    for client in Client.query.order_by(Client.id):
-        values = unsupported_values(client.client_metadata, document)
-        if values:
-            warnings.append((client, values))
-    return warnings
+def client_rows(document):
+    """Return each client with the values that the server does not support."""
+    return [
+        (client, unsupported_values(client.client_metadata, document))
+        for client in Client.query.order_by(Client.id)
+    ]
 
 
 @bp.route("/")
@@ -56,7 +58,7 @@ def index():
         endpoints=ENDPOINTS,
         client_count=Client.query.count(),
         persona_count=Persona.query.count(),
-        warnings=client_warnings(current_document()),
+        warnings=[row for row in client_rows(current_document()) if row[1]],
     )
 
 
@@ -111,3 +113,62 @@ def server_defaults():
         save_document(default_document())
         flash(_("The default configuration is restored."), "success")
     return redirect(url_for("admin.server"))
+
+
+@bp.route("/clients")
+def clients():
+    return render_template("admin/clients.html", rows=client_rows(current_document()))
+
+
+@bp.route("/clients/new", methods=["GET", "POST"])
+def new_client():
+    form = ClientForm(current_document())
+    if not form.validate_on_submit():
+        return render_template("admin/client.html", form=form, client=None)
+
+    client = form.save_client()
+    flash(_("The client is created."), "success")
+    return redirect(url_for("admin.edit_client", client_id=client.client_id))
+
+
+def get_client(client_id):
+    return Client.query.filter_by(client_id=client_id).first_or_404()
+
+
+@bp.route("/clients/<client_id>", methods=["GET", "POST"])
+def edit_client(client_id):
+    client = get_client(client_id)
+    form = ClientForm(current_document(), client)
+    if not form.validate_on_submit():
+        return render_template(
+            "admin/client.html",
+            form=form,
+            client=client,
+            regenerate_form=ActionForm(prefix="regenerate"),
+            delete_form=ActionForm(prefix="delete"),
+        )
+
+    form.save_client()
+    flash(_("The client is saved."), "success")
+    return redirect(url_for("admin.edit_client", client_id=client_id))
+
+
+@bp.route("/clients/<client_id>/secret", methods=["POST"])
+def regenerate_secret(client_id):
+    client = get_client(client_id)
+    if ActionForm(prefix="regenerate").validate_on_submit() and client.client_secret:
+        client.client_secret = secrets.token_urlsafe(36)
+        db.session.commit()
+        flash(_("The client secret is regenerated."), "success")
+    return redirect(url_for("admin.edit_client", client_id=client_id))
+
+
+@bp.route("/clients/<client_id>/delete", methods=["POST"])
+def remove_client(client_id):
+    client = get_client(client_id)
+    if not ActionForm(prefix="delete").validate_on_submit():
+        return redirect(url_for("admin.edit_client", client_id=client_id))
+
+    delete_client(client)
+    flash(_("The client is deleted."), "success")
+    return redirect(url_for("admin.clients"))

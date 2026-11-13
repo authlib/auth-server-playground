@@ -147,3 +147,11 @@ def test_selector_does_not_name_an_unknown_client(testapp):
 def test_selector_without_a_client(testapp):
     res = testapp.get("/interaction/persona?next=/en/")
     assert "asks you" not in res.html.select_one("main").get_text()
+
+
+def test_selector_without_a_client_id(testapp):
+    url = "/interaction/persona?" + urlencode(
+        {"next": authorize_url(response_type="code")}
+    )
+    res = testapp.get(url)
+    assert "asks you" not in res.html.select_one("main").get_text()

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-13 17:19+0100\n"
+"POT-Creation-Date: 2026-11-13 17:35+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,102 +17,200 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: src/auth_server_playground/admin.py:82
+#: src/auth_server_playground/admin.py:88
 msgid "The server configuration is saved."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:108
+#: src/auth_server_playground/admin.py:114
 msgid "The default configuration is restored."
 msgstr ""
 
-#: src/auth_server_playground/endpoints.py:64
+#: src/auth_server_playground/admin.py:130
+msgid "The client is created."
+msgstr ""
+
+#: src/auth_server_playground/admin.py:152
+msgid "The client is saved."
+msgstr ""
+
+#: src/auth_server_playground/admin.py:162
+msgid "The client secret is regenerated."
+msgstr ""
+
+#: src/auth_server_playground/admin.py:173
+msgid "The client is deleted."
+msgstr ""
+
+#: src/auth_server_playground/endpoints.py:67
 msgid "The persona changed since this page was shown."
 msgstr ""
 
-#: src/auth_server_playground/forms.py:110
+#: src/auth_server_playground/forms.py:121
 msgid "Persona"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:111
+#: src/auth_server_playground/forms.py:122
 msgid "Continue as this persona"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:116
+#: src/auth_server_playground/forms.py:127
 msgid "Accept"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:117
+#: src/auth_server_playground/forms.py:128
 msgid "Deny"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:122
+#: src/auth_server_playground/forms.py:133
 #: src/auth_server_playground/templates/admin/index.html:8
 msgid "Issuer"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:124
+#: src/auth_server_playground/forms.py:135
 msgid "Leave empty to use the URL of each request."
 msgstr ""
 
-#: src/auth_server_playground/forms.py:128
+#: src/auth_server_playground/forms.py:139
+#: src/auth_server_playground/forms.py:313
+#: src/auth_server_playground/templates/admin/clients.html:16
 msgid "Grant types"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:133
+#: src/auth_server_playground/forms.py:144
 msgid "Client authentication methods"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:138
+#: src/auth_server_playground/forms.py:149
 msgid "PKCE methods"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:140
+#: src/auth_server_playground/forms.py:151
 msgid "Leave all unchecked to disable PKCE."
 msgstr ""
 
-#: src/auth_server_playground/forms.py:144
+#: src/auth_server_playground/forms.py:155
 msgid "PKCE is required for"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:146
+#: src/auth_server_playground/forms.py:157
 msgid "All clients"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:147
+#: src/auth_server_playground/forms.py:158
 msgid "Public clients only"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:151
+#: src/auth_server_playground/forms.py:162
 msgid "Access token lifetime"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:153
-#: src/auth_server_playground/forms.py:158
+#: src/auth_server_playground/forms.py:164
+#: src/auth_server_playground/forms.py:169
 msgid "In seconds."
 msgstr ""
 
-#: src/auth_server_playground/forms.py:156
+#: src/auth_server_playground/forms.py:167
 msgid "Refresh token lifetime"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:161
+#: src/auth_server_playground/forms.py:172
 msgid "Issue a new refresh token on each refresh"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:165
+#: src/auth_server_playground/forms.py:176
 msgid "Token revocation endpoint"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:169
+#: src/auth_server_playground/forms.py:180
+#: src/auth_server_playground/forms.py:318
 msgid "Scopes"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:170
+#: src/auth_server_playground/forms.py:181
 msgid "Separated by spaces. Leave empty to accept any scope."
 msgstr ""
 
-#: src/auth_server_playground/forms.py:173
+#: src/auth_server_playground/forms.py:184
+#: src/auth_server_playground/forms.py:336
 msgid "Save"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:257
+msgid "This is not an http or https URL."
+msgstr ""
+
+#: src/auth_server_playground/forms.py:266
+#, python-format
+msgid "Each line must be an http or https URL without fragment: %(url)s"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:285
+msgid "not supported by the server"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:294
+#: src/auth_server_playground/templates/admin/client.html:42
+#: src/auth_server_playground/templates/admin/clients.html:14
+msgid "Client ID"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:295
+msgid "Leave empty to generate one. Letters, digits, and . _ ~ -"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:299
+#: src/auth_server_playground/templates/admin/clients.html:13
+msgid "Name"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:301
+msgid "Home page"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:304
+msgid "Logo"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:307
+msgid "Redirect URIs"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:309
+#: src/auth_server_playground/forms.py:325
+msgid "One per line."
+msgstr ""
+
+#: src/auth_server_playground/forms.py:316
+msgid "Response types"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:320
+msgid "Authentication method"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:324
+msgid "Contacts"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:329
+msgid "Terms of service"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:332
+msgid "Privacy policy"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:381
+#, python-format
+msgid "%(value)s (not supported by the server)"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:394
+msgid "Use 1 to 48 letters, digits, and . _ ~ - characters."
+msgstr ""
+
+#: src/auth_server_playground/forms.py:397
+msgid "A client already uses this ID."
 msgstr ""
 
 #: src/auth_server_playground/templates/_copy.html:2
@@ -135,7 +233,8 @@ msgstr ""
 msgid "Error:"
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/index.html:40
+#: src/auth_server_playground/templates/admin/clients.html:31
+#: src/auth_server_playground/templates/admin/index.html:41
 #: src/auth_server_playground/templates/layout.html:25
 msgid "Warning:"
 msgstr ""
@@ -154,6 +253,67 @@ msgstr ""
 
 #: src/auth_server_playground/templates/admin/_metadata_preview.html:2
 msgid "Published metadata"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/client.html:5
+#: src/auth_server_playground/templates/admin/clients.html:6
+msgid "New client"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/client.html:10
+#: src/auth_server_playground/templates/admin/clients.html:2
+#: src/auth_server_playground/templates/admin/clients.html:5
+#: src/auth_server_playground/templates/admin/index.html:29
+#: src/auth_server_playground/templates/admin/layout.html:3
+msgid "Clients"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/client.html:41
+msgid "Credentials"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/client.html:45
+msgid "Copy the client ID"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/client.html:48
+msgid "Client secret"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/client.html:51
+msgid "Copy the client secret"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/client.html:55
+msgid "Regenerate the secret"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/client.html:59
+msgid "A public client has no secret."
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/client.html:63
+msgid "Delete"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/client.html:64
+msgid "Deletes the client, its codes and its tokens."
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/client.html:67
+msgid "Delete the client"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/clients.html:15
+msgid "Authentication"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/clients.html:32
+msgid "The server does not support:"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/clients.html:45
+msgid "No client yet."
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/index.html:3
@@ -193,25 +353,25 @@ msgstr ""
 msgid "Configure the server"
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/index.html:29
-msgid "Clients"
+#: src/auth_server_playground/templates/admin/index.html:31
+msgid "Manage the clients"
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/index.html:33
+#: src/auth_server_playground/templates/admin/index.html:34
 msgid "Personas"
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/index.html:41
+#: src/auth_server_playground/templates/admin/index.html:42
 #, python-format
 msgid "The server does not support these values of %(client)s:"
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/layout.html:16
+#: src/auth_server_playground/templates/admin/layout.html:18
 #, python-format
 msgid "Acting as <strong>%(persona)s</strong>"
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/layout.html:17
+#: src/auth_server_playground/templates/admin/layout.html:19
 msgid "Forget persona"
 msgstr ""
 

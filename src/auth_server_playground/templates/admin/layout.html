@@ -1,10 +1,11 @@
 {% extends "layout.html" %}
 {% block navigation %}
-    {% set links = [("admin.index", _("Home")), ("admin.server", _("Server"))] %}
+    {% set links = [("admin.index", _("Home")), ("admin.server", _("Server")), ("admin.clients", _("Clients"))] %}
     <nav>
         <ul>
             {% for endpoint, label in links %}
-                {% if request.endpoint == endpoint %}
+                {#- A detail page sets the section it belongs to. -#}
+                {% if (section or request.endpoint) == endpoint %}
                     <li><a href="{{ url_for(endpoint) }}" aria-current="page"><strong>{{ label }}</strong></a></li>
                 {% else %}
                     <li><a href="{{ url_for(endpoint) }}">{{ label }}</a></li>

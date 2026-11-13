@@ -1,3 +1,8 @@
+import re
+import secrets
+import time
+from urllib.parse import urlsplit
+
 from flask import current_app
 from flask_babel import lazy_gettext as _
 from flask_wtf import FlaskForm
@@ -8,10 +13,13 @@ from wtforms import ButtonField
 from wtforms import HiddenField
 from wtforms import IntegerField
 from wtforms import RadioField
+from wtforms import SelectField
 from wtforms import SelectMultipleField
 from wtforms import StringField
 from wtforms import SubmitField
+from wtforms import TextAreaField
 from wtforms import URLField
+from wtforms import ValidationError
 from wtforms.csrf.core import CSRFTokenField
 from wtforms.fields import SelectChoice
 from wtforms.fields import SelectFieldBase
@@ -23,11 +31,14 @@ from wtforms.widgets import CheckboxInput
 from wtforms.widgets import HiddenInput
 from wtforms.widgets import ListWidget
 
+from .models import Client
+from .models import db
 from .settings import AUTH_METHODS
 from .settings import ENDPOINTS
 from .settings import GRANT_TYPES
 from .settings import MAX_LIFETIME
 from .settings import PKCE_METHODS
+from .settings import RESPONSE_TYPES
 from .settings import response_types_for
 
 # The render_kw keys that field_wrapper reads, and that are not HTML attributes.
@@ -222,3 +233,198 @@ class ActionForm(FlaskForm):
     """A form with only a CSRF token, for the buttons that change data."""
 
     submit = SubmitField()
+
+
+def lines(text):
+    return [line.strip() for line in (text or "").splitlines() if line.strip()]
+
+
+#: Characters that need no escaping in a URL path (RFC 3986 §2.3).
+CLIENT_ID_PATTERN = re.compile(r"[A-Za-z0-9._~-]{1,48}")
+RESERVED_CLIENT_IDS = ("new", ".", "..")
+
+
+def is_web_url(url):
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return False
+    return parts.scheme in ("http", "https") and bool(parts.hostname)
+
+
+def check_url(form, field):
+    if field.data and not is_web_url(field.data):
+        raise ValidationError(_("This is not an http or https URL."))
+
+
+def check_urls(form, field):
+    for url in lines(field.data):
+        # Redirection endpoints have no fragment (RFC 6749 §3.1.2).
+        if not is_web_url(url) or "#" in url:
+            raise ValidationError(
+                _(
+                    "Each line must be an http or https URL without fragment: %(url)s",
+                    url=url,
+                )
+            )
+
+
+def with_stored(values, stored):
+    """Return the known values, followed by the stored values that are unknown."""
+    return [*values, *(value for value in stored if value not in values)]
+
+
+def marked_choices(values, supported):
+    """Return the choices, marking the values that the server does not support."""
+    return [
+        SelectChoice(
+            value,
+            value
+            if value in supported
+            else Markup("{} <mark>{}</mark>").format(
+                value, _("not supported by the server")
+            ),
+        )
+        for value in values
+    ]
+
+
+class ClientForm(BaseForm):
+    client_id = StringField(
+        _("Client ID"),
+        description=_("Leave empty to generate one. Letters, digits, and . _ ~ -"),
+        filters=[lambda value: value.strip() if value else value],
+        render_kw={"param": "client_id"},
+    )
+    client_name = StringField(_("Name"), render_kw={"param": "client_name"})
+    client_uri = URLField(
+        _("Home page"), validators=[check_url], render_kw={"param": "client_uri"}
+    )
+    logo_uri = URLField(
+        _("Logo"), validators=[check_url], render_kw={"param": "logo_uri"}
+    )
+    redirect_uris = TextAreaField(
+        _("Redirect URIs"),
+        validators=[check_urls],
+        description=_("One per line."),
+        render_kw={"param": "redirect_uris", "rows": 3},
+    )
+    grant_types = MultiCheckboxField(
+        _("Grant types"), render_kw={"param": "grant_types"}
+    )
+    response_types = MultiCheckboxField(
+        _("Response types"), render_kw={"param": "response_types"}
+    )
+    scope = StringField(_("Scopes"), render_kw={"param": "scope"})
+    token_endpoint_auth_method = SelectField(
+        _("Authentication method"),
+        render_kw={"param": "token_endpoint_auth_method"},
+    )
+    contacts = TextAreaField(
+        _("Contacts"),
+        description=_("One per line."),
+        render_kw={"param": "contacts", "rows": 2},
+    )
+    tos_uri = URLField(
+        _("Terms of service"), validators=[check_url], render_kw={"param": "tos_uri"}
+    )
+    policy_uri = URLField(
+        _("Privacy policy"),
+        validators=[check_url],
+        render_kw={"param": "policy_uri"},
+    )
+    save = SubmitField(_("Save"))
+
+    TEXT_METADATA = (
+        "client_name",
+        "client_uri",
+        "logo_uri",
+        "scope",
+        "token_endpoint_auth_method",
+        "tos_uri",
+        "policy_uri",
+    )
+
+    def __init__(self, document, client=None, **kwargs):
+        if client is not None:
+            data = dict(client.client_metadata)
+            data["redirect_uris"] = "\n".join(data.get("redirect_uris", []))
+            data["contacts"] = "\n".join(data.get("contacts", []))
+            kwargs["data"] = data
+        super().__init__(**kwargs)
+        self.client = client
+        if client is not None:
+            del self.client_id
+
+        # Values stored by an import or another tool stay available.
+        stored = client.client_metadata if client is not None else {}
+        metadata = document["metadata"]
+        self.grant_types.choices = marked_choices(
+            with_stored(GRANT_TYPES, stored.get("grant_types", [])),
+            metadata["grant_types_supported"],
+        )
+        self.response_types.choices = marked_choices(
+            with_stored(
+                list(RESPONSE_TYPES.values()), stored.get("response_types", [])
+            ),
+            metadata["response_types_supported"],
+        )
+        methods = with_stored(
+            AUTH_METHODS, [client.token_endpoint_auth_method] if client else []
+        )
+        # A select option holds text only, so the mark is written out.
+        self.token_endpoint_auth_method.choices = [
+            SelectChoice(
+                method,
+                method
+                if method in metadata["token_endpoint_auth_methods_supported"]
+                else _("%(value)s (not supported by the server)", value=method),
+            )
+            for method in methods
+        ]
+
+    def validate_client_id(self, field):
+        if not field.data:
+            return
+        if (
+            not CLIENT_ID_PATTERN.fullmatch(field.data)
+            or field.data in RESERVED_CLIENT_IDS
+        ):
+            raise ValidationError(
+                _("Use 1 to 48 letters, digits, and . _ ~ - characters.")
+            )
+        if Client.query.filter_by(client_id=field.data).count():
+            raise ValidationError(_("A client already uses this ID."))
+
+    def client_metadata(self):
+        """Return the metadata of the client, updated with the form.
+
+        The metadata the form has no field for are kept.
+        """
+        metadata = dict(self.client.client_metadata) if self.client else {}
+        for name in self.TEXT_METADATA:
+            metadata.pop(name, None)
+            if self[name].data:
+                metadata[name] = self[name].data
+        metadata["redirect_uris"] = lines(self.redirect_uris.data)
+        metadata["contacts"] = lines(self.contacts.data)
+        metadata["grant_types"] = self.grant_types.data
+        metadata["response_types"] = self.response_types.data
+        return metadata
+
+    def save_client(self):
+        """Create or update the client, and return it."""
+        client = self.client
+        if client is None:
+            client = Client(
+                client_id=self.client_id.data or secrets.token_urlsafe(18),
+                client_id_issued_at=int(time.time()),
+            )
+            db.session.add(client)
+        client.set_client_metadata(self.client_metadata())
+        if client.token_endpoint_auth_method == "none":
+            client.client_secret = ""
+        elif not client.client_secret:
+            client.client_secret = secrets.token_urlsafe(36)
+        db.session.commit()
+        return client

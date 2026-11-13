@@ -76,6 +76,10 @@ header h1 a:hover {
     margin: 0;
 }
 
+.table-scroll {
+    overflow-x: auto;
+}
+
 .stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

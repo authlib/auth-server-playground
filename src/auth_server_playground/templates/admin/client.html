@@ -1,0 +1,74 @@
+{% extends "admin/layout.html" %}
+{% set section = "admin.clients" %}
+{% from "_copy.html" import copy_button %}
+{% from "_form.html" import render_form %}
+{% set title = (client.client_name or client.client_id) if client else _("New client") %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+    <nav aria-label="breadcrumb">
+        <ul>
+            <li><a href="{{ url_for('admin.clients') }}">{% trans %}Clients{% endtrans %}</a></li>
+            <li>{{ title }}</li>
+        </ul>
+    </nav>
+    <h2>{{ title }}</h2>
+    <div class="with-aside">
+        {% call render_form(form, request.path, id="client") %}
+            {% if form.client_id %}{{ form.client_id() }}{% endif %}
+            {{ form.client_name() }}
+            <div class="grid">
+                {{ form.client_uri() }}
+                {{ form.logo_uri() }}
+            </div>
+            {{ form.redirect_uris() }}
+            {{ form.grant_types() }}
+            {{ form.response_types() }}
+            <div class="grid">
+                {{ form.scope() }}
+                {{ form.token_endpoint_auth_method() }}
+            </div>
+            {{ form.contacts() }}
+            <div class="grid">
+                {{ form.tos_uri() }}
+                {{ form.policy_uri() }}
+            </div>
+            {{ form.save() }}
+        {% endcall %}
+
+        {% if client %}
+            <aside>
+                <article>
+                    <header><h3>{% trans %}Credentials{% endtrans %}</h3></header>
+                    <label for="client-id-value">{% trans %}Client ID{% endtrans %}</label>
+                    <div role="group">
+                        <input id="client-id-value" type="text" readonly value="{{ client.client_id }}">
+                        {{ copy_button(client.client_id, _("Copy the client ID")) }}
+                    </div>
+                    {% if client.client_secret %}
+                        <label for="client-secret-value">{% trans %}Client secret{% endtrans %}</label>
+                        <div role="group">
+                            <input id="client-secret-value" type="text" readonly value="{{ client.client_secret }}">
+                            {{ copy_button(client.client_secret, _("Copy the client secret")) }}
+                        </div>
+                        <footer>
+                            {% call render_form(regenerate_form, url_for('admin.regenerate_secret', client_id=client.client_id), id="regenerate") %}
+                                {{ regenerate_form.submit(value=_("Regenerate the secret"), class="outline") }}
+                            {% endcall %}
+                        </footer>
+                    {% else %}
+                        <p><small>{% trans %}A public client has no secret.{% endtrans %}</small></p>
+                    {% endif %}
+                </article>
+                <article>
+                    <header><h3>{% trans %}Delete{% endtrans %}</h3></header>
+                    <p><small>{% trans %}Deletes the client, its codes and its tokens.{% endtrans %}</small></p>
+                    <footer>
+                        {% call render_form(delete_form, url_for('admin.remove_client', client_id=client.client_id), id="delete") %}
+                            {{ delete_form.submit(value=_("Delete the client"), class="contrast") }}
+                        {% endcall %}
+                    </footer>
+                </article>
+            </aside>
+        {% endif %}
+    </div>
+{% endblock %}

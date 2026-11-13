@@ -12,7 +12,6 @@ from . import interaction
 from .i18n import preferred_language
 from .i18n import setup_i18n
 from .models import db
-from .routes import bp
 from .store import init_database
 
 
@@ -66,7 +65,6 @@ def setup_app(app):
             "repository_url": "https://github.com/authlib/auth-server-playground",
         }
 
-    app.register_blueprint(bp)
     app.register_blueprint(endpoints.bp)
     app.register_blueprint(admin.bp)
 

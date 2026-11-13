@@ -1,0 +1,47 @@
+{% extends "admin/layout.html" %}
+{% block title %}{% trans %}Clients{% endtrans %}{% endblock %}
+{% block content %}
+    <div class="page-title">
+        <h2>{% trans %}Clients{% endtrans %}</h2>
+        <a href="{{ url_for('admin.new_client') }}" role="button">{% trans %}New client{% endtrans %}</a>
+    </div>
+    {% if rows %}
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th scope="col">{% trans %}Name{% endtrans %}</th>
+                        <th scope="col">{% trans %}Client ID{% endtrans %}</th>
+                        <th scope="col">{% trans %}Authentication{% endtrans %}</th>
+                        <th scope="col">{% trans %}Grant types{% endtrans %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for client, unsupported in rows %}
+                        <tr>
+                            <td><a href="{{ url_for('admin.edit_client', client_id=client.client_id) }}">{{ client.client_name or client.client_id }}</a></td>
+                            <td><code>{{ client.client_id }}</code></td>
+                            <td><code>{{ client.token_endpoint_auth_method }}</code></td>
+                            <td>{{ client.grant_types|join(", ") }}</td>
+                        </tr>
+                        {% if unsupported %}
+                            <tr>
+                                <td colspan="4">
+                                    <article role="alert" data-type="warning">
+                                        <strong>{% trans %}Warning:{% endtrans %}</strong>
+                                        {% trans %}The server does not support:{% endtrans %}
+                                        {% for key, values in unsupported.items() %}
+                                            <code>{{ key }}</code> {{ values|join(", ") }}{% if not loop.last %};{% endif %}
+                                        {% endfor %}
+                                    </article>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>{% trans %}No client yet.{% endtrans %}</p>
+    {% endif %}
+{% endblock %}
