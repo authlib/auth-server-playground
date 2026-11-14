@@ -1,9 +1,12 @@
+import itertools
 import time
 
 import pytest
 from flask_webtest import TestApp
+from joserfc.jwk import RSAKey
 
 from auth_server_playground import create_app
+from auth_server_playground import keys
 from auth_server_playground.models import Client
 from auth_server_playground.models import Persona
 from auth_server_playground.models import db
@@ -13,6 +16,27 @@ from auth_server_playground.store import current_document
 from auth_server_playground.store import save_document
 from tests.utils import REDIRECT_URI
 from tests.utils import select_persona
+
+#: The key generators of the application, before the tests replace the RSA ones.
+REAL_GENERATORS = dict(keys.GENERATORS)
+
+
+@pytest.fixture(scope="session")
+def rsa_pool():
+    """Eight RSA keys. A test never generates eight RSA keys in one database."""
+    return [RSAKey.generate_key(2048).as_dict(private=True) for _ in range(8)]
+
+
+@pytest.fixture(autouse=True)
+def fast_rsa_keys(monkeypatch, rsa_pool):
+    """Reuse the pool instead of generating RSA keys."""
+    pool = itertools.cycle(rsa_pool)
+
+    def generate(parameters):
+        return RSAKey.import_key(next(pool), parameters=parameters)
+
+    monkeypatch.setitem(keys.GENERATORS, "RS256", generate)
+    monkeypatch.setitem(keys.GENERATORS, "PS256", generate)
 
 
 @pytest.fixture

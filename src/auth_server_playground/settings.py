@@ -19,6 +19,8 @@ RESPONSE_TYPES = {"authorization_code": "code", "implicit": "token"}
 AUTH_METHODS = ["client_secret_basic", "client_secret_post", "none"]
 PKCE_METHODS = ["S256", "plain"]
 PKCE_REQUIRED = ["all", "public"]
+#: The ID token signing algorithms. RFC 9864 deprecates EdDSA for Ed25519.
+ID_TOKEN_ALGORITHMS = ["RS256", "PS256", "ES256", "Ed25519"]
 
 #: The issuer used to validate a document whose issuer comes from requests.
 DEFAULT_ISSUER = "http://localhost"

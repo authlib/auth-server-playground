@@ -1,3 +1,4 @@
+import datetime
 import re
 import time
 
@@ -20,6 +21,22 @@ class Settings(db.Model):
     document = db.Column(db.JSON, nullable=False)
     revision = db.Column(db.Integer, nullable=False, default=1)
     secret_key = db.Column(db.String(64), nullable=False)
+
+
+class SigningKey(db.Model):
+    """A private key that signs the ID tokens."""
+
+    __tablename__ = "signing_key"
+
+    kid = db.Column(db.String(64), primary_key=True)
+    alg = db.Column(db.String(16), nullable=False)
+    jwk = db.Column(db.JSON, nullable=False)
+    created_at = db.Column(db.Integer, nullable=False)
+    active = db.Column(db.Boolean, nullable=False)
+
+    @property
+    def created(self):
+        return datetime.datetime.fromtimestamp(self.created_at, datetime.UTC)
 
 
 class Persona(db.Model):

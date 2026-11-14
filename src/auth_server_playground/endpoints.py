@@ -13,6 +13,7 @@ from flask_babel import gettext as _
 
 from .forms import ConsentForm
 from .interaction import current_persona
+from .keys import public_jwks
 from .models import Persona
 from .models import db
 from .server import get_server
@@ -113,4 +114,12 @@ def persona_picture(persona_id):
     response.headers["Content-Security-Policy"] = (
         "default-src 'none'; style-src 'unsafe-inline'"
     )
+    return response
+
+
+@bp.route("/oauth/jwks")
+def jwks():
+    response = jsonify(public_jwks())
+    # A rotation must show at once.
+    response.headers["Cache-Control"] = "no-cache"
     return response
