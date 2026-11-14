@@ -2,13 +2,17 @@ import importlib.metadata
 import os
 
 from flask import Flask
+from flask import Response
 from flask import redirect
+from flask import request
 from flask import url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from . import admin
 from . import endpoints
 from . import interaction
+from .highlighting import highlight
+from .highlighting import stylesheet
 from .i18n import preferred_language
 from .i18n import setup_i18n
 from .models import db
@@ -64,6 +68,15 @@ def setup_app(app):
             "app_version": importlib.metadata.version("auth-server-playground"),
             "repository_url": "https://github.com/authlib/auth-server-playground",
         }
+
+    app.add_template_filter(highlight)
+
+    @app.route("/highlight.css")
+    def highlight_css():
+        """Serve the colors of the highlighted code."""
+        response = Response(stylesheet(), mimetype="text/css")
+        response.add_etag()
+        return response.make_conditional(request)
 
     app.register_blueprint(endpoints.bp)
     app.register_blueprint(admin.bp)

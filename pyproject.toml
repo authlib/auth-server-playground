@@ -22,6 +22,7 @@ dependencies = [
     "flask-sqlalchemy>=3.1.1",
     "flask-wtf>=1.3.0",
     "flask-wtforms-htmx>=0.1.0",
+    "pygments>=2.21.0",
     "python-avatars>=1.4.1",
     "python-dotenv>=1.2.4",
 ]

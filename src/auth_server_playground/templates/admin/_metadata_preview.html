@@ -9,6 +9,6 @@
             </ul>
         </div>
     {% else %}
-        <pre class="metadata"><code>{{ metadata|pretty_json }}</code></pre>
+        <pre class="metadata highlight"><code>{{ metadata|pretty_json|highlight("json") }}</code></pre>
     {% endif %}
 </article>
