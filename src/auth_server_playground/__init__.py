@@ -19,14 +19,19 @@ from .models import db
 from .store import init_database
 
 
-def is_proxy_fix_enabled():
-    """Read from the environment whether the application runs behind a proxy."""
-    value = os.environ.get("PROXY_FIX", "").strip().lower()
+def env_flag(name):
+    """Read a boolean from the environment. Unset means false."""
+    value = os.environ.get(name, "").strip().lower()
     if value in ("", "0", "false"):
         return False
     if value in ("1", "true"):
         return True
-    raise ValueError(f"PROXY_FIX must be true or false, got {value!r}")
+    raise ValueError(f"{name} must be true or false, got {value!r}")
+
+
+def is_proxy_fix_enabled():
+    """Read from the environment whether the application runs behind a proxy."""
+    return env_flag("PROXY_FIX")
 
 
 def create_app(config=None):
@@ -62,12 +67,14 @@ def create_app(config=None):
 def setup_app(app):
     setup_i18n(app)
 
+    version = {
+        "app_version": importlib.metadata.version("auth-server-playground"),
+        "repository_url": "https://github.com/authlib/auth-server-playground",
+    }
+
     @app.context_processor
     def version_context():
-        return {
-            "app_version": importlib.metadata.version("auth-server-playground"),
-            "repository_url": "https://github.com/authlib/auth-server-playground",
-        }
+        return version
 
     app.add_template_filter(highlight)
 

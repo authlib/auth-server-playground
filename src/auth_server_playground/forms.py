@@ -43,7 +43,10 @@ from .models import Client
 from .models import Persona
 from .models import db
 from .models import is_valid_client_id
+from .personas import ADDRESS_FIELDS
 from .personas import RANDOM_LOCALES
+from .personas import STANDARD_CLAIMS
+from .personas import STRING_CLAIMS
 from .personas import find_by_username
 from .personas import is_valid_sub
 from .personas import render_avatar
@@ -436,38 +439,6 @@ class ClientForm(BaseForm):
         return client
 
 
-STANDARD_CLAIMS = (
-    "sub",
-    "name",
-    "given_name",
-    "family_name",
-    "middle_name",
-    "nickname",
-    "preferred_username",
-    "profile",
-    "picture",
-    "website",
-    "email",
-    "email_verified",
-    "gender",
-    "birthdate",
-    "zoneinfo",
-    "locale",
-    "phone_number",
-    "phone_number_verified",
-    "address",
-    "updated_at",
-)
-ADDRESS_FIELDS = (
-    "formatted",
-    "street_address",
-    "locality",
-    "region",
-    "postal_code",
-    "country",
-)
-
-
 #: The forms of a birthdate: a full date, a year, or a day without year (OIDC Core §5.1).
 BIRTHDATE_PATTERN = re.compile(r"\d{4}(-\d{2}-\d{2})?")
 
@@ -564,30 +535,24 @@ class PersonaForm(BaseForm):
     )
     save = SubmitField(_("Save"))
 
-    STRING_CLAIMS = (
-        "name",
-        "given_name",
-        "family_name",
-        "middle_name",
-        "nickname",
-        "preferred_username",
-        "profile",
-        "picture",
-        "website",
-        "email",
-        "gender",
-        "zoneinfo",
-        "locale",
-        "phone_number",
-    )
+    # The birthdate field has its own validation.
+    TEXT_CLAIMS = tuple(claim for claim in STRING_CLAIMS if claim != "birthdate")
 
     def __init__(self, persona=None, **kwargs):
         if persona is not None and "data" not in kwargs:
             kwargs["data"] = self.persona_data(persona)
         super().__init__(**kwargs)
         self.persona = persona
-        self.zoneinfo.choices = optional_choices(time_zones())
-        self.locale.choices = optional_choices(locales())
+        # A stored value outside the lists stays selected.
+        claims = persona.claims if persona is not None else {}
+        self.zoneinfo.choices = optional_choices(
+            with_stored(
+                time_zones(), [claims["zoneinfo"]] if claims.get("zoneinfo") else []
+            )
+        )
+        self.locale.choices = optional_choices(
+            with_stored(locales(), [claims["locale"]] if claims.get("locale") else [])
+        )
 
     @staticmethod
     def persona_data(persona):
@@ -633,7 +598,7 @@ class PersonaForm(BaseForm):
     def to_claims(self):
         """Return the claims of the form. Empty values are left out."""
         claims = json.loads(self.extra_claims.data.strip() or "{}")
-        for name in self.STRING_CLAIMS:
+        for name in self.TEXT_CLAIMS:
             if self[name].data:
                 claims[name] = self[name].data
         if self.birthdate.data:

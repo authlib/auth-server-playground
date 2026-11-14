@@ -60,10 +60,7 @@ LIST_CHOICES = {
 
 
 class InvalidDocument(ValueError):
-    """The configuration document is not valid.
-
-    ``errors`` maps a metadata or settings key, or ``"document"``, to a message.
-    """
+    """The configuration document is not valid."""
 
     def __init__(self, errors):
         super().__init__("; ".join(f"{key}: {msg}" for key, msg in errors.items()))
@@ -84,11 +81,7 @@ def response_types_for(grant_types):
 
 
 def published_metadata(document, issuer, endpoint_urls):
-    """Return the metadata that the server publishes.
-
-    ``issuer`` is used when the document has none. ``endpoint_urls`` maps the
-    endpoint metadata keys to their URLs.
-    """
+    """Return the metadata that the server publishes."""
     stored = document["metadata"]
     settings = document["settings"]
     grant_types = set(stored["grant_types_supported"])
@@ -122,9 +115,11 @@ def validate_document(document):
         metadata = document["metadata"]
         settings = document["settings"]
     except (KeyError, TypeError):
+        metadata = settings = None
+    if not isinstance(metadata, dict) or not isinstance(settings, dict):
         raise InvalidDocument(
-            {"document": "The document needs metadata and settings."}
-        ) from None
+            {"document": "The document needs metadata and settings objects."}
+        )
 
     errors = {**_metadata_errors(metadata), **_settings_errors(settings)}
     if errors:
@@ -134,6 +129,17 @@ def validate_document(document):
     if metadata["response_types_supported"] != expected:
         raise InvalidDocument(
             {"response_types_supported": f"The grants give {expected}."}
+        )
+
+    # Per RFC 8414 §2, an omitted list would mean client_secret_basic.
+    token_grants = set(metadata["grant_types_supported"]) - {"implicit"}
+    if token_grants and not metadata["token_endpoint_auth_methods_supported"]:
+        raise InvalidDocument(
+            {
+                "token_endpoint_auth_methods_supported": (
+                    "The token endpoint needs at least one method."
+                )
+            }
         )
 
     # Only confidential clients use this grant (RFC 6749 §4.4).

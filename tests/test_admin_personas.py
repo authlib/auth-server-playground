@@ -290,3 +290,14 @@ def test_birthdate_that_does_not_exist(testapp):
     form = testapp.get("/en/personas/new").forms["persona"]
     form["birthdate"] = "1990-02-30"
     assert text(form.submit(), "#birthdate-error")
+
+
+def test_edit_keeps_unknown_zoneinfo_and_locale(app, testapp, persona):
+    with app.app_context():
+        row = db.session.get(Persona, persona["id"])
+        row.claims = {**row.claims, "zoneinfo": "Etc/Unknown", "locale": "en-us"}
+        db.session.commit()
+    testapp.get(f"/en/personas/{persona['id']}").forms["persona"].submit()
+    claims = stored(app, persona["sub"])["claims"]
+    assert claims["zoneinfo"] == "Etc/Unknown"
+    assert claims["locale"] == "en-us"

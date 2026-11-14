@@ -201,3 +201,33 @@ def test_any_scope_is_supported_without_scopes_supported():
 def test_client_credentials_needs_a_confidential_method():
     document = changed(metadata={"token_endpoint_auth_methods_supported": ["none"]})
     assert "token_endpoint_auth_methods_supported" in errors_of(document)
+
+
+@pytest.mark.parametrize("part", ["metadata", "settings"])
+def test_parts_must_be_objects(part):
+    document = default_document()
+    document[part] = []
+    with pytest.raises(InvalidDocument):
+        validate_document(document)
+
+
+def test_token_endpoint_needs_a_method():
+    document = default_document()
+    document["metadata"].update(
+        grant_types_supported=["authorization_code"],
+        token_endpoint_auth_methods_supported=[],
+    )
+    with pytest.raises(InvalidDocument) as excinfo:
+        validate_document(document)
+    assert "token_endpoint_auth_methods_supported" in excinfo.value.errors
+
+
+def test_implicit_only_needs_no_method():
+    document = default_document()
+    document["metadata"].update(
+        grant_types_supported=["implicit"],
+        response_types_supported=["token"],
+        token_endpoint_auth_methods_supported=[],
+        code_challenge_methods_supported=[],
+    )
+    validate_document(document)

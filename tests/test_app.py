@@ -2,6 +2,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.exc import OperationalError
 
+from auth_server_playground import store
 from auth_server_playground.models import Persona
 from auth_server_playground.models import Settings
 from auth_server_playground.models import db
@@ -54,3 +55,20 @@ def test_missing_settings_with_existing_personas(tmp_path, make_app):
         db.session.commit()
     with pytest.raises(IntegrityError):
         init_database(app)
+
+
+def test_another_worker_creates_the_settings(app, monkeypatch):
+    real = store.settings_row
+    calls = []
+
+    def settings_row():
+        # The first check runs before the other worker commits.
+        calls.append(1)
+        return None if len(calls) == 1 else real()
+
+    monkeypatch.setattr(store, "settings_row", settings_row)
+    with app.app_context():
+        key = Settings.query.one().secret_key
+    assert init_database(app) == key
+    with app.app_context():
+        assert Persona.query.count() == 2

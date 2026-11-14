@@ -23,8 +23,39 @@ RANDOM_LOCALES = {
 COMPLETE_SUB = "c0a1e3d2-7b5f-4e7a-9d2c-1f6b8a4e5c3d"
 MINIMAL_SUB = "5e8d2b1a-3c4f-4a6e-8b7d-9f0e1a2b3c4d"
 
+#: The standard claims (OIDC Core §5.1), and the members of the address claim.
+STANDARD_CLAIMS = (
+    "sub",
+    "name",
+    "given_name",
+    "family_name",
+    "middle_name",
+    "nickname",
+    "preferred_username",
+    "profile",
+    "picture",
+    "website",
+    "email",
+    "email_verified",
+    "gender",
+    "birthdate",
+    "zoneinfo",
+    "locale",
+    "phone_number",
+    "phone_number_verified",
+    "address",
+    "updated_at",
+)
+ADDRESS_FIELDS = (
+    "formatted",
+    "street_address",
+    "locality",
+    "region",
+    "postal_code",
+    "country",
+)
 
-#: The types of the standard claims (OIDC Core §5.1).
+#: The types of the standard claims.
 STRING_CLAIMS = (
     "name",
     "given_name",

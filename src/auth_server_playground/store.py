@@ -33,6 +33,8 @@ def init_database(app, initial_snapshot=None):
     snapshot = read_snapshot(initial_snapshot) if initial_snapshot else None
     with app.app_context():
         create_tables()
+        if settings_row() is not None:
+            return settings_row().secret_key
         db.session.add(
             Settings(
                 id=SETTINGS_ID,

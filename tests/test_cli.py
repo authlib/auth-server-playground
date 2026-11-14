@@ -15,7 +15,7 @@ def test_run(monkeypatch, tmp_path):
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/db.sqlite")
     monkeypatch.delenv("FLASK_RUN_HOST", raising=False)
     monkeypatch.setenv("FLASK_RUN_PORT", "5001")
-    monkeypatch.setenv("FLASK_DEBUG", "true")
+    monkeypatch.setenv("FLASK_DEBUG", "1")
     monkeypatch.setattr("flask.Flask.run", run)
     cli.run()
     assert calls == {"host": "127.0.0.1", "port": 5001, "debug": True}
