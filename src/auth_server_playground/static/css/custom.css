@@ -18,6 +18,11 @@ body > footer {
     padding-block: var(--pico-block-spacing-vertical);
 }
 
+/* Center the page footer, not the footers of the cards. */
+body > footer p {
+    text-align: center;
+}
+
 /* Header title link styling */
 header h1 a {
     color: inherit;
