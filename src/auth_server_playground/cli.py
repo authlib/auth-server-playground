@@ -13,7 +13,3 @@ def run():
     port = int(os.environ.get("FLASK_RUN_PORT", "5000"))
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     app.run(host=host, port=port, debug=debug)
-
-
-if __name__ == "__main__":
-    run()

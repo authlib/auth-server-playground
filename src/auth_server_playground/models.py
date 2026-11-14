@@ -56,9 +56,6 @@ class Persona(db.Model):
             return url_for("oauth.persona_picture", persona_id=self.id, _external=True)
         return None
 
-    def get_user_id(self):
-        return self.id
-
 
 #: Characters that need no escaping in a URL path (RFC 3986 §2.3).
 CLIENT_ID_PATTERN = re.compile(r"[A-Za-z0-9._~-]{1,48}")

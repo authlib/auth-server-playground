@@ -3,7 +3,6 @@ import time
 import pytest
 from authlib.common.security import generate_token
 from authlib.oauth2.rfc7636 import create_s256_code_challenge
-from webtest import AppError
 
 from auth_server_playground.models import Token
 from auth_server_playground.models import db
@@ -66,7 +65,7 @@ def test_change_applies_without_restart(testapp, client, configure):
 
 @pytest.mark.xfail(
     strict=True,
-    raises=AppError,
+    raises=AssertionError,
     reason=(
         "Authlib answers 400 when client_secret_basic is not allowed, even if "
         "the client sent an Authorization header (RFC 6749 §5.2 asks for 401)."
@@ -76,9 +75,12 @@ def test_removed_auth_method_is_refused(testapp, client, configure):
     configure(
         metadata={"token_endpoint_auth_methods_supported": ["client_secret_post"]}
     )
-    res = client_credentials_token(testapp, client, status=401)
-    assert res.json["error"] == "invalid_client"
-    assert res.headers["WWW-Authenticate"].startswith("Basic ")
+    res = client_credentials_token(testapp, client, status="*")
+    assert (
+        res.status_int,
+        res.json["error"],
+        res.headers.get("WWW-Authenticate", "").split(" ")[0],
+    ) == (401, "invalid_client", "Basic")
 
 
 def test_removed_auth_method_gives_invalid_client(testapp, client, configure):

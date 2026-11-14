@@ -1,3 +1,6 @@
+from flask_babel import get_locale
+
+
 def test_admin_page_language_comes_from_the_url(testapp):
     assert '<html lang="en"' in testapp.get("/en/")
     assert '<html lang="fr"' in testapp.get("/fr/")
@@ -21,3 +24,8 @@ def test_language_links_keep_the_page(testapp):
 def test_admin_links_follow_the_browser_language(testapp):
     res = testapp.get("/interaction/persona", headers={"Accept-Language": "fr"})
     assert res.html.select_one("header h1 a")["href"] == "/fr/"
+
+
+def test_default_locale_outside_a_request(app):
+    with app.app_context():
+        assert str(get_locale()) == "en"

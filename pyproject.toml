@@ -161,7 +161,14 @@ commands_pre = [
 
 [tool.tox.env.coverage]
 commands = [
-    ["pytest", "--cov", "--cov-report", "term:skip-covered", "{posargs}"],
+    [
+        "pytest",
+        "--cov",
+        "--cov-report",
+        "term:skip-covered",
+        "--cov-fail-under=100",
+        "{posargs}",
+    ],
     ["coverage", "html"],
 ]
 
