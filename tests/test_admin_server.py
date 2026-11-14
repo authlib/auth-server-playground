@@ -25,7 +25,7 @@ def test_unknown_language(testapp):
 def test_home_shows_the_endpoints(testapp):
     res = testapp.get("/en/")
     assert "http://localhost/.well-known/oauth-authorization-server" in res
-    assert 'data-copy="http://localhost/oauth/token"' in res
+    assert res.html.select_one('input.copy-value[value="http://localhost/oauth/token"]')
 
 
 def test_home_counts(testapp, client, public_client):
@@ -152,3 +152,27 @@ def test_document_error_without_a_field_goes_on_top(testapp):
     form["grant_types_supported"] = ["client_credentials"]
     res = form.submit()
     assert "response_types_supported" in text(res, "#server")
+
+
+def test_copy_fields_have_a_label(testapp, client):
+    for url in ("/en/", f"/en/clients/{client['client_id']}"):
+        res = testapp.get(url)
+        fields = res.html.select("input.copy-value")
+        assert fields
+        for field in fields:
+            assert res.html.select_one(f'label[for="{field["id"]}"]')
+
+
+def test_copy_button(testapp):
+    res = testapp.get("/en/")
+    field = res.html.select_one("#token_endpoint-value")
+    group = field.parent
+    button = group.select_one("button[data-copy]")
+    assert group["aria-labelledby"] == "token_endpoint-value-label"
+    assert button["aria-label"] == "Copy token_endpoint"
+    assert {span.get("data-when") for span in button.select("span")} == {
+        None,
+        "copied",
+        "failed",
+    }
+    assert group.find_next_sibling()["role"] == "status"

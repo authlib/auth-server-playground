@@ -1,24 +1,30 @@
+// The timers that bring each button back to its first label.
+const resets = new WeakMap();
+
 // Listen on the document, so that the buttons htmx swaps in work too.
 document.addEventListener('click', event => {
     const button = event.target.closest('[data-copy]');
     if (!button) {
         return;
     }
+    const group = button.closest('[role="group"]');
+    const value = group.querySelector('input').value;
+    const status = group.nextElementSibling;
 
-    // Read the label once: a second click would read the "copied" label.
-    const label = button.dataset.label ??= button.textContent;
+    const show = state => {
+        button.dataset.state = state;
+        status.textContent = button.querySelector(`[data-when="${state}"]`).textContent;
+    };
 
     // The clipboard API only exists in secure contexts: HTTPS or localhost.
     const copied = navigator.clipboard
-        ? navigator.clipboard.writeText(button.dataset.copy)
+        ? navigator.clipboard.writeText(value)
         : Promise.reject(new Error('No clipboard'));
-    copied.then(() => {
-        button.textContent = button.dataset.copied;
-    }).catch(() => {
-        button.textContent = button.dataset.failed;
-    }).finally(() => {
-        setTimeout(() => {
-            button.textContent = label;
-        }, 2000);
+    copied.then(() => show('copied')).catch(() => show('failed')).finally(() => {
+        clearTimeout(resets.get(button));
+        resets.set(button, setTimeout(() => {
+            delete button.dataset.state;
+            status.textContent = '';
+        }, 2000));
     });
 });

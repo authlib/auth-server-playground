@@ -1,3 +1,16 @@
-{% macro copy_button(value, label) -%}
-    <button type="button" class="outline secondary" data-copy="{{ value }}" data-copied="{% trans %}Copied!{% endtrans %}" data-failed="{% trans %}Copy failed{% endtrans %}" aria-label="{{ label }}">{% trans %}Copy{% endtrans %}</button>
+{#- A label, then a read-only field joined to its copy button. The call
+    block holds the label content. The status tells screen readers whether
+    the copy worked. -#}
+{% macro copy_field(id, value, copy_label) -%}
+    <label id="{{ id }}-label" for="{{ id }}">{{ caller() }}</label>
+    <div role="group" aria-labelledby="{{ id }}-label">
+        <input id="{{ id }}" class="copy-value" type="text" readonly value="{{ value }}">
+        {#- The three labels share one place, so that the button keeps its width. -#}
+        <button type="button" class="outline secondary copy-button" data-copy aria-label="{{ copy_label }}">
+            <span>{% trans %}Copy{% endtrans %}</span>
+            <span data-when="copied">{% trans %}Copied!{% endtrans %}</span>
+            <span data-when="failed">{% trans %}Copy failed{% endtrans %}</span>
+        </button>
+    </div>
+    <span class="sr-only" role="status"></span>
 {%- endmacro %}

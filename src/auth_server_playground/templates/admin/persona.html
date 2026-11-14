@@ -4,12 +4,6 @@
 {% set title = persona|string if persona else _("New persona") %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-    <nav aria-label="breadcrumb">
-        <ul>
-            <li><a href="{{ url_for('admin.personas') }}">{% trans %}Personas{% endtrans %}</a></li>
-            <li>{{ title }}</li>
-        </ul>
-    </nav>
     <h2>{{ title }}</h2>
     <div class="with-aside">
         {% call render_form(form, request.path, id="persona") %}

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-14 13:09+0100\n"
+"POT-Creation-Date: 2026-11-14 13:33+0100\n"
 "PO-Revision-Date: 2026-11-13 15:51+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -177,7 +177,7 @@ msgid "not supported by the server"
 msgstr "non pris en charge par le serveur"
 
 #: src/auth_server_playground/forms.py:306
-#: src/auth_server_playground/templates/admin/client.html:42
+#: src/auth_server_playground/templates/admin/client.html:36
 #: src/auth_server_playground/templates/admin/clients.html:14
 msgid "Client ID"
 msgstr "ID du client"
@@ -397,7 +397,6 @@ msgstr "Fichier d'instantané"
 
 #: src/auth_server_playground/forms.py:649
 #: src/auth_server_playground/templates/admin/snapshot.html:16
-#: src/auth_server_playground/templates/admin/snapshot_confirm.html:9
 msgid "Import"
 msgstr "Importer"
 
@@ -405,17 +404,17 @@ msgstr "Importer"
 msgid "Replace everything"
 msgstr "Tout remplacer"
 
-#: src/auth_server_playground/templates/_copy.html:2
+#: src/auth_server_playground/templates/_copy.html:10
+msgid "Copy"
+msgstr "Copier"
+
+#: src/auth_server_playground/templates/_copy.html:11
 msgid "Copied!"
 msgstr "Copié !"
 
-#: src/auth_server_playground/templates/_copy.html:2
+#: src/auth_server_playground/templates/_copy.html:12
 msgid "Copy failed"
 msgstr "Échec de la copie"
-
-#: src/auth_server_playground/templates/_copy.html:2
-msgid "Copy"
-msgstr "Copier"
 
 #: src/auth_server_playground/templates/layout.html:19
 msgid "OAuth 2.0 demonstration server"
@@ -426,7 +425,7 @@ msgid "Error:"
 msgstr "Erreur :"
 
 #: src/auth_server_playground/templates/admin/clients.html:31
-#: src/auth_server_playground/templates/admin/index.html:42
+#: src/auth_server_playground/templates/admin/index.html:36
 #: src/auth_server_playground/templates/layout.html:26
 msgid "Warning:"
 msgstr "Attention :"
@@ -452,50 +451,49 @@ msgstr "Métadonnées publiées"
 msgid "New client"
 msgstr "Nouveau client"
 
-#: src/auth_server_playground/templates/admin/client.html:10
-#: src/auth_server_playground/templates/admin/clients.html:2
-#: src/auth_server_playground/templates/admin/clients.html:5
-#: src/auth_server_playground/templates/admin/index.html:29
-#: src/auth_server_playground/templates/admin/layout.html:3
-msgid "Clients"
-msgstr "Clients"
-
-#: src/auth_server_playground/templates/admin/client.html:41
+#: src/auth_server_playground/templates/admin/client.html:35
 msgid "Credentials"
 msgstr "Identifiants"
 
-#: src/auth_server_playground/templates/admin/client.html:45
+#: src/auth_server_playground/templates/admin/client.html:36
 msgid "Copy the client ID"
 msgstr "Copier l'ID du client"
 
-#: src/auth_server_playground/templates/admin/client.html:48
-msgid "Client secret"
-msgstr "Secret du client"
-
-#: src/auth_server_playground/templates/admin/client.html:51
+#: src/auth_server_playground/templates/admin/client.html:38
 msgid "Copy the client secret"
 msgstr "Copier le secret du client"
 
-#: src/auth_server_playground/templates/admin/client.html:55
+#: src/auth_server_playground/templates/admin/client.html:38
+msgid "Client secret"
+msgstr "Secret du client"
+
+#: src/auth_server_playground/templates/admin/client.html:41
 msgid "Regenerate the secret"
 msgstr "Régénérer le secret"
 
-#: src/auth_server_playground/templates/admin/client.html:59
+#: src/auth_server_playground/templates/admin/client.html:45
 msgid "A public client has no secret."
 msgstr "Un client public n'a pas de secret."
 
-#: src/auth_server_playground/templates/admin/client.html:63
-#: src/auth_server_playground/templates/admin/persona.html:72
+#: src/auth_server_playground/templates/admin/client.html:49
+#: src/auth_server_playground/templates/admin/persona.html:66
 msgid "Delete"
 msgstr "Supprimer"
 
-#: src/auth_server_playground/templates/admin/client.html:64
+#: src/auth_server_playground/templates/admin/client.html:50
 msgid "Deletes the client, its codes and its tokens."
 msgstr "Supprime le client, ses codes et ses jetons."
 
-#: src/auth_server_playground/templates/admin/client.html:67
+#: src/auth_server_playground/templates/admin/client.html:53
 msgid "Delete the client"
 msgstr "Supprimer le client"
+
+#: src/auth_server_playground/templates/admin/clients.html:2
+#: src/auth_server_playground/templates/admin/clients.html:5
+#: src/auth_server_playground/templates/admin/index.html:23
+#: src/auth_server_playground/templates/admin/layout.html:3
+msgid "Clients"
+msgstr "Clients"
 
 #: src/auth_server_playground/templates/admin/clients.html:15
 msgid "Authentication"
@@ -521,48 +519,47 @@ msgstr "Accueil"
 msgid "Server"
 msgstr "Serveur"
 
-#: src/auth_server_playground/templates/admin/index.html:10
+#: src/auth_server_playground/templates/admin/index.html:8
 msgid "Copy the issuer"
 msgstr "Copier l'émetteur"
 
-#: src/auth_server_playground/templates/admin/index.html:11
-msgid "Metadata"
-msgstr "Métadonnées"
-
-#: src/auth_server_playground/templates/admin/index.html:13
+#: src/auth_server_playground/templates/admin/index.html:9
 msgid "Copy the metadata URL"
 msgstr "Copier l'URL des métadonnées"
 
-#: src/auth_server_playground/templates/admin/index.html:17
+#: src/auth_server_playground/templates/admin/index.html:9
+msgid "Metadata"
+msgstr "Métadonnées"
+
+#: src/auth_server_playground/templates/admin/index.html:11
 #, python-format
 msgid "Copy %(endpoint)s"
 msgstr "Copier %(endpoint)s"
 
-#: src/auth_server_playground/templates/admin/index.html:21
+#: src/auth_server_playground/templates/admin/index.html:15
 msgid "Grants:"
 msgstr "Grants :"
 
-#: src/auth_server_playground/templates/admin/index.html:23
+#: src/auth_server_playground/templates/admin/index.html:17
 msgid "Configure the server"
 msgstr "Configurer le serveur"
 
-#: src/auth_server_playground/templates/admin/index.html:31
+#: src/auth_server_playground/templates/admin/index.html:25
 msgid "Manage the clients"
 msgstr "Gérer les clients"
 
-#: src/auth_server_playground/templates/admin/index.html:34
+#: src/auth_server_playground/templates/admin/index.html:28
 #: src/auth_server_playground/templates/admin/layout.html:3
-#: src/auth_server_playground/templates/admin/persona.html:9
 #: src/auth_server_playground/templates/admin/personas.html:3
 #: src/auth_server_playground/templates/admin/personas.html:6
 msgid "Personas"
 msgstr "Personas"
 
-#: src/auth_server_playground/templates/admin/index.html:36
+#: src/auth_server_playground/templates/admin/index.html:30
 msgid "Manage the personas"
 msgstr "Gérer les personas"
 
-#: src/auth_server_playground/templates/admin/index.html:43
+#: src/auth_server_playground/templates/admin/index.html:37
 #, python-format
 msgid "The server does not support these values of %(client)s:"
 msgstr "Le serveur ne prend pas en charge ces valeurs de %(client)s :"
@@ -570,16 +567,15 @@ msgstr "Le serveur ne prend pas en charge ces valeurs de %(client)s :"
 #: src/auth_server_playground/templates/admin/layout.html:3
 #: src/auth_server_playground/templates/admin/snapshot.html:2
 #: src/auth_server_playground/templates/admin/snapshot.html:4
-#: src/auth_server_playground/templates/admin/snapshot_confirm.html:8
 msgid "Snapshot"
 msgstr "Instantané"
 
-#: src/auth_server_playground/templates/admin/layout.html:18
+#: src/auth_server_playground/templates/admin/layout.html:20
 #, python-format
 msgid "Acting as <strong>%(persona)s</strong>"
 msgstr "En tant que <strong>%(persona)s</strong>"
 
-#: src/auth_server_playground/templates/admin/layout.html:19
+#: src/auth_server_playground/templates/admin/layout.html:21
 msgid "Forget persona"
 msgstr "Oublier la persona"
 
@@ -588,48 +584,48 @@ msgstr "Oublier la persona"
 msgid "New persona"
 msgstr "Nouvelle persona"
 
-#: src/auth_server_playground/templates/admin/persona.html:18
+#: src/auth_server_playground/templates/admin/persona.html:12
 msgid "Profile"
 msgstr "Profil"
 
-#: src/auth_server_playground/templates/admin/persona.html:27
+#: src/auth_server_playground/templates/admin/persona.html:21
 msgid "Contact"
 msgstr "Contact"
 
-#: src/auth_server_playground/templates/admin/persona.html:32
+#: src/auth_server_playground/templates/admin/persona.html:26
 msgid "Regional settings"
 msgstr "Paramètres régionaux"
 
-#: src/auth_server_playground/templates/admin/persona.html:36
+#: src/auth_server_playground/templates/admin/persona.html:30
 msgid "Address"
 msgstr "Adresse"
 
-#: src/auth_server_playground/templates/admin/persona.html:50
+#: src/auth_server_playground/templates/admin/persona.html:44
 #, python-format
 msgid "Avatar of %(persona)s"
 msgstr "Avatar de %(persona)s"
 
-#: src/auth_server_playground/templates/admin/persona.html:56
+#: src/auth_server_playground/templates/admin/persona.html:50
 msgid "The picture claim replaces the generated avatar."
 msgstr "La claim picture remplace l'avatar généré."
 
-#: src/auth_server_playground/templates/admin/persona.html:59
+#: src/auth_server_playground/templates/admin/persona.html:53
 msgid "Draw another avatar"
 msgstr "Dessiner un autre avatar"
 
-#: src/auth_server_playground/templates/admin/persona.html:66
+#: src/auth_server_playground/templates/admin/persona.html:60
 msgid "Updated"
 msgstr "Mise à jour"
 
-#: src/auth_server_playground/templates/admin/persona.html:68
+#: src/auth_server_playground/templates/admin/persona.html:62
 msgid "Set on each save."
 msgstr "Mis à jour à chaque enregistrement."
 
-#: src/auth_server_playground/templates/admin/persona.html:73
+#: src/auth_server_playground/templates/admin/persona.html:67
 msgid "Deletes the persona, its codes and its tokens."
 msgstr "Supprime la persona, ses codes et ses jetons."
 
-#: src/auth_server_playground/templates/admin/persona.html:76
+#: src/auth_server_playground/templates/admin/persona.html:70
 msgid "Delete the persona"
 msgstr "Supprimer la persona"
 
@@ -670,42 +666,47 @@ msgid "You confirm on the next page. Nothing changes before."
 msgstr "Vous confirmez à la page suivante. Rien ne change avant."
 
 #: src/auth_server_playground/templates/admin/snapshot_confirm.html:4
+#: src/auth_server_playground/templates/admin/snapshot_confirm.html:6
 msgid "Import a snapshot"
 msgstr "Importer un instantané"
 
-#: src/auth_server_playground/templates/admin/snapshot_confirm.html:13
+#: src/auth_server_playground/templates/admin/snapshot_confirm.html:8
 msgid "Replace everything?"
 msgstr "Tout remplacer ?"
 
-#: src/auth_server_playground/templates/admin/snapshot_confirm.html:14
+#: src/auth_server_playground/templates/admin/snapshot_confirm.html:9
 msgid "The playground will hold the content of the file:"
 msgstr "Le playground contiendra le contenu du fichier :"
 
-#: src/auth_server_playground/templates/admin/snapshot_confirm.html:16
+#: src/auth_server_playground/templates/admin/snapshot_confirm.html:11
 msgid "the server configuration;"
 msgstr "la configuration du serveur ;"
 
-#: src/auth_server_playground/templates/admin/snapshot_confirm.html:17
+#: src/auth_server_playground/templates/admin/snapshot_confirm.html:12
 #, python-format
 msgid "%(count)s persona;"
 msgid_plural "%(count)s personas;"
 msgstr[0] "%(count)s persona ;"
 msgstr[1] "%(count)s personas ;"
 
-#: src/auth_server_playground/templates/admin/snapshot_confirm.html:18
+#: src/auth_server_playground/templates/admin/snapshot_confirm.html:13
 #, python-format
 msgid "%(count)s client."
 msgid_plural "%(count)s clients."
 msgstr[0] "%(count)s client."
 msgstr[1] "%(count)s clients."
 
-#: src/auth_server_playground/templates/admin/snapshot_confirm.html:20
+#: src/auth_server_playground/templates/admin/snapshot_confirm.html:15
 msgid ""
 "The current personas and clients are deleted, with all the codes and "
 "tokens. The selected persona is forgotten."
 msgstr ""
 "Les personas et clients actuels sont supprimés, avec tous les codes et "
 "jetons. La persona choisie est oubliée."
+
+#: src/auth_server_playground/templates/admin/snapshot_confirm.html:20
+msgid "Cancel"
+msgstr "Annuler"
 
 #: src/auth_server_playground/templates/interaction/consent.html:3
 msgid "Consent"

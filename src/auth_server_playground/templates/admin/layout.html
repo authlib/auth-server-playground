@@ -5,8 +5,10 @@
         <ul>
             {% for endpoint, label in links %}
                 {#- A detail page sets the section it belongs to. -#}
-                {% if (section or request.endpoint) == endpoint %}
-                    <li><a href="{{ url_for(endpoint) }}" aria-current="page"><strong>{{ label }}</strong></a></li>
+                {% if request.endpoint == endpoint %}
+                    <li><a href="{{ url_for(endpoint) }}" aria-current="page">{{ label }}</a></li>
+                {% elif section == endpoint %}
+                    <li><a href="{{ url_for(endpoint) }}" aria-current="true">{{ label }}</a></li>
                 {% else %}
                     <li><a href="{{ url_for(endpoint) }}">{{ label }}</a></li>
                 {% endif %}

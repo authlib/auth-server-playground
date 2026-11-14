@@ -1,16 +1,10 @@
 {% extends "admin/layout.html" %}
 {% set section = "admin.clients" %}
-{% from "_copy.html" import copy_button %}
+{% from "_copy.html" import copy_field %}
 {% from "_form.html" import render_form %}
 {% set title = (client.client_name or client.client_id) if client else _("New client") %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-    <nav aria-label="breadcrumb">
-        <ul>
-            <li><a href="{{ url_for('admin.clients') }}">{% trans %}Clients{% endtrans %}</a></li>
-            <li>{{ title }}</li>
-        </ul>
-    </nav>
     <h2>{{ title }}</h2>
     <div class="with-aside">
         {% call render_form(form, request.path, id="client") %}
@@ -39,17 +33,9 @@
             <aside>
                 <article>
                     <header><h3>{% trans %}Credentials{% endtrans %}</h3></header>
-                    <label for="client-id-value">{% trans %}Client ID{% endtrans %}</label>
-                    <div role="group">
-                        <input id="client-id-value" type="text" readonly value="{{ client.client_id }}">
-                        {{ copy_button(client.client_id, _("Copy the client ID")) }}
-                    </div>
+                    {% call copy_field("client-id-value", client.client_id, _("Copy the client ID")) %}{% trans %}Client ID{% endtrans %}{% endcall %}
                     {% if client.client_secret %}
-                        <label for="client-secret-value">{% trans %}Client secret{% endtrans %}</label>
-                        <div role="group">
-                            <input id="client-secret-value" type="text" readonly value="{{ client.client_secret }}">
-                            {{ copy_button(client.client_secret, _("Copy the client secret")) }}
-                        </div>
+                        {% call copy_field("client-secret-value", client.client_secret, _("Copy the client secret")) %}{% trans %}Client secret{% endtrans %}{% endcall %}
                         <footer>
                             {% call render_form(regenerate_form, url_for('admin.regenerate_secret', client_id=client.client_id), id="regenerate") %}
                                 {{ regenerate_form.submit(value=_("Regenerate the secret"), class="outline") }}

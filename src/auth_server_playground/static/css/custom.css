@@ -33,6 +33,41 @@ header h1 a:hover {
     text-decoration: underline;
 }
 
+/* On the admin pages, the navigation sits right under the title. */
+body > header:has(> nav) {
+    padding-bottom: 0;
+}
+
+body > header:has(> nav) > hgroup {
+    margin-bottom: 0;
+}
+
+/* On small screens, the links and the persona go on several lines. */
+body > header nav,
+body > header nav ul {
+    flex-wrap: wrap;
+}
+
+@media (width < 768px) {
+    body > header nav li {
+        padding-block: 0.25rem;
+    }
+}
+
+body > header:has(> nav) + main {
+    padding-top: calc(var(--pico-spacing) / 2);
+}
+
+/* The current section is underlined, not only bold. */
+body > header nav a[aria-current] {
+    color: var(--pico-color);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: var(--pico-primary);
+    text-decoration-thickness: 0.15rem;
+    text-underline-offset: 0.45rem;
+}
+
 /* A page title with its actions on the same line. */
 .page-title {
     display: flex;
@@ -65,20 +100,59 @@ header h1 a:hover {
     max-width: 640px;
 }
 
-/* Name, value and copy button on each row. */
-.copy-list {
+/* A value to copy, joined to its copy button. */
+.copy-value {
+    min-width: 0;
+    font-family: var(--pico-font-family-monospace);
+    font-size: 0.875em;
+}
+
+/* Name, then the value and its copy button, on each row. */
+.copy-rows {
     display: grid;
-    grid-template-columns: minmax(0, max-content) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
     gap: calc(var(--pico-spacing) / 2) var(--pico-spacing);
     align-items: center;
 }
 
-.copy-list code {
-    overflow-wrap: anywhere;
+.copy-rows label,
+.copy-rows [role="group"] {
+    margin: 0;
 }
 
-.copy-list button {
-    margin: 0;
+/* All labels of a copy button share one grid cell. The button is as wide as
+   the longest label. Only the label of the current state is visible. */
+.copy-button {
+    display: grid;
+    align-items: center;
+    padding-inline: 1rem;
+    white-space: nowrap;
+}
+
+.copy-button > span {
+    grid-area: 1 / 1;
+}
+
+.copy-button > span[data-when],
+.copy-button[data-state] > span:not([data-when]) {
+    visibility: hidden;
+}
+
+.copy-button[data-state="copied"] > [data-when="copied"],
+.copy-button[data-state="failed"] > [data-when="failed"] {
+    visibility: visible;
+}
+
+/* On small screens, the name goes above its value. */
+@media (width < 768px) {
+    .copy-rows {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: 0.25rem;
+    }
+
+    .copy-rows [role="group"] {
+        margin-bottom: calc(var(--pico-spacing) / 2);
+    }
 }
 
 .table-scroll {

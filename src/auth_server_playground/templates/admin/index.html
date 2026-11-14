@@ -1,25 +1,19 @@
 {% extends "admin/layout.html" %}
-{% from "_copy.html" import copy_button %}
+{% from "_copy.html" import copy_field %}
 {% block title %}{% trans %}Home{% endtrans %}{% endblock %}
 {% block content %}
     <article>
         <header><h2>{% trans %}Server{% endtrans %}</h2></header>
-        <div class="copy-list">
-            <span>{% trans %}Issuer{% endtrans %}</span>
-            <code>{{ metadata.issuer }}</code>
-            {{ copy_button(metadata.issuer, _("Copy the issuer")) }}
-            <span>{% trans %}Metadata{% endtrans %}</span>
-            <code>{{ metadata_url }}</code>
-            {{ copy_button(metadata_url, _("Copy the metadata URL")) }}
+        <div class="copy-rows">
+            {% call copy_field("issuer-value", metadata.issuer, _("Copy the issuer")) %}{% trans %}Issuer{% endtrans %}{% endcall %}
+            {% call copy_field("metadata-value", metadata_url, _("Copy the metadata URL")) %}{% trans %}Metadata{% endtrans %}{% endcall %}
             {% for key in endpoints if metadata[key] %}
-                <span><code>{{ key }}</code></span>
-                <code>{{ metadata[key] }}</code>
-                {{ copy_button(metadata[key], _("Copy %(endpoint)s", endpoint=key)) }}
+                {% call copy_field(key ~ "-value", metadata[key], _("Copy %(endpoint)s", endpoint=key)) %}<code>{{ key }}</code>{% endcall %}
             {% endfor %}
         </div>
         <footer>
             {% trans %}Grants:{% endtrans %}
-            {% for grant in metadata.grant_types_supported %}<mark>{{ grant }}</mark> {% endfor %}
+            {% for grant in metadata.grant_types_supported %}<code>{{ grant }}</code> {% endfor %}
             <a href="{{ url_for('admin.server') }}">{% trans %}Configure the server{% endtrans %}</a>
         </footer>
     </article>

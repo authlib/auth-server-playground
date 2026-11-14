@@ -254,4 +254,5 @@ def test_client_page_has_unique_ids(testapp, client):
 
 def test_navigation_marks_the_clients_section(testapp, client):
     res = testapp.get(f"/en/clients/{client['client_id']}")
-    assert text(res, 'nav [aria-current="page"]') == "Clients"
+    assert text(res, 'nav [aria-current="true"]') == "Clients"
+    assert not res.html.select('nav [aria-current="page"]')
