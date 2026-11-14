@@ -1,0 +1,39 @@
+{% extends "admin/layout.html" %}
+{% from "_form.html" import render_form %}
+{% block title %}{% trans %}Personas{% endtrans %}{% endblock %}
+{% block content %}
+    <div class="page-title">
+        <h2>{% trans %}Personas{% endtrans %}</h2>
+        <div class="actions">
+            <a href="{{ url_for('admin.new_persona') }}" role="button" class="outline">{% trans %}New persona{% endtrans %}</a>
+            {% call render_form(random_form, url_for('admin.random_persona'), id="random") %}
+                <div role="group">
+                    {{ random_form.locale(**{"aria-label": _("Locale of the random persona")}) }}
+                    {{ random_form.create() }}
+                </div>
+            {% endcall %}
+        </div>
+    </div>
+    <div class="cards">
+        {% for persona in personas %}
+            <article class="persona-card">
+                {% set url = persona.picture_url %}
+                {% if url %}
+                    <img class="avatar" src="{{ url }}" alt="" width="64" height="64">
+                {% else %}
+                    <span class="avatar avatar-empty" aria-hidden="true"></span>
+                {% endif %}
+                <div>
+                    <a href="{{ url_for('admin.edit_persona', persona_id=persona.id) }}"><strong>{{ persona }}</strong></a>
+                    <div>
+                        <small>
+                            {% if persona.preferred_username %}<code>{{ persona.preferred_username }}</code>{% endif %}
+                            {% if persona.claims.email %}• {{ persona.claims.email }}{% endif %}
+                        </small>
+                    </div>
+                    <div><small class="wrap">sub <code>{{ persona.sub }}</code></small></div>
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+{% endblock %}

@@ -16,8 +16,37 @@
             </p>
         </header>
         {% call render_form(form, request.script_root + request.full_path, id="select-persona") %}
-            {{ form.persona() }}
+            <fieldset{% if form.persona.errors %} aria-invalid="true" aria-describedby="persona-error"{% endif %}>
+                <legend class="sr-only">{{ form.persona.label.text }}</legend>
+                {% for option in form.persona %}
+                    {% set persona = personas[option.data] %}
+                    {% set url = persona.picture_url %}
+                    <label class="persona-choice" for="{{ option.id }}">
+                        {{ option() }}
+                        {% if url %}
+                            <img class="avatar avatar-small" src="{{ url }}" alt="" width="40" height="40">
+                        {% else %}
+                            <span class="avatar avatar-small avatar-empty" aria-hidden="true"></span>
+                        {% endif %}
+                        <span>
+                            <strong>{{ persona }}</strong><br>
+                            <small>
+                                {% if persona.preferred_username %}<code>{{ persona.preferred_username }}</code>{% endif %}
+                                {% if persona.claims.email %}• {{ persona.claims.email }}{% endif %}
+                            </small>
+                        </span>
+                    </label>
+                {% endfor %}
+            </fieldset>
+            {% if form.persona.errors %}
+                <small id="persona-error">{{ form.persona.errors|join(" ") }}</small>
+            {% endif %}
             {{ form.select() }}
         {% endcall %}
+        <footer>
+            {% call render_form(random_form, url_for('interaction.random_persona', next=request.args.get('next')), id="random") %}
+                {{ random_form.submit(value=_("Continue with a new random persona"), class="outline secondary") }}
+            {% endcall %}
+        </footer>
     </article>
 {% endblock %}

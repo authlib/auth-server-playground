@@ -1,6 +1,7 @@
 from authlib.integrations.flask_oauth2 import current_token
 from authlib.oauth2 import OAuth2Error
 from flask import Blueprint
+from flask import Response
 from flask import abort
 from flask import flash
 from flask import jsonify
@@ -12,6 +13,8 @@ from flask_babel import gettext as _
 
 from .forms import ConsentForm
 from .interaction import current_persona
+from .models import Persona
+from .models import db
 from .server import get_server
 from .server import require_oauth
 from .settings import published_metadata
@@ -97,3 +100,17 @@ def resource():
     if token.persona is not None:
         data["sub"] = token.persona.sub
     return jsonify(data)
+
+
+@bp.route("/personas/<int:persona_id>/picture.svg")
+def persona_picture(persona_id):
+    # The id, not the sub: a sub may hold "/" and could not be a path segment.
+    persona = db.get_or_404(Persona, persona_id)
+    if not persona.picture_svg:
+        abort(404)
+    response = Response(persona.picture_svg, mimetype="image/svg+xml")
+    # The SVG comes from this origin: it must not run scripts.
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'none'; style-src 'unsafe-inline'"
+    )
+    return response

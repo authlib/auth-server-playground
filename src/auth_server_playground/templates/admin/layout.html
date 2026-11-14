@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block navigation %}
-    {% set links = [("admin.index", _("Home")), ("admin.server", _("Server")), ("admin.clients", _("Clients"))] %}
+    {% set links = [("admin.index", _("Home")), ("admin.server", _("Server")), ("admin.clients", _("Clients")), ("admin.personas", _("Personas"))] %}
     <nav>
         <ul>
             {% for endpoint, label in links %}

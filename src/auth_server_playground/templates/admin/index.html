@@ -33,6 +33,7 @@
         <article>
             <header><h3>{% trans %}Personas{% endtrans %}</h3></header>
             <p><strong id="persona-count">{{ persona_count }}</strong></p>
+            <footer><a href="{{ url_for('admin.personas') }}">{% trans %}Manage the personas{% endtrans %}</a></footer>
         </article>
     </div>
 

@@ -1,5 +1,6 @@
 import json
 import secrets
+import time
 
 from flask import Blueprint
 from flask import flash
@@ -7,16 +8,22 @@ from flask import redirect
 from flask import render_template
 from flask import request
 from flask import url_for
+from flask_babel import get_locale
 from flask_babel import gettext as _
 
 from .endpoints import current_metadata
 from .forms import ActionForm
 from .forms import ClientForm
+from .forms import PersonaForm
+from .forms import RandomPersonaForm
 from .forms import ServerForm
 from .interaction import current_persona
 from .models import Client
 from .models import Persona
 from .models import db
+from .personas import create_random_persona
+from .personas import random_locale_for
+from .personas import render_avatar
 from .settings import ENDPOINTS
 from .settings import InvalidDocument
 from .settings import default_document
@@ -172,3 +179,82 @@ def remove_client(client_id):
     delete_client(client)
     flash(_("The client is deleted."), "success")
     return redirect(url_for("admin.clients"))
+
+
+@bp.route("/personas")
+def personas():
+    return render_template(
+        "admin/personas.html",
+        personas=Persona.query.order_by(Persona.id).all(),
+        random_form=RandomPersonaForm(
+            prefix="random", locale=random_locale_for(get_locale().language)
+        ),
+    )
+
+
+@bp.route("/personas/new", methods=["GET", "POST"])
+def new_persona():
+    form = PersonaForm()
+    if not form.validate_on_submit():
+        return render_template("admin/persona.html", form=form, persona=None)
+
+    persona = form.save_persona()
+    flash(_("The persona is created."), "success")
+    return redirect(url_for("admin.edit_persona", persona_id=persona.id))
+
+
+@bp.route("/personas/random", methods=["POST"])
+def random_persona():
+    form = RandomPersonaForm(prefix="random")
+    if not form.validate_on_submit():
+        return redirect(url_for("admin.personas"))
+
+    persona = create_random_persona(form.locale.data)
+    flash(_("A random persona is created."), "success")
+    return redirect(url_for("admin.edit_persona", persona_id=persona.id))
+
+
+def get_persona(persona_id):
+    return db.get_or_404(Persona, persona_id)
+
+
+@bp.route("/personas/<int:persona_id>", methods=["GET", "POST"])
+def edit_persona(persona_id):
+    persona = get_persona(persona_id)
+    form = PersonaForm(persona)
+    if not form.validate_on_submit():
+        return render_template(
+            "admin/persona.html",
+            form=form,
+            persona=persona,
+            avatar_form=ActionForm(prefix="avatar"),
+            delete_form=ActionForm(prefix="delete"),
+        )
+
+    form.save_persona()
+    flash(_("The persona is saved."), "success")
+    return redirect(url_for("admin.edit_persona", persona_id=persona_id))
+
+
+@bp.route("/personas/<int:persona_id>/avatar", methods=["POST"])
+def redraw_avatar(persona_id):
+    persona = get_persona(persona_id)
+    if ActionForm(prefix="avatar").validate_on_submit():
+        persona.picture_svg = render_avatar()
+        # The picture claim changes with the avatar.
+        persona.claims = {**persona.claims, "updated_at": int(time.time())}
+        db.session.commit()
+    return redirect(url_for("admin.edit_persona", persona_id=persona_id))
+
+
+@bp.route("/personas/<int:persona_id>/delete", methods=["POST"])
+def remove_persona(persona_id):
+    persona = get_persona(persona_id)
+    if not ActionForm(prefix="delete").validate_on_submit():
+        return redirect(url_for("admin.edit_persona", persona_id=persona_id))
+
+    # The cascade of the model deletes the codes and the tokens of the persona.
+    db.session.delete(persona)
+    db.session.commit()
+    flash(_("The persona is deleted."), "success")
+    return redirect(url_for("admin.personas"))

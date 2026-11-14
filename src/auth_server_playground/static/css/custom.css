@@ -106,3 +106,79 @@ fieldset ul {
 fieldset ul li {
     list-style: none;
 }
+
+/* A row of actions next to a page title. */
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: calc(var(--pico-spacing) / 2);
+}
+
+.actions form,
+.actions [role="group"] {
+    margin: 0;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--pico-spacing);
+}
+
+.persona-card,
+.persona-choice {
+    display: flex;
+    gap: var(--pico-spacing);
+    align-items: center;
+}
+
+.persona-card {
+    margin: 0;
+}
+
+.persona-choice {
+    padding-block: calc(var(--pico-spacing) / 2);
+}
+
+.wrap code {
+    overflow-wrap: anywhere;
+}
+
+/* Generated avatars and the place of a missing one. */
+.avatar {
+    flex: none;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+}
+
+.avatar-small {
+    width: 40px;
+    height: 40px;
+}
+
+.avatar-large {
+    display: block;
+    width: 160px;
+    height: 160px;
+    margin-inline: auto;
+}
+
+.avatar-empty {
+    display: inline-block;
+    border: 2px dashed var(--pico-muted-border-color);
+}
+
+.avatar-card {
+    text-align: center;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}

@@ -14,11 +14,13 @@ source = { editable = "." }
 dependencies = [
     { name = "authlib" },
     { name = "babel" },
+    { name = "faker" },
     { name = "flask" },
     { name = "flask-babel" },
     { name = "flask-sqlalchemy" },
     { name = "flask-wtf" },
     { name = "flask-wtforms-htmx" },
+    { name = "python-avatars" },
     { name = "python-dotenv" },
 ]
 
@@ -36,11 +38,13 @@ dev = [
 requires-dist = [
     { name = "authlib", specifier = ">=1.10.0b1" },
     { name = "babel", specifier = ">=2.18.0" },
+    { name = "faker", specifier = ">=40.54.0" },
     { name = "flask", specifier = ">=3.1.2" },
     { name = "flask-babel", specifier = ">=4.0.0" },
     { name = "flask-sqlalchemy", specifier = ">=3.1.1" },
     { name = "flask-wtf", specifier = ">=1.3.0" },
     { name = "flask-wtforms-htmx", specifier = ">=0.1.0" },
+    { name = "python-avatars", specifier = ">=1.4.1" },
     { name = "python-dotenv", specifier = ">=1.2.4" },
 ]
 
@@ -429,6 +433,18 @@ wheels = [
 ]
 
 [[package]]
+name = "faker"
+version = "40.54.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d9/64/eace8e5941eaf51b62d56a54e3ab8380934b0ab2deef2c640ed1153ea47f/faker-40.54.0.tar.gz", hash = "sha256:38fba73e32699a9f1071724d67e5a66a84bf057987cffb27c9d0c979fda3f135", size = 2037669, upload-time = "2026-11-10T22:05:54.089Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/85/2d/031405437c6ccdc5fb24fc8cc715fbe5fbf9af492749ad070d9cc85f69dc/faker-40.54.0-py3-none-any.whl", hash = "sha256:2dd88ee8cb63a9149e19ef48bdd73879bc3854d8ba2d6c1535e902a762e603f7", size = 2071041, upload-time = "2026-11-10T22:05:51.787Z" },
+]
+
+[[package]]
 name = "filelock"
 version = "4.2.10"
 source = { registry = "https://pypi.org/simple" }
@@ -808,6 +824,15 @@ wheels = [
 ]
 
 [[package]]
+name = "python-avatars"
+version = "1.4.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c2/b6/cca0fe90db8dd804a81dc1e428f40e168ac194d9a14d2b5268cdc45ef5d4/python_avatars-1.4.1.tar.gz", hash = "sha256:133dc0e1dfd778f0287aa6b6697da2677aeb3ce985ebf908205068e963165b0e", size = 215434, upload-time = "2024-07-14T09:54:36.542Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b0/50/a6c79dd2e1b9de1aa64f3b38e10be972308dd004f94ac76f6ea6060c9fd5/python_avatars-1.4.1-py3-none-any.whl", hash = "sha256:ef97b1f8ac23583367705f876fbbac1cc118435982532d882ccc788e95663722", size = 301092, upload-time = "2024-07-14T09:54:34.629Z" },
+]
+
+[[package]]
 name = "python-discovery"
 version = "1.9.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1007,6 +1032,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f6/cc/6253133b5bb138fc3306cebfbda2c520f545d36b5be2c7255cc528bb45d6/typing_extensions-4.16.0.tar.gz", hash = "sha256:dc983d19a509c94dba722ee6abd33940f7c05a89e243c47e907eb4db6f1a43e5", size = 113555, upload-time = "2026-07-02T08:40:05.92Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl", hash = "sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8", size = 45571, upload-time = "2026-07-02T08:40:04.659Z" },
+]
+
+[[package]]
+name = "tzdata"
+version = "2026.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7a/29/6a1391d31cd00ff9e927215a224a880e1e84e826b64ba80a499e51c074d8/tzdata-2026.6.tar.gz", hash = "sha256:85d2cd9c09f81f0bb29db27759fc83af4f1e620efb814f8c5bf8b4cc4feece6d", size = 201017, upload-time = "2026-10-28T09:57:09.137Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/66/9a06c2227fedfd4919f0eaaa8b94377d9730882a7e4f95823c9a331ab5e1/tzdata-2026.6-py2.py3-none-any.whl", hash = "sha256:0a10eec6e13ef16b627fabed9a5f2ba61a62b1c67f327305f4e7e412a70b4aec", size = 348210, upload-time = "2026-10-28T09:57:07.276Z" },
 ]
 
 [[package]]

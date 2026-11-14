@@ -1,6 +1,24 @@
+import re
+import secrets
 import time
+import unicodedata
+import uuid
+
+import python_avatars
+from faker import Faker
 
 from .models import Persona
+from .models import db
+
+#: The Faker locales offered for random personas, with their time zone.
+RANDOM_LOCALES = {
+    "en_US": "America/New_York",
+    "fr_FR": "Europe/Paris",
+    "de_DE": "Europe/Berlin",
+    "es_ES": "Europe/Madrid",
+    "pt_BR": "America/Sao_Paulo",
+    "ja_JP": "Asia/Tokyo",
+}
 
 COMPLETE_SUB = "c0a1e3d2-7b5f-4e7a-9d2c-1f6b8a4e5c3d"
 MINIMAL_SUB = "5e8d2b1a-3c4f-4a6e-8b7d-9f0e1a2b3c4d"
@@ -11,6 +29,7 @@ def default_personas():
     now = int(time.time())
     complete = Persona(
         sub=COMPLETE_SUB,
+        picture_svg=render_avatar(),
         claims={
             "name": "Alice Martin",
             "given_name": "Alice",
@@ -56,3 +75,84 @@ def find_by_username(username):
     return Persona.query.filter(
         Persona.claims["preferred_username"].as_string() == username
     ).first()
+
+
+def render_avatar():
+    return python_avatars.Avatar.random().render()
+
+
+def random_locale_for(language):
+    """Return the Faker locale of the random personas for an interface language."""
+    for locale in RANDOM_LOCALES:
+        if locale.startswith(f"{language}_"):
+            return locale
+    return "en_US"
+
+
+def create_random_persona(locale):
+    """Create a random persona in the database, and return it."""
+    persona = random_persona(locale)
+    db.session.add(persona)
+    db.session.commit()
+    return persona
+
+
+def username_from(given_name, family_name):
+    """Return a lower case ASCII username built from the names, maybe empty."""
+    text = unicodedata.normalize("NFKD", f"{given_name[:1]}{family_name}")
+    return re.sub(r"[^a-z0-9]", "", text.encode("ascii", "ignore").decode().lower())
+
+
+def unique_username(username):
+    candidate = username
+    while find_by_username(candidate) is not None:
+        candidate = f"{username}{secrets.randbelow(10000)}"
+    return candidate
+
+
+def random_persona(locale):
+    """Return a persona with all the standard claims, from a Faker locale."""
+    fake = Faker(locale)
+    female = fake.boolean()
+    first_name = fake.first_name_female if female else fake.first_name_male
+    given_name = first_name()
+    family_name = fake.last_name()
+    # Names in other scripts give no ASCII username: Faker makes one instead.
+    username = unique_username(
+        username_from(given_name, family_name) or fake.user_name()
+    )
+    street = fake.street_address()
+    locality = fake.city()
+    postal_code = fake.postcode()
+    country = fake.current_country()
+    return Persona(
+        sub=str(uuid.uuid4()),
+        picture_svg=render_avatar(),
+        claims={
+            "name": f"{given_name} {family_name}",
+            "given_name": given_name,
+            "family_name": family_name,
+            "middle_name": first_name(),
+            "nickname": given_name,
+            "preferred_username": username,
+            "profile": f"https://{username}.example/profile",
+            "website": f"https://{username}.example",
+            # example.com is reserved for documentation (RFC 2606).
+            "email": f"{username}@example.com",
+            "email_verified": True,
+            "gender": "female" if female else "male",
+            "birthdate": fake.date_of_birth(minimum_age=18, maximum_age=90).isoformat(),
+            "zoneinfo": RANDOM_LOCALES[locale],
+            "locale": locale.replace("_", "-"),
+            "phone_number": fake.phone_number(),
+            "phone_number_verified": fake.boolean(),
+            "address": {
+                "formatted": f"{street}\n{postal_code} {locality}\n{country}",
+                "street_address": street,
+                "locality": locality,
+                "postal_code": postal_code,
+                "country": country,
+            },
+            "updated_at": int(time.time()),
+        },
+    )

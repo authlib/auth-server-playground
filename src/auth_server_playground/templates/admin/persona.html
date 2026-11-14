@@ -1,0 +1,83 @@
+{% extends "admin/layout.html" %}
+{% set section = "admin.personas" %}
+{% from "_form.html" import render_form %}
+{% set title = persona|string if persona else _("New persona") %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+    <nav aria-label="breadcrumb">
+        <ul>
+            <li><a href="{{ url_for('admin.personas') }}">{% trans %}Personas{% endtrans %}</a></li>
+            <li>{{ title }}</li>
+        </ul>
+    </nav>
+    <h2>{{ title }}</h2>
+    <div class="with-aside">
+        {% call render_form(form, request.path, id="persona") %}
+            {{ form.sub() }}
+            <fieldset>
+                <legend><strong>{% trans %}Profile{% endtrans %}</strong></legend>
+                <div class="grid">{{ form.name() }}{{ form.preferred_username() }}</div>
+                <div class="grid">{{ form.given_name() }}{{ form.family_name() }}</div>
+                <div class="grid">{{ form.middle_name() }}{{ form.nickname() }}</div>
+                <div class="grid">{{ form.gender() }}{{ form.birthdate() }}</div>
+                <div class="grid">{{ form.profile() }}{{ form.website() }}</div>
+                {{ form.picture() }}
+            </fieldset>
+            <fieldset>
+                <legend><strong>{% trans %}Contact{% endtrans %}</strong></legend>
+                <div class="grid">{{ form.email() }}{{ form.email_verified() }}</div>
+                <div class="grid">{{ form.phone_number() }}{{ form.phone_number_verified() }}</div>
+            </fieldset>
+            <fieldset>
+                <legend><strong>{% trans %}Locale{% endtrans %}</strong></legend>
+                <div class="grid">{{ form.zoneinfo() }}{{ form.locale() }}</div>
+            </fieldset>
+            <fieldset>
+                <legend><strong>{% trans %}Address{% endtrans %}</strong> <code>address</code></legend>
+                {{ form.address_formatted() }}
+                <div class="grid">{{ form.address_street_address() }}{{ form.address_locality() }}</div>
+                <div class="grid">{{ form.address_region() }}{{ form.address_postal_code() }}</div>
+                {{ form.address_country() }}
+            </fieldset>
+            {{ form.extra_claims() }}
+            {{ form.save() }}
+        {% endcall %}
+
+        {% if persona %}
+            <aside>
+                <article class="avatar-card">
+                    {% if persona.picture_url %}
+                        <img class="avatar avatar-large" src="{{ persona.picture_url }}" alt="{% trans %}Avatar of {{ persona }}{% endtrans %}" width="160" height="160">
+                    {% else %}
+                        <span class="avatar avatar-large avatar-empty" aria-hidden="true"></span>
+                    {% endif %}
+                    <footer>
+                        {% if persona.claims.picture %}
+                            <small>{% trans %}The picture claim replaces the generated avatar.{% endtrans %}</small>
+                        {% else %}
+                            {% call render_form(avatar_form, url_for('admin.redraw_avatar', persona_id=persona.id), id="avatar") %}
+                                {{ avatar_form.submit(value=_("Draw another avatar"), class="outline") }}
+                            {% endcall %}
+                        {% endif %}
+                    </footer>
+                </article>
+                {% if persona.claims.updated_at %}
+                    <article>
+                        <header><h3>{% trans %}Updated{% endtrans %}</h3></header>
+                        <p><code>updated_at</code> {{ persona.claims.updated_at }}</p>
+                        <p><small>{% trans %}Set on each save.{% endtrans %}</small></p>
+                    </article>
+                {% endif %}
+                <article>
+                    <header><h3>{% trans %}Delete{% endtrans %}</h3></header>
+                    <p><small>{% trans %}Deletes the persona, its codes and its tokens.{% endtrans %}</small></p>
+                    <footer>
+                        {% call render_form(delete_form, url_for('admin.remove_persona', persona_id=persona.id), id="delete") %}
+                            {{ delete_form.submit(value=_("Delete the persona"), class="contrast") }}
+                        {% endcall %}
+                    </footer>
+                </article>
+            </aside>
+        {% endif %}
+    </div>
+{% endblock %}

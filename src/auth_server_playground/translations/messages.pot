@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-13 17:35+0100\n"
+"POT-Creation-Date: 2026-11-13 17:47+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,200 +17,368 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: src/auth_server_playground/admin.py:88
+#: src/auth_server_playground/admin.py:95
 msgid "The server configuration is saved."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:114
+#: src/auth_server_playground/admin.py:121
 msgid "The default configuration is restored."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:130
+#: src/auth_server_playground/admin.py:137
 msgid "The client is created."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:152
+#: src/auth_server_playground/admin.py:159
 msgid "The client is saved."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:162
+#: src/auth_server_playground/admin.py:169
 msgid "The client secret is regenerated."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:173
+#: src/auth_server_playground/admin.py:180
 msgid "The client is deleted."
 msgstr ""
 
-#: src/auth_server_playground/endpoints.py:67
+#: src/auth_server_playground/admin.py:202
+msgid "The persona is created."
+msgstr ""
+
+#: src/auth_server_playground/admin.py:213
+msgid "A random persona is created."
+msgstr ""
+
+#: src/auth_server_playground/admin.py:235
+msgid "The persona is saved."
+msgstr ""
+
+#: src/auth_server_playground/admin.py:259
+msgid "The persona is deleted."
+msgstr ""
+
+#: src/auth_server_playground/endpoints.py:70
 msgid "The persona changed since this page was shown."
 msgstr ""
 
-#: src/auth_server_playground/forms.py:121
+#: src/auth_server_playground/forms.py:131
 msgid "Persona"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:122
+#: src/auth_server_playground/forms.py:132
 msgid "Continue as this persona"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:127
+#: src/auth_server_playground/forms.py:137
 msgid "Accept"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:128
+#: src/auth_server_playground/forms.py:138
 msgid "Deny"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:133
+#: src/auth_server_playground/forms.py:143
 #: src/auth_server_playground/templates/admin/index.html:8
 msgid "Issuer"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:135
+#: src/auth_server_playground/forms.py:145
 msgid "Leave empty to use the URL of each request."
 msgstr ""
 
-#: src/auth_server_playground/forms.py:139
-#: src/auth_server_playground/forms.py:313
+#: src/auth_server_playground/forms.py:149
+#: src/auth_server_playground/forms.py:323
 #: src/auth_server_playground/templates/admin/clients.html:16
 msgid "Grant types"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:144
+#: src/auth_server_playground/forms.py:154
 msgid "Client authentication methods"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:149
+#: src/auth_server_playground/forms.py:159
 msgid "PKCE methods"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:151
+#: src/auth_server_playground/forms.py:161
 msgid "Leave all unchecked to disable PKCE."
 msgstr ""
 
-#: src/auth_server_playground/forms.py:155
+#: src/auth_server_playground/forms.py:165
 msgid "PKCE is required for"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:157
+#: src/auth_server_playground/forms.py:167
 msgid "All clients"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:158
+#: src/auth_server_playground/forms.py:168
 msgid "Public clients only"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:162
+#: src/auth_server_playground/forms.py:172
 msgid "Access token lifetime"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:164
-#: src/auth_server_playground/forms.py:169
+#: src/auth_server_playground/forms.py:174
+#: src/auth_server_playground/forms.py:179
 msgid "In seconds."
 msgstr ""
 
-#: src/auth_server_playground/forms.py:167
+#: src/auth_server_playground/forms.py:177
 msgid "Refresh token lifetime"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:172
+#: src/auth_server_playground/forms.py:182
 msgid "Issue a new refresh token on each refresh"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:176
+#: src/auth_server_playground/forms.py:186
 msgid "Token revocation endpoint"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:180
-#: src/auth_server_playground/forms.py:318
+#: src/auth_server_playground/forms.py:190
+#: src/auth_server_playground/forms.py:328
 msgid "Scopes"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:181
+#: src/auth_server_playground/forms.py:191
 msgid "Separated by spaces. Leave empty to accept any scope."
 msgstr ""
 
-#: src/auth_server_playground/forms.py:184
-#: src/auth_server_playground/forms.py:336
+#: src/auth_server_playground/forms.py:194
+#: src/auth_server_playground/forms.py:346
+#: src/auth_server_playground/forms.py:569
 msgid "Save"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:257
+#: src/auth_server_playground/forms.py:267
 msgid "This is not an http or https URL."
 msgstr ""
 
-#: src/auth_server_playground/forms.py:266
+#: src/auth_server_playground/forms.py:276
 #, python-format
 msgid "Each line must be an http or https URL without fragment: %(url)s"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:285
+#: src/auth_server_playground/forms.py:295
 msgid "not supported by the server"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:294
+#: src/auth_server_playground/forms.py:304
 #: src/auth_server_playground/templates/admin/client.html:42
 #: src/auth_server_playground/templates/admin/clients.html:14
 msgid "Client ID"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:295
+#: src/auth_server_playground/forms.py:305
 msgid "Leave empty to generate one. Letters, digits, and . _ ~ -"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:299
+#: src/auth_server_playground/forms.py:309
 #: src/auth_server_playground/templates/admin/clients.html:13
 msgid "Name"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:301
+#: src/auth_server_playground/forms.py:311
 msgid "Home page"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:304
+#: src/auth_server_playground/forms.py:314
 msgid "Logo"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:307
+#: src/auth_server_playground/forms.py:317
 msgid "Redirect URIs"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:309
-#: src/auth_server_playground/forms.py:325
+#: src/auth_server_playground/forms.py:319
+#: src/auth_server_playground/forms.py:335
 msgid "One per line."
 msgstr ""
 
-#: src/auth_server_playground/forms.py:316
+#: src/auth_server_playground/forms.py:326
 msgid "Response types"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:320
+#: src/auth_server_playground/forms.py:330
 msgid "Authentication method"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:324
+#: src/auth_server_playground/forms.py:334
 msgid "Contacts"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:329
+#: src/auth_server_playground/forms.py:339
 msgid "Terms of service"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:332
+#: src/auth_server_playground/forms.py:342
 msgid "Privacy policy"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:381
+#: src/auth_server_playground/forms.py:391
 #, python-format
 msgid "%(value)s (not supported by the server)"
 msgstr ""
 
-#: src/auth_server_playground/forms.py:394
+#: src/auth_server_playground/forms.py:404
 msgid "Use 1 to 48 letters, digits, and . _ ~ - characters."
 msgstr ""
 
-#: src/auth_server_playground/forms.py:397
+#: src/auth_server_playground/forms.py:407
 msgid "A client already uses this ID."
+msgstr ""
+
+#: src/auth_server_playground/forms.py:497
+msgid "Use YYYY-MM-DD, YYYY or 0000-MM-DD."
+msgstr ""
+
+#: src/auth_server_playground/forms.py:505
+msgid "This date does not exist."
+msgstr ""
+
+#: src/auth_server_playground/forms.py:510
+msgid "Subject"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:511
+msgid "Leave empty to generate one."
+msgstr ""
+
+#: src/auth_server_playground/forms.py:515
+msgid "Full name"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:517
+msgid "Username"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:519
+msgid "Given name"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:520
+msgid "Family name"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:521
+msgid "Middle name"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:522
+msgid "Nickname"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:523
+msgid "Gender"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:525
+msgid "Birth date"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:527
+msgid "YYYY-MM-DD, YYYY or 0000-MM-DD."
+msgstr ""
+
+#: src/auth_server_playground/forms.py:531
+msgid "Profile page"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:534
+msgid "Website"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:537
+msgid "Picture"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:539
+msgid "Leave empty to use the generated avatar."
+msgstr ""
+
+#: src/auth_server_playground/forms.py:542
+msgid "Email"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:544
+msgid "Email verified"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:546
+msgid "Phone number"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:548
+msgid "Phone number verified"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:550
+msgid "Time zone"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:551
+#: src/auth_server_playground/forms.py:683
+#: src/auth_server_playground/templates/admin/persona.html:32
+msgid "Locale"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:553
+msgid "Formatted address"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:556
+msgid "Street address"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:558
+msgid "Locality"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:559
+msgid "Region"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:561
+msgid "Postal code"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:563
+msgid "Country"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:565
+msgid "Other claims"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:566
+msgid "A JSON object. Standard claims have their own field."
+msgstr ""
+
+#: src/auth_server_playground/forms.py:614
+msgid "Use at most 255 printable ASCII characters."
+msgstr ""
+
+#: src/auth_server_playground/forms.py:617
+msgid "A persona already uses this subject."
+msgstr ""
+
+#: src/auth_server_playground/forms.py:622
+msgid "A persona already uses this username."
+msgstr ""
+
+#: src/auth_server_playground/forms.py:630
+msgid "The claims must be a JSON object."
+msgstr ""
+
+#: src/auth_server_playground/forms.py:635
+#, python-format
+msgid "These standard claims have their own field: %(claims)s"
+msgstr ""
+
+#: src/auth_server_playground/forms.py:686
+msgid "Random persona"
 msgstr ""
 
 #: src/auth_server_playground/templates/_copy.html:2
@@ -234,7 +402,7 @@ msgid "Error:"
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/clients.html:31
-#: src/auth_server_playground/templates/admin/index.html:41
+#: src/auth_server_playground/templates/admin/index.html:42
 #: src/auth_server_playground/templates/layout.html:25
 msgid "Warning:"
 msgstr ""
@@ -293,6 +461,7 @@ msgid "A public client has no secret."
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/client.html:63
+#: src/auth_server_playground/templates/admin/persona.html:72
 msgid "Delete"
 msgstr ""
 
@@ -358,10 +527,18 @@ msgid "Manage the clients"
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/index.html:34
+#: src/auth_server_playground/templates/admin/layout.html:3
+#: src/auth_server_playground/templates/admin/persona.html:9
+#: src/auth_server_playground/templates/admin/personas.html:3
+#: src/auth_server_playground/templates/admin/personas.html:6
 msgid "Personas"
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/index.html:42
+#: src/auth_server_playground/templates/admin/index.html:36
+msgid "Manage the personas"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/index.html:43
 #, python-format
 msgid "The server does not support these values of %(client)s:"
 msgstr ""
@@ -373,6 +550,56 @@ msgstr ""
 
 #: src/auth_server_playground/templates/admin/layout.html:19
 msgid "Forget persona"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/persona.html:4
+#: src/auth_server_playground/templates/admin/personas.html:8
+msgid "New persona"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/persona.html:18
+msgid "Profile"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/persona.html:27
+msgid "Contact"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/persona.html:36
+msgid "Address"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/persona.html:50
+#, python-format
+msgid "Avatar of %(persona)s"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/persona.html:56
+msgid "The picture claim replaces the generated avatar."
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/persona.html:59
+msgid "Draw another avatar"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/persona.html:66
+msgid "Updated"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/persona.html:68
+msgid "Set on each save."
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/persona.html:73
+msgid "Deletes the persona, its codes and its tokens."
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/persona.html:76
+msgid "Delete the persona"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/personas.html:11
+msgid "Locale of the random persona"
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/server.html:8
@@ -417,5 +644,9 @@ msgstr ""
 
 #: src/auth_server_playground/templates/interaction/select_persona.html:14
 msgid "The playground does not check passwords: pick who you act as."
+msgstr ""
+
+#: src/auth_server_playground/templates/interaction/select_persona.html:48
+msgid "Continue with a new random persona"
 msgstr ""
 

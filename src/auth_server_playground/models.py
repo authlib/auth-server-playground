@@ -3,6 +3,7 @@ import time
 from authlib.integrations.sqla_oauth2 import OAuth2AuthorizationCodeMixin
 from authlib.integrations.sqla_oauth2 import OAuth2ClientMixin
 from authlib.integrations.sqla_oauth2 import OAuth2TokenMixin
+from flask import url_for
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
@@ -41,6 +42,15 @@ class Persona(db.Model):
     @property
     def preferred_username(self):
         return self.claims.get("preferred_username")
+
+    @property
+    def picture_url(self):
+        """Return the picture claim: the stored URL, else the generated avatar, if any."""
+        if self.claims.get("picture"):
+            return self.claims["picture"]
+        if self.picture_svg:
+            return url_for("oauth.persona_picture", persona_id=self.id, _external=True)
+        return None
 
     def get_user_id(self):
         return self.id
