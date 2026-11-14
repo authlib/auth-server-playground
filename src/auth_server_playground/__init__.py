@@ -45,7 +45,7 @@ def create_app(config=None):
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_prefix=1)
 
     db.init_app(app)
-    stored_key = init_database(app)
+    stored_key = init_database(app, os.environ.get("INITIAL_SNAPSHOT"))
     # Without SECRET_KEY, all the workers share the key stored in the database.
     app.config["SECRET_KEY"] = (
         app.config.get("SECRET_KEY") or os.environ.get("SECRET_KEY") or stored_key

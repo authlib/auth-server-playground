@@ -1,4 +1,5 @@
 import copy
+import json
 import secrets
 
 from sqlalchemy.exc import DatabaseError
@@ -12,28 +13,35 @@ from .models import db
 from .personas import default_personas
 from .settings import default_document
 from .settings import validate_document
+from .snapshot import check_snapshot
+from .snapshot import snapshot_rows
 
 
-def init_database(app):
+def init_database(app, initial_snapshot=None):
     """Create the tables, the settings and the default personas.
+
+    With an initial snapshot file, an empty database gets its content
+    instead of the defaults. The file is checked even if the database is
+    not empty.
 
     Several workers may run it at the same time on an empty database. The
     settings row has a fixed id, so only one worker can insert it, with the
-    default personas in the same transaction.
+    personas and clients in the same transaction.
 
     Return the stored secret key.
     """
+    snapshot = read_snapshot(initial_snapshot) if initial_snapshot else None
     with app.app_context():
         create_tables()
         db.session.add(
             Settings(
                 id=SETTINGS_ID,
-                document=default_document(),
+                document=snapshot["configuration"] if snapshot else default_document(),
                 revision=1,
                 secret_key=secrets.token_hex(32),
             )
         )
-        db.session.add_all(default_personas())
+        db.session.add_all(snapshot_rows(snapshot) if snapshot else default_personas())
         try:
             db.session.commit()
         except IntegrityError:
@@ -42,6 +50,13 @@ def init_database(app):
             if settings_row() is None:
                 raise
         return settings_row().secret_key
+
+
+def read_snapshot(path):
+    with open(path, encoding="utf-8") as file:
+        snapshot = json.load(file)
+    check_snapshot(snapshot)
+    return snapshot
 
 
 def create_tables():

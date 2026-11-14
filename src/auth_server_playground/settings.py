@@ -172,7 +172,7 @@ def _metadata_errors(metadata):
 
     for key, choices in LIST_CHOICES.items():
         value = metadata.get(key)
-        if not isinstance(value, list) or not set(value) <= set(choices):
+        if not isinstance(value, list) or not all(item in choices for item in value):
             errors[key] = f"A list of values among {choices}."
 
     scopes = metadata.get("scopes_supported")

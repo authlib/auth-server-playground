@@ -12,6 +12,8 @@ from babel import localedata
 from flask import current_app
 from flask_babel import lazy_gettext as _
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField
+from flask_wtf.file import FileRequired
 from flask_wtforms_htmx import HtmxFlaskForm
 from markupsafe import Markup
 from wtforms import BooleanField
@@ -40,8 +42,10 @@ from wtforms.widgets import ListWidget
 from .models import Client
 from .models import Persona
 from .models import db
+from .models import is_valid_client_id
 from .personas import RANDOM_LOCALES
 from .personas import find_by_username
+from .personas import is_valid_sub
 from .personas import render_avatar
 from .settings import AUTH_METHODS
 from .settings import ENDPOINTS
@@ -249,11 +253,6 @@ def lines(text):
     return [line.strip() for line in (text or "").splitlines() if line.strip()]
 
 
-#: Characters that need no escaping in a URL path (RFC 3986 §2.3).
-CLIENT_ID_PATTERN = re.compile(r"[A-Za-z0-9._~-]{1,48}")
-RESERVED_CLIENT_IDS = ("new", ".", "..")
-
-
 def is_web_url(url):
     try:
         parts = urlsplit(url)
@@ -396,10 +395,7 @@ class ClientForm(BaseForm):
     def validate_client_id(self, field):
         if not field.data:
             return
-        if (
-            not CLIENT_ID_PATTERN.fullmatch(field.data)
-            or field.data in RESERVED_CLIENT_IDS
-        ):
+        if not is_valid_client_id(field.data):
             raise ValidationError(
                 _("Use 1 to 48 letters, digits, and . _ ~ - characters.")
             )
@@ -607,10 +603,7 @@ class PersonaForm(BaseForm):
     def validate_sub(self, field):
         if not field.data:
             return
-        # At most 255 ASCII characters (OIDC Core §2).
-        if len(field.data) > 255 or not (
-            field.data.isascii() and field.data.isprintable()
-        ):
+        if not is_valid_sub(field.data):
             raise ValidationError(_("Use at most 255 printable ASCII characters."))
         existing = Persona.query.filter_by(sub=field.data).first()
         if existing is not None and existing is not self.persona:
@@ -684,3 +677,13 @@ class RandomPersonaForm(FlaskForm):
         choices=[SelectChoice(locale, locale) for locale in RANDOM_LOCALES],
     )
     create = SubmitField(_("Random persona"))
+
+
+class ImportForm(BaseForm):
+    file = FileField(_("Snapshot file"), validators=[FileRequired()])
+    upload = SubmitField(_("Import"))
+
+
+class ConfirmImportForm(FlaskForm):
+    snapshot = HiddenField()
+    confirm = SubmitField(_("Replace everything"))

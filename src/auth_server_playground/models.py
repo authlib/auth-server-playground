@@ -1,3 +1,4 @@
+import re
 import time
 
 from authlib.integrations.sqla_oauth2 import OAuth2AuthorizationCodeMixin
@@ -23,6 +24,9 @@ class Settings(db.Model):
 
 class Persona(db.Model):
     __tablename__ = "persona"
+    # SQLite reuses the id of a deleted row without it. A browser session
+    # that still holds that id would then act as another persona.
+    __table_args__ = {"sqlite_autoincrement": True}
 
     id = db.Column(db.Integer, primary_key=True)
     sub = db.Column(db.String(255), unique=True, nullable=False)
@@ -54,6 +58,20 @@ class Persona(db.Model):
 
     def get_user_id(self):
         return self.id
+
+
+#: Characters that need no escaping in a URL path (RFC 3986 §2.3).
+CLIENT_ID_PATTERN = re.compile(r"[A-Za-z0-9._~-]{1,48}")
+RESERVED_CLIENT_IDS = ("new", ".", "..")
+
+
+def is_valid_client_id(value):
+    """Return whether the client_id can be a segment of the admin URLs."""
+    return (
+        isinstance(value, str)
+        and CLIENT_ID_PATTERN.fullmatch(value) is not None
+        and value not in RESERVED_CLIENT_IDS
+    )
 
 
 class Client(db.Model, OAuth2ClientMixin):

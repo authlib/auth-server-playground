@@ -1,0 +1,27 @@
+{% extends "admin/layout.html" %}
+{% set section = "admin.snapshot" %}
+{% from "_form.html" import render_form %}
+{% block title %}{% trans %}Import a snapshot{% endtrans %}{% endblock %}
+{% block content %}
+    <nav aria-label="breadcrumb">
+        <ul>
+            <li><a href="{{ url_for('admin.snapshot') }}">{% trans %}Snapshot{% endtrans %}</a></li>
+            <li>{% trans %}Import{% endtrans %}</li>
+        </ul>
+    </nav>
+    <article>
+        <header><h2>{% trans %}Replace everything?{% endtrans %}</h2></header>
+        <p>{% trans %}The playground will hold the content of the file:{% endtrans %}</p>
+        <ul>
+            <li>{% trans %}the server configuration;{% endtrans %}</li>
+            <li>{% trans count=snapshot.personas|length %}{{ count }} persona;{% pluralize %}{{ count }} personas;{% endtrans %}</li>
+            <li>{% trans count=snapshot.clients|length %}{{ count }} client.{% pluralize %}{{ count }} clients.{% endtrans %}</li>
+        </ul>
+        <p>{% trans %}The current personas and clients are deleted, with all the codes and tokens. The selected persona is forgotten.{% endtrans %}</p>
+        <footer>
+            {% call render_form(form, url_for('admin.confirm_import'), id="confirm") %}
+                {{ form.confirm(class="contrast") }}
+            {% endcall %}
+        </footer>
+    </article>
+{% endblock %}

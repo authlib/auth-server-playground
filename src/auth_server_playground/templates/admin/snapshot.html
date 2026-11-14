@@ -1,0 +1,26 @@
+{% extends "admin/layout.html" %}
+{% block title %}{% trans %}Snapshot{% endtrans %}{% endblock %}
+{% block content %}
+    <h2>{% trans %}Snapshot{% endtrans %}</h2>
+    <p>{% trans %}A snapshot is a JSON file with the server configuration, the personas and the clients.{% endtrans %}</p>
+    <div class="grid">
+        <article>
+            <header><h3>{% trans %}Export{% endtrans %}</h3></header>
+            <p>{% trans %}Download the current state of the playground.{% endtrans %}</p>
+            <p><small>{% trans %}The file holds the client secrets.{% endtrans %}</small></p>
+            <footer>
+                <a href="{{ url_for('admin.export_snapshot_file') }}" role="button" class="outline" download>{% trans %}Download the snapshot{% endtrans %}</a>
+            </footer>
+        </article>
+        <article>
+            <header><h3>{% trans %}Import{% endtrans %}</h3></header>
+            {#- render_form does not set the encoding that file uploads need. -#}
+            <form method="POST" action="{{ url_for('admin.snapshot') }}" enctype="multipart/form-data" id="import">
+                {{ form.hidden_tag() }}
+                {{ form.file(accept="application/json,.json") }}
+                <p><small>{% trans %}You confirm on the next page. Nothing changes before.{% endtrans %}</small></p>
+                {{ form.upload() }}
+            </form>
+        </article>
+    </div>
+{% endblock %}

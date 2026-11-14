@@ -4,6 +4,7 @@ import time
 
 from flask import Blueprint
 from flask import flash
+from flask import jsonify
 from flask import redirect
 from flask import render_template
 from flask import request
@@ -14,6 +15,8 @@ from flask_babel import gettext as _
 from .endpoints import current_metadata
 from .forms import ActionForm
 from .forms import ClientForm
+from .forms import ConfirmImportForm
+from .forms import ImportForm
 from .forms import PersonaForm
 from .forms import RandomPersonaForm
 from .forms import ServerForm
@@ -29,6 +32,9 @@ from .settings import InvalidDocument
 from .settings import default_document
 from .settings import unsupported_values
 from .settings import validate_document
+from .snapshot import check_snapshot
+from .snapshot import export_snapshot
+from .snapshot import import_snapshot
 from .store import current_document
 from .store import delete_client
 from .store import save_document
@@ -258,3 +264,45 @@ def remove_persona(persona_id):
     db.session.commit()
     flash(_("The persona is deleted."), "success")
     return redirect(url_for("admin.personas"))
+
+
+@bp.route("/snapshot", methods=["GET", "POST"])
+def snapshot():
+    form = ImportForm()
+    if not form.validate_on_submit():
+        return render_template("admin/snapshot.html", form=form)
+
+    try:
+        data = json.loads(form.file.data.read())
+        check_snapshot(data)
+    # SnapshotError, and the JSON and decoding errors, are ValueErrors.
+    except (ValueError, RecursionError) as error:
+        flash(_("This snapshot cannot be imported: %(error)s", error=error), "error")
+        return render_template("admin/snapshot.html", form=form)
+
+    confirm = ConfirmImportForm(data={"snapshot": json.dumps(data)})
+    return render_template("admin/snapshot_confirm.html", form=confirm, snapshot=data)
+
+
+@bp.route("/snapshot/confirm", methods=["POST"])
+def confirm_import():
+    form = ConfirmImportForm()
+    if not form.validate_on_submit():
+        return redirect(url_for("admin.snapshot"))
+
+    try:
+        import_snapshot(json.loads(form.snapshot.data))
+    except (ValueError, RecursionError) as error:
+        flash(_("This snapshot cannot be imported: %(error)s", error=error), "error")
+    else:
+        flash(_("The snapshot is imported."), "success")
+    return redirect(url_for("admin.snapshot"))
+
+
+@bp.route("/snapshot/export")
+def export_snapshot_file():
+    response = jsonify(export_snapshot())
+    response.headers["Content-Disposition"] = (
+        "attachment; filename=auth-server-playground-snapshot.json"
+    )
+    return response

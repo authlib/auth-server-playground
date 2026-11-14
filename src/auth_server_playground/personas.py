@@ -24,6 +24,63 @@ COMPLETE_SUB = "c0a1e3d2-7b5f-4e7a-9d2c-1f6b8a4e5c3d"
 MINIMAL_SUB = "5e8d2b1a-3c4f-4a6e-8b7d-9f0e1a2b3c4d"
 
 
+#: The types of the standard claims (OIDC Core §5.1).
+STRING_CLAIMS = (
+    "name",
+    "given_name",
+    "family_name",
+    "middle_name",
+    "nickname",
+    "preferred_username",
+    "profile",
+    "picture",
+    "website",
+    "email",
+    "gender",
+    "birthdate",
+    "zoneinfo",
+    "locale",
+    "phone_number",
+)
+BOOLEAN_CLAIMS = ("email_verified", "phone_number_verified")
+
+
+def invalid_claims(claims):
+    """Return the standard claims whose value has the wrong type."""
+    invalid = [
+        key
+        for key in STRING_CLAIMS
+        if key in claims and not isinstance(claims[key], str)
+    ]
+    invalid += [
+        key
+        for key in BOOLEAN_CLAIMS
+        if key in claims and not isinstance(claims[key], bool)
+    ]
+    updated_at = claims.get("updated_at")
+    if "updated_at" in claims and (
+        not isinstance(updated_at, int) or isinstance(updated_at, bool)
+    ):
+        invalid.append("updated_at")
+    address = claims.get("address")
+    if "address" in claims and not (
+        isinstance(address, dict)
+        and all(isinstance(value, str) for value in address.values())
+    ):
+        invalid.append("address")
+    return invalid
+
+
+def is_valid_sub(value):
+    """Per OIDC Core §2, a sub is at most 255 ASCII characters."""
+    return (
+        isinstance(value, str)
+        and 0 < len(value) <= 255
+        and value.isascii()
+        and value.isprintable()
+    )
+
+
 def default_personas():
     """Return the personas of a new database: one complete, one minimal."""
     now = int(time.time())
