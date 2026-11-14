@@ -33,6 +33,11 @@ repository = "https://github.com/authlib/auth-server-playground"
 [project.scripts]
 auth-server-playground = "auth_server_playground.cli:run"
 
+[project.optional-dependencies]
+granian = [
+    "granian>=2.8.8",
+]
+
 [dependency-groups]
 dev = [
     "flask-webtest>=0.1.6",

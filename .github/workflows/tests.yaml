@@ -167,8 +167,9 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Test Docker image
         run: |
+          # Without SECRET_KEY, the workers share the key stored in the database.
           docker run -d --name test-app -p 5000:5000 \
-            -e SECRET_KEY="test-secret-key-for-ci" \
+            -e GRANIAN_WORKERS=2 \
             auth-server-playground:test
 
           timeout 30 sh -c 'until docker inspect --format="{{.State.Health.Status}}" test-app | grep -qx "healthy"; do sleep 1; done' || {
@@ -177,7 +178,7 @@ jobs:
             exit 1
           }
 
-          curl -fsSL -o /dev/null http://localhost:5000/ || {
+          curl -fsSL -o /dev/null http://localhost:5000/en/ || {
             echo "App failed to respond"
             docker logs test-app
             exit 1

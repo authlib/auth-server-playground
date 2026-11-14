@@ -8,12 +8,12 @@ ENV UV_COMPILE_BYTECODE=1
 COPY pyproject.toml uv.lock ./
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project --no-dev
+    uv sync --frozen --no-install-project --no-dev --extra granian
 
 COPY . .
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-editable
+    uv sync --frozen --no-dev --no-editable --extra granian
 
 
 FROM python:3.15-slim-trixie@sha256:8c13a3f37a6a5b71498228e902c4b9f51c1f7900d49fabf71f9a650c6120e0d0
@@ -28,9 +28,10 @@ COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
 
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
-ENV FLASK_RUN_HOST="0.0.0.0"
-ENV FLASK_RUN_PORT="5000"
-ENV FLASK_DEBUG="False"
+ENV GRANIAN_HOST="0.0.0.0"
+ENV GRANIAN_PORT="5000"
+ENV GRANIAN_INTERFACE="wsgi"
+ENV GRANIAN_LOG_ACCESS_ENABLED="true"
 ENV DATABASE_URL="sqlite:////data/db.sqlite"
 
 USER appuser
@@ -38,6 +39,6 @@ USER appuser
 EXPOSE 5000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --start-interval=1s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/').read()" || exit 1
+    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://localhost:' + os.environ['GRANIAN_PORT'] + '/').read()" || exit 1
 
-CMD ["auth-server-playground"]
+CMD ["granian", "--factory", "auth_server_playground:create_app"]
