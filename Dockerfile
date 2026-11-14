@@ -29,14 +29,14 @@ COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 ENV GRANIAN_HOST="0.0.0.0"
-ENV GRANIAN_PORT="5000"
+ENV GRANIAN_PORT="3000"
 ENV GRANIAN_INTERFACE="wsgi"
 ENV GRANIAN_LOG_ACCESS_ENABLED="true"
 ENV DATABASE_URL="sqlite:////data/db.sqlite"
 
 USER appuser
 
-EXPOSE 5000
+EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --start-interval=1s --retries=3 \
     CMD python -c "import os, urllib.request; urllib.request.urlopen('http://localhost:' + os.environ['GRANIAN_PORT'] + '/').read()" || exit 1

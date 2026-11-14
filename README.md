@@ -37,18 +37,18 @@ $ uv run auth-server-playground
  * Serving Flask app 'auth_server_playground'
  * Debug mode: off
 WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
- * Running on http://127.0.0.1:5000
+ * Running on http://127.0.0.1:3000
 Press CTRL+C to quit
 ```
 
-Open `http://127.0.0.1:5000/` to reach the web interface.
+Open `http://127.0.0.1:3000/` to reach the web interface.
 The server stores its data in a SQLite database in the Flask instance folder.
 
 Run the server with Docker:
 
 ```bash
 docker build -t auth-server-playground .
-docker run -p 5000:5000 -v auth-server-playground:/data auth-server-playground
+docker run -p 3000:3000 -v auth-server-playground:/data auth-server-playground
 ```
 
 The container stores the database in `/data`.
@@ -70,21 +70,21 @@ Create a client in the web interface:
 Request a token, with `<SECRET>` replaced by the client secret:
 
 ```console
-$ curl -u demo:<SECRET> -d grant_type=client_credentials -d scope=profile http://127.0.0.1:5000/oauth/token
+$ curl -u demo:<SECRET> -d grant_type=client_credentials -d scope=profile http://127.0.0.1:3000/oauth/token
 {"token_type": "Bearer", "access_token": "XUpVEr75OavL4VdLKitjwnvypTJx2fn92JxW1LYiXC", "expires_in": 3600, "scope": "profile"}
 ```
 
 Call the protected resource with the access token:
 
 ```console
-$ curl -H "Authorization: Bearer <ACCESS_TOKEN>" http://127.0.0.1:5000/api/resource
+$ curl -H "Authorization: Bearer <ACCESS_TOKEN>" http://127.0.0.1:3000/api/resource
 {"scope":"profile","client_id":"demo"}
 ```
 
 The password grant is off by default, as RFC 9700 §2.4 requires:
 
 ```console
-$ curl -u demo:<SECRET> -d grant_type=password -d username=alice -d password=x http://127.0.0.1:5000/oauth/token
+$ curl -u demo:<SECRET> -d grant_type=password -d username=alice -d password=x http://127.0.0.1:3000/oauth/token
 {"error": "unsupported_grant_type"}
 ```
 
@@ -104,7 +104,7 @@ Copy it to `.env`: the `auth-server-playground` command loads `.env` from the cu
 | `PROXY_FIX` | `false` | Set to `true` behind a reverse proxy. |
 | `AUTHLIB_INSECURE_TRANSPORT` | unset | Set to `1` to accept plain HTTP requests. |
 | `FLASK_RUN_HOST` | `127.0.0.1` | Address of the `auth-server-playground` command. |
-| `FLASK_RUN_PORT` | `5000` | Port of the `auth-server-playground` command. |
+| `FLASK_RUN_PORT` | `3000` | Port of the `auth-server-playground` command. |
 | `FLASK_DEBUG` | `False` | Set to `True` to enable the Flask debug mode. |
 
 Per RFC 6749 §3.1 and §3.2, the OAuth 2.0 endpoints require TLS.
@@ -117,7 +117,7 @@ The Docker image serves the server with [Granian](https://github.com/emmett-fram
 | Variable | Value in the image | Description |
 |---|---|---|
 | `GRANIAN_HOST` | `0.0.0.0` | Address the server listens on. |
-| `GRANIAN_PORT` | `5000` | Port the server listens on. |
+| `GRANIAN_PORT` | `3000` | Port the server listens on. |
 | `GRANIAN_INTERFACE` | `wsgi` | Interface between Granian and the application. |
 | `GRANIAN_LOG_ACCESS_ENABLED` | `true` | Log each request. |
 | `GRANIAN_WORKERS` | `1` | Number of worker processes. |
@@ -137,7 +137,7 @@ For a public deployment, install the `granian` extra and serve the application w
 
 ```bash
 uv sync --extra granian
-uv run granian --interface wsgi --factory --host 0.0.0.0 --port 5000 --env-files .env auth_server_playground:create_app
+uv run granian --interface wsgi --factory --host 0.0.0.0 --port 3000 --env-files .env auth_server_playground:create_app
 ```
 
 `--workers` sets the number of worker processes.
@@ -164,7 +164,7 @@ With nginx, at the root of the domain:
 
 ```nginx
 location / {
-    proxy_pass http://127.0.0.1:5000;
+    proxy_pass http://127.0.0.1:3000;
     proxy_set_header Host $http_host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
@@ -176,7 +176,7 @@ Under a sub-path, the proxy removes the prefix from the request path and sends i
 
 ```nginx
 location /auth/ {
-    proxy_pass http://127.0.0.1:5000/;
+    proxy_pass http://127.0.0.1:3000/;
     proxy_set_header Host $http_host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;

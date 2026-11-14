@@ -11,6 +11,6 @@ def run():
     load_dotenv()
     app = create_app()
     host = os.environ.get("FLASK_RUN_HOST", "127.0.0.1")
-    port = int(os.environ.get("FLASK_RUN_PORT", "5000"))
+    port = int(os.environ.get("FLASK_RUN_PORT", "3000"))
     debug = env_flag("FLASK_DEBUG")
     app.run(host=host, port=port, debug=debug)
