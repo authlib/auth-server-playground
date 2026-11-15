@@ -8,8 +8,6 @@ from flask_babel import get_locale
 from werkzeug.exceptions import NotFound
 from werkzeug.routing import BaseConverter
 
-from .interaction import authorization_params
-
 babel = Babel()
 
 #: The blueprint whose URLs start with the language code.
@@ -34,12 +32,13 @@ class LangConverter(BaseConverter):
 def requested_language():
     """Return the first interface language in ui_locales, or None.
 
-    ui_locales comes from the authorization request, or from the request in
-    the next parameter of the interaction pages.
+    On the consent page, ui_locales comes from the authorization request, as
+    Authlib reads it. The persona pages get it in their URL.
     """
-    values = request.args.get("ui_locales") or authorization_params(
-        request.args.get("next")
-    ).get("ui_locales", "")
+    params = g.get("authorization_params")
+    if params is None:
+        params = request.args
+    values = params.get("ui_locales") or ""
     codes = available_language_codes()
     for tag in values.split():
         language = tag.split("-")[0].lower()

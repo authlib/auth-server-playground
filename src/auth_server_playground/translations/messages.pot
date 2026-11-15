@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-15 16:50+0100\n"
+"POT-Creation-Date: 2026-11-15 20:03+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -84,7 +84,7 @@ msgstr ""
 msgid "The snapshot is imported."
 msgstr ""
 
-#: src/auth_server_playground/endpoints.py:95
+#: src/auth_server_playground/endpoints.py:101
 msgid "The persona changed since this page was shown."
 msgstr ""
 
@@ -746,6 +746,11 @@ msgstr ""
 
 #: src/auth_server_playground/templates/admin/persona.html:73
 msgid "Revoke"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/persona.html:73
+#, python-format
+msgid "Revoke the consent of %(client)s"
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/persona.html:76

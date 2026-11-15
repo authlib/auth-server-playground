@@ -140,15 +140,24 @@ def check_clients(clients):
     ):
         raise SnapshotError("The client_secret of a client is a string.")
     if not all(
-        is_timestamp(client.get(key)) for client in clients for key in CLIENT_TIMESTAMPS
+        client.get(key) is None or is_timestamp(client[key])
+        for client in clients
+        for key in CLIENT_TIMESTAMPS
     ):
-        raise SnapshotError("The timestamps of a client are integers.")
+        raise SnapshotError(
+            f"The timestamps of a client are numbers of seconds, from 0 to {MAX_TIMESTAMP}."
+        )
     for client in clients:
         check_client_metadata(client)
 
 
 def is_timestamp(value):
-    return value is None or (isinstance(value, int) and not isinstance(value, bool))
+    """Tell whether the value is a number of seconds that a datetime holds."""
+    return (
+        isinstance(value, int)
+        and not isinstance(value, bool)
+        and 0 <= value <= MAX_TIMESTAMP
+    )
 
 
 #: The client metadata of features that the server does not support. With
@@ -215,12 +224,7 @@ def check_keys(items):
                 f"Key {item.get('kid')!r} is not a private {item['alg']} key "
                 "whose kid is its thumbprint."
             )
-        created_at = item.get("created_at")
-        if not (
-            isinstance(created_at, int)
-            and not isinstance(created_at, bool)
-            and 0 <= created_at <= MAX_TIMESTAMP
-        ):
+        if not is_timestamp(item.get("created_at")):
             raise SnapshotError(
                 f"The created_at of a key is a number of seconds, from 0 to {MAX_TIMESTAMP}."
             )

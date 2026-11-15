@@ -8,7 +8,7 @@
         <header><h2>{% trans %}{{ client }} asks for access{% endtrans %}</h2></header>
         <p>
             {% trans %}You act as <strong>{{ persona }}</strong>.{% endtrans %}
-            <a href="{{ url_for('interaction.select_persona', next=request.script_root + request.full_path) }}">{% trans %}Change persona{% endtrans %}</a>
+            <a href="{{ url_for('interaction.select_persona', next=request.script_root + request.full_path, ui_locales=ui_locales) }}">{% trans %}Change persona{% endtrans %}</a>
         </p>
         {% if grant.request.scope %}
             <p>{% trans %}Requested scopes:{% endtrans %}</p>
@@ -28,10 +28,10 @@
         {% endif %}
         <details>
             <summary>{% trans %}Authorization request{% endtrans %}</summary>
-            <table>
+            <table class="request-params">
                 <tbody>
-                    {% for key, value in grant.request.args.items(multi=True) %}
-                        <tr><th scope="row"><code>{{ key }}</code></th><td><code>{{ value }}</code></td></tr>
+                    {% for key, value in request_params.items() %}
+                        <tr><th scope="row"><code>{{ key }}</code></th><td><code>{{ value if value is string else value|tojson }}</code></td></tr>
                     {% endfor %}
                 </tbody>
             </table>

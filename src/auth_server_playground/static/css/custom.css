@@ -166,6 +166,12 @@ body > header nav a[aria-current] {
     min-width: 14rem;
 }
 
+/* A value of the authorization request may be a long URL or JSON: it wraps
+   anywhere, so that the table fits the page. */
+.request-params td code {
+    overflow-wrap: anywhere;
+}
+
 .stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

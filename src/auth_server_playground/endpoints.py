@@ -6,6 +6,7 @@ from flask import Blueprint
 from flask import Response
 from flask import abort
 from flask import flash
+from flask import g
 from flask import jsonify
 from flask import redirect
 from flask import render_template
@@ -71,6 +72,11 @@ def authorize():
     except OAuth2Error as error:
         return server.handle_error_response(request, error)
 
+    # With a request object, Authlib reads the parameters from the object, not
+    # from the URL. The consent page and its language follow Authlib.
+    params = grant.request.payload.data
+    g.authorization_params = params
+
     # Authlib stores the start time of the request before the selector, so
     # that a selection after it counts as a new login.
     if {"login", "select_account"} & set(grant.interactions):
@@ -78,8 +84,9 @@ def authorize():
             url_for(
                 "interaction.select_persona",
                 next=request.script_root + request.full_path,
-                # A request object hides the login_hint from the next URL.
-                login_hint=grant.request.payload.data.get("login_hint"),
+                # A request object hides these parameters from the next URL.
+                login_hint=params.get("login_hint"),
+                ui_locales=params.get("ui_locales"),
             )
         )
 
@@ -101,6 +108,10 @@ def authorize():
         form=form,
         grant=grant,
         persona=persona,
+        request_params={
+            key: value for key, value in params.items() if key not in CONSENT_FIELDS
+        },
+        ui_locales=params.get("ui_locales"),
         extra_claims=extra_claims(
             getattr(grant.request, "claims_request", None), grant.request.scope
         ),

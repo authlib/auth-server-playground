@@ -44,7 +44,7 @@
             {{ form.select() }}
         {% endcall %}
         <footer>
-            {% call render_form(random_form, url_for('interaction.random_persona', next=request.args.get('next')), id="random") %}
+            {% call render_form(random_form, url_for('interaction.random_persona', next=request.args.get('next'), ui_locales=request.args.get('ui_locales')), id="random") %}
                 {{ random_form.submit(value=_("Continue with a new random persona"), class="outline secondary") }}
             {% endcall %}
         </footer>

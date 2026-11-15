@@ -70,7 +70,7 @@
                             <small>{% for scope in consent.scope.split() %}<code>{{ scope }}</code> {% endfor %}</small>
                         </p>
                         {% call render_form(revoke, url_for('admin.revoke_consent', persona_id=persona.id, consent_id=consent.id), id="revoke-" ~ consent.id) %}
-                            {{ revoke.submit(value=_("Revoke"), class="outline secondary") }}
+                            {{ revoke.submit(value=_("Revoke"), class="outline secondary", **{"aria-label": _("Revoke the consent of %(client)s", client=consent.client_id)}) }}
                         {% endcall %}
                     {% else %}
                         <p><small>{% trans %}No client has a consent yet.{% endtrans %}</small></p>

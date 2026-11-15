@@ -58,6 +58,8 @@ Press CTRL+C to quit
 
 Open `http://127.0.0.1:3000/` to reach the web interface.
 The server stores its data in a SQLite database in the Flask instance folder.
+At start, the server creates the missing tables, but it does not change the existing ones.
+After an update that changes a table, remove the database: the server creates a new one.
 
 Run the server with Docker:
 

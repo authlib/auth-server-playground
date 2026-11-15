@@ -87,3 +87,36 @@ def test_login_hint_of_the_request_object(testapp, client, other_persona):
     url = authorize_url(client_id=client["client_id"], request=unsigned(claims))
     res = testapp.get(url).follow()
     assert res.forms["select-persona"]["persona"].value == str(other_persona["id"])
+
+
+def test_ui_locales_of_the_request_object_on_the_consent_page(logged_in, client):
+    claims = request_claims(client, ui_locales="fr")
+    url = authorize_url(client_id=client["client_id"], request=unsigned(claims))
+    res = logged_in.get(url)
+    assert '<html lang="fr"' in res.text
+
+
+def test_consent_shows_the_parameters_of_the_request_object(logged_in, client):
+    request = unsigned(request_claims(client, claims={"userinfo": {"email": None}}))
+    url = authorize_url(client_id=client["client_id"], request=request)
+    details = logged_in.get(url).html.select_one("details").get_text(" ", strip=True)
+    assert "from-the-object" in details
+    assert '{"userinfo": {"email": null}}' in details
+    assert request not in details
+
+
+def fr_request_url(client):
+    claims = request_claims(client, ui_locales="fr")
+    return authorize_url(client_id=client["client_id"], request=unsigned(claims))
+
+
+def test_ui_locales_of_the_request_object_on_the_persona_page(testapp, client):
+    res = testapp.get(fr_request_url(client)).follow()
+    assert '<html lang="fr"' in res.text
+    assert "ui_locales=fr" in res.forms["random"].action
+
+
+def test_change_persona_keeps_the_ui_locales_of_the_request_object(logged_in, client):
+    page = logged_in.get(fr_request_url(client))
+    link = page.html.select_one("a[href^='/interaction/persona']")["href"]
+    assert '<html lang="fr"' in logged_in.get(link).text

@@ -98,6 +98,8 @@ def test_import_bumps_the_revision(app):
         lambda s: s["clients"][0].update(client_secret=42),
         lambda s: s["clients"][0].update(client_id_issued_at="now"),
         lambda s: s["clients"][0].update(client_id_issued_at=True),
+        lambda s: s["clients"][0].update(client_id_issued_at=2**70),
+        lambda s: s["clients"][0].update(client_secret_expires_at=-1),
         lambda s: s["clients"][0].update(client_metadata=[]),
         lambda s: s["clients"][0]["client_metadata"].update(scope=["profile"]),
         lambda s: s["clients"][0]["client_metadata"].update(

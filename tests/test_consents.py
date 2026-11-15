@@ -63,6 +63,8 @@ def test_persona_page_lists_and_revokes_consents(app, logged_in, client, persona
     assert len(ids) == len(set(ids))
     with app.app_context():
         consent_id = Consent.query.one().id
+    button = page.html.select_one(f"#revoke-{consent_id} [type=submit]")
+    assert button["aria-label"] == "Revoke the consent of confidential-client"
     page.forms[f"revoke-{consent_id}"].submit().follow()
     assert consents_of(app, persona) == []
     assert "consent" in logged_in.get(code_url(client)).forms
