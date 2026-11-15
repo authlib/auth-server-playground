@@ -157,6 +157,13 @@ body > header nav a[aria-current] {
 
 .table-scroll {
     overflow-x: auto;
+    /* Contains the sr-only content of the cells, which is absolute. */
+    position: relative;
+}
+
+/* A table cell shrinks the value to nothing: the table scrolls instead. */
+.table-scroll .copy-value {
+    min-width: 14rem;
 }
 
 .stats {

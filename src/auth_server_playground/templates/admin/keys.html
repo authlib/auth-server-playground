@@ -1,0 +1,56 @@
+{% extends "admin/layout.html" %}
+{% from "_copy.html" import copy_field %}
+{% from "_form.html" import render_form %}
+{% block title %}{% trans %}Keys{% endtrans %}{% endblock %}
+{% block content %}
+    <div class="page-title">
+        <h2>{% trans %}Keys{% endtrans %}</h2>
+        <div class="actions">
+            {% for alg, form in rotate_forms.items() %}
+                {% call render_form(form, url_for('admin.rotate_key', alg=alg), id="rotate-" ~ alg) %}
+                    {{ form.submit(value=_("Rotate %(alg)s", alg=alg), class="outline") }}
+                {% endcall %}
+            {% endfor %}
+        </div>
+    </div>
+    <p>{% trans %}The active key of each algorithm signs the ID tokens. A retired key stays published, so that clients can still verify the tokens it signed.{% endtrans %}</p>
+    <div class="table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">{% trans %}Algorithm{% endtrans %}</th>
+                    <th scope="col">{% trans %}Key ID{% endtrans %}</th>
+                    <th scope="col">{% trans %}Created{% endtrans %}</th>
+                    <th scope="col">{% trans %}State{% endtrans %}</th>
+                    <th scope="col"><span class="sr-only">{% trans %}Actions{% endtrans %}</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key in signing_keys %}
+                    <tr>
+                        <td><code>{{ key.alg }}</code>{% if key.alg not in enabled %} <mark>{% trans %}disabled{% endtrans %}</mark>{% endif %}</td>
+                        <td>
+                            {% call copy_field("kid-" ~ loop.index, key.kid, _("Copy the %(alg)s key ID %(kid)s", alg=key.alg, kid=key.kid)) %}<span class="sr-only">{% trans %}Key ID{% endtrans %}</span>{% endcall %}
+                        </td>
+                        <td>{{ key.created|datetimeformat("short") }}</td>
+                        <td>{% if key.active %}{% trans %}Active{% endtrans %}{% else %}{% trans %}Retired{% endtrans %}{% endif %}</td>
+                        <td>
+                            {% if key.kid in delete_forms %}
+                                {% set form = delete_forms[key.kid] %}
+                                {% call render_form(form, url_for('admin.remove_key', kid=key.kid), id="delete-" ~ key.kid) %}
+                                    {{ form.submit(value=_("Delete"), class="outline secondary", **{"aria-label": _("Delete the %(alg)s key %(kid)s", alg=key.alg, kid=key.kid)}) }}
+                                {% endcall %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <article>
+        <header>
+            {% call copy_field("jwks-url-value", jwks_url, _("Copy the JWKS URL")) %}<code>jwks_uri</code>{% endcall %}
+        </header>
+        <pre class="metadata highlight"><code>{{ jwks|pretty_json|highlight("json") }}</code></pre>
+    </article>
+{% endblock %}

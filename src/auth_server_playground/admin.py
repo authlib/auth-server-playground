@@ -3,6 +3,7 @@ import secrets
 import time
 
 from flask import Blueprint
+from flask import abort
 from flask import flash
 from flask import jsonify
 from flask import redirect
@@ -21,9 +22,15 @@ from .forms import PersonaForm
 from .forms import RandomPersonaForm
 from .forms import ServerForm
 from .interaction import current_persona
+from .keys import KeyInUse
+from .keys import all_keys
+from .keys import delete_key
+from .keys import public_jwks
+from .keys import rotate_key as rotate_signing_key
 from .models import Client
 from .models import Consent
 from .models import Persona
+from .models import SigningKey
 from .models import db
 from .personas import create_random_persona
 from .personas import random_locale_for
@@ -134,6 +141,53 @@ def server_defaults():
         save_document(default_document())
         flash(_("The default configuration is restored."), "success")
     return redirect(url_for("admin.server"))
+
+
+def enabled_algorithms():
+    return current_document()["metadata"]["id_token_signing_alg_values_supported"]
+
+
+@bp.route("/keys")
+def keys():
+    enabled = enabled_algorithms()
+    signing_keys = all_keys()
+    return render_template(
+        "admin/keys.html",
+        signing_keys=signing_keys,
+        enabled=enabled,
+        rotate_forms={alg: ActionForm(prefix=f"rotate-{alg}") for alg in enabled},
+        delete_forms={
+            key.kid: ActionForm(prefix=f"delete-{key.kid}")
+            for key in signing_keys
+            if not (key.active and key.alg in enabled)
+        },
+        jwks=public_jwks(),
+        jwks_url=url_for("oauth.jwks", _external=True),
+    )
+
+
+@bp.route("/keys/<alg>/rotate", methods=["POST"])
+def rotate_key(alg):
+    if alg not in enabled_algorithms():
+        abort(404)
+    if ActionForm(prefix=f"rotate-{alg}").validate_on_submit():
+        rotate_signing_key(alg)
+        flash(_("A new %(alg)s key signs the ID tokens.", alg=alg), "success")
+    return redirect(url_for("admin.keys"))
+
+
+@bp.route("/keys/<kid>/delete", methods=["POST"])
+def remove_key(kid):
+    key = db.get_or_404(SigningKey, kid)
+    if not ActionForm(prefix=f"delete-{kid}").validate_on_submit():
+        return redirect(url_for("admin.keys"))
+    try:
+        delete_key(key, enabled_algorithms())
+    except KeyInUse:
+        flash(_("This key signs the ID tokens. Rotate it first."), "error")
+    else:
+        flash(_("The key is deleted."), "success")
+    return redirect(url_for("admin.keys"))
 
 
 @bp.route("/clients")

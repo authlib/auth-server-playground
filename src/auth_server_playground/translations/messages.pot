@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-15 08:35+0100\n"
+"POT-Creation-Date: 2026-11-15 09:21+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,61 +17,74 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: src/auth_server_playground/admin.py:109
+#: src/auth_server_playground/admin.py:116
 msgid "The server configuration is saved."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:135
+#: src/auth_server_playground/admin.py:142
 msgid "The default configuration is restored."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:151
+#: src/auth_server_playground/admin.py:175
+#, python-format
+msgid "A new %(alg)s key signs the ID tokens."
+msgstr ""
+
+#: src/auth_server_playground/admin.py:187
+msgid "This key signs the ID tokens. Rotate it first."
+msgstr ""
+
+#: src/auth_server_playground/admin.py:189
+msgid "The key is deleted."
+msgstr ""
+
+#: src/auth_server_playground/admin.py:205
 msgid "The client is created."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:173
+#: src/auth_server_playground/admin.py:227
 msgid "The client is saved."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:183
+#: src/auth_server_playground/admin.py:237
 msgid "The client secret is regenerated."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:194
+#: src/auth_server_playground/admin.py:248
 msgid "The client is deleted."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:216
+#: src/auth_server_playground/admin.py:270
 msgid "The persona is created."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:227
+#: src/auth_server_playground/admin.py:281
 msgid "A random persona is created."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:254
+#: src/auth_server_playground/admin.py:308
 msgid "The persona is saved."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:279
+#: src/auth_server_playground/admin.py:333
 msgid "The consent is revoked."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:292
+#: src/auth_server_playground/admin.py:346
 msgid "The persona is deleted."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:307
-#: src/auth_server_playground/admin.py:323
+#: src/auth_server_playground/admin.py:361
+#: src/auth_server_playground/admin.py:377
 #, python-format
 msgid "This snapshot cannot be imported: %(error)s"
 msgstr ""
 
-#: src/auth_server_playground/admin.py:325
+#: src/auth_server_playground/admin.py:379
 msgid "The snapshot is imported."
 msgstr ""
 
-#: src/auth_server_playground/endpoints.py:78
+#: src/auth_server_playground/endpoints.py:81
 msgid "The persona changed since this page was shown."
 msgstr ""
 
@@ -492,6 +505,7 @@ msgid "A public client has no secret."
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/client.html:49
+#: src/auth_server_playground/templates/admin/keys.html:41
 #: src/auth_server_playground/templates/admin/persona.html:80
 msgid "Delete"
 msgstr ""
@@ -586,6 +600,70 @@ msgstr ""
 #: src/auth_server_playground/templates/admin/index.html:40
 #, python-format
 msgid "The server does not support these values of %(client)s:"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/keys.html:4
+#: src/auth_server_playground/templates/admin/keys.html:7
+#: src/auth_server_playground/templates/admin/layout.html:3
+msgid "Keys"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/keys.html:11
+#, python-format
+msgid "Rotate %(alg)s"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/keys.html:16
+msgid ""
+"The active key of each algorithm signs the ID tokens. A retired key stays"
+" published, so that clients can still verify the tokens it signed."
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/keys.html:21
+msgid "Algorithm"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/keys.html:22
+#: src/auth_server_playground/templates/admin/keys.html:33
+msgid "Key ID"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/keys.html:23
+msgid "Created"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/keys.html:24
+msgid "State"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/keys.html:25
+msgid "Actions"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/keys.html:31
+msgid "disabled"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/keys.html:33
+#, python-format
+msgid "Copy the %(alg)s key ID %(kid)s"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/keys.html:36
+msgid "Active"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/keys.html:36
+msgid "Retired"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/keys.html:41
+#, python-format
+msgid "Delete the %(alg)s key %(kid)s"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/keys.html:52
+msgid "Copy the JWKS URL"
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/layout.html:3
