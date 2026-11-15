@@ -1,21 +1,22 @@
 # Auth Server Playground
 
-An OAuth 2.0 authorization server built with [Authlib](https://authlib.org/), configured from a web interface.
-Run it to test and debug an OAuth 2.0 client, or to try the server features of Authlib.
+An OAuth 2.0 and OpenID Connect authorization server built with [Authlib](https://authlib.org/), configured from a web interface.
+Run it to test and debug an OAuth 2.0 or OpenID Connect client, or to try the server features of Authlib.
 For a client to test an authorization server, see [Auth Playground](https://github.com/authlib/auth-playground).
 
 This page explains how to run, try and configure the server.
-It assumes basic knowledge of OAuth 2.0.
+It assumes basic knowledge of OAuth 2.0 and OpenID Connect.
 It does not explain how to build a server with Authlib: for that, read the [Authlib documentation](https://docs.authlib.org/) and the [example OAuth 2.0 server](https://github.com/authlib/example-oauth2-server).
 
 ## Features
 
-The web interface has four sections:
+The web interface has five sections:
 
-- **Server**: the published metadata, the grants, the client authentication methods, PKCE, the token lifetimes and the scopes. The defaults follow RFC 9700.
+- **Server**: the published metadata, the grants, the client authentication methods, PKCE, the token lifetimes, the scopes and the ID token algorithms. The defaults follow RFC 9700.
+- **Keys**: the keys that sign the ID tokens, one active key per algorithm. A rotation creates a new active key. The old key stays in the JWKS until it is deleted, so clients can still verify the tokens it signed.
 - **Clients**: create and edit the clients by hand. The form marks the values that the server does not support.
-- **Personas**: the users of the server. The server checks no password: at the authorization endpoint, pick the persona to act as. Each persona has the standard claims of OpenID Connect.
-- **Snapshot**: export the configuration, the personas and the clients to a JSON file, and import such a file.
+- **Personas**: the users of the server. The server checks no password: at the authorization endpoint, pick the persona to act as. Each persona has the standard claims of OpenID Connect. The persona page lists the consents of the persona, and revokes them.
+- **Snapshot**: export the configuration, the personas, the clients and the signing keys to a JSON file, and import such a file. The file holds the client secrets and the private keys: keep it private.
 
 The server supports these grants and endpoints:
 
@@ -27,6 +28,20 @@ The server supports these grants and endpoints:
 - Token revocation (RFC 7009).
 - Authorization server metadata (RFC 8414), at `/.well-known/oauth-authorization-server`.
 - A protected resource, `/api/resource`, that returns the scope, the client and the persona of the access token.
+
+OpenID Connect is on when the scopes of the server hold `openid`, as in the default configuration.
+The server then supports:
+
+- ID tokens in the authorization code flow, signed with RS256, PS256, ES256 or Ed25519.
+- The UserInfo endpoint, at `/oauth/userinfo`.
+- Discovery, at `/.well-known/openid-configuration`, and the public keys at `/oauth/jwks`.
+- The `prompt`, `max_age`, `login_hint`, `ui_locales` and `acr_values` parameters.
+  `login_hint` preselects a persona, and `ui_locales` sets the language of the persona and consent pages.
+  The server accepts any `acr` value: the ID token holds the first requested value.
+- A default `max_age` for each client.
+- The `claims` parameter. The consent page lists the claims that the scopes do not give.
+- Request objects in the `request` parameter, unsigned only (`alg` `none`): the clients have no keys yet.
+  The `request_uri` parameter is not supported.
 
 ## Run the server
 
@@ -89,6 +104,76 @@ $ curl -u demo:<SECRET> -d grant_type=password -d username=alice -d password=x h
 ```
 
 Enable it in **Server**, then in the client.
+
+## Try OpenID Connect
+
+Clients find the endpoints of the server in its discovery document:
+
+```console
+$ curl -s http://127.0.0.1:3000/.well-known/openid-configuration | jq '{issuer, authorization_endpoint, token_endpoint, userinfo_endpoint, jwks_uri}'
+{
+  "issuer": "http://127.0.0.1:3000",
+  "authorization_endpoint": "http://127.0.0.1:3000/oauth/authorize",
+  "token_endpoint": "http://127.0.0.1:3000/oauth/token",
+  "userinfo_endpoint": "http://127.0.0.1:3000/oauth/userinfo",
+  "jwks_uri": "http://127.0.0.1:3000/oauth/jwks"
+}
+```
+
+Set up the `demo` client of the previous section for the authorization code flow:
+
+1. Open **Clients**, then `demo`.
+2. Set **Redirect URIs** to `http://127.0.0.1:8000/callback`.
+   No server needs to listen there: the code shows in the address bar of the browser.
+3. Check `authorization_code` in **Grant types**, and `code` in **Response types**.
+4. Set **Scopes** to `openid profile`.
+5. Click **Save**.
+
+The default configuration requires PKCE for all clients.
+Create a code verifier, and print an authorization URL with its challenge:
+
+```bash
+VERIFIER=$(openssl rand -hex 32)
+CHALLENGE=$(printf %s "$VERIFIER" | openssl dgst -sha256 -binary | openssl base64 | tr '+/' '-_' | tr -d '=')
+echo "http://127.0.0.1:3000/oauth/authorize?response_type=code&client_id=demo&redirect_uri=http://127.0.0.1:8000/callback&scope=openid%20profile&nonce=n-0S6_WzA2Mj&code_challenge=$CHALLENGE&code_challenge_method=S256"
+```
+
+Open the URL in a browser, pick a persona, and click **Accept**.
+The browser goes to the redirect URI, such as `http://127.0.0.1:8000/callback?code=NfcKoEYKZVGeX3HWX0sfAA6HDZUtwmJl2QpC35gU6saJVXPc`.
+In the same shell, exchange the code for the tokens, with `<CODE>` replaced by the code:
+
+```console
+$ curl -s -u demo:<SECRET> -d grant_type=authorization_code -d code=<CODE> -d redirect_uri=http://127.0.0.1:8000/callback -d code_verifier=$VERIFIER http://127.0.0.1:3000/oauth/token | tee token.json
+{"token_type": "Bearer", "access_token": "BnRYDC5spCh9C4kugcA99yieB5dzFgzDtyTfuBcbk8", "expires_in": 3600, "refresh_token": "Tdh8EtppfPcv7bMcKEQP8FYqz32UrD5Eqos1kCqQQQKnDxzE", "scope": "openid profile", "id_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6ImQ4cnMzM2lqd0IxNHdrWmR6ZWUxbWttZFJNakxtVTJWekN4VlE0RDJzNGsifQ..."}
+```
+
+The ID token is a JWT, shortened in this output.
+Read some of its claims:
+
+```console
+$ jq '.id_token | split(".")[1] | gsub("-";"+") | gsub("_";"/") | @base64d | fromjson | {iss, aud, sub, nonce, auth_time, name}' token.json
+{
+  "iss": "http://127.0.0.1:3000",
+  "aud": [
+    "demo"
+  ],
+  "sub": "c0a1e3d2-7b5f-4e7a-9d2c-1f6b8a4e5c3d",
+  "nonce": "n-0S6_WzA2Mj",
+  "auth_time": 1794764875,
+  "name": "Alice Martin"
+}
+```
+
+Call the UserInfo endpoint with the access token:
+
+```console
+$ curl -s -H "Authorization: Bearer $(jq -r .access_token token.json)" http://127.0.0.1:3000/oauth/userinfo
+{"name": "Alice Martin", "given_name": "Alice", "family_name": "Martin", "middle_name": "Claire", "nickname": "Ali", "preferred_username": "alice", "profile": "https://alice.example/profile", "website": "https://alice.example", "gender": "female", "birthdate": "1990-12-10", "zoneinfo": "Europe/Paris", "locale": "fr-FR", "updated_at": 1794764773, "sub": "c0a1e3d2-7b5f-4e7a-9d2c-1f6b8a4e5c3d", "picture": "http://127.0.0.1:3000/personas/1/picture.svg"}
+```
+
+The server passes the Config and Basic plans of the OpenID Foundation conformance suite, with a few warnings.
+`conformance/expected-failures.json` lists them, with their reasons.
+[`conformance/README.md`](conformance/README.md) explains how to run the suite against the server.
 
 ## Configuration
 
