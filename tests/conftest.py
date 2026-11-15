@@ -177,6 +177,7 @@ def client(app):
         client_id="confidential-client",
         client_secret="confidential-secret",
         metadata={
+            "scope": "openid profile",
             "grant_types": [
                 "authorization_code",
                 "password",

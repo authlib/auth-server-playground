@@ -3,6 +3,12 @@ from urllib.parse import parse_qs
 from urllib.parse import urlencode
 from urllib.parse import urlparse
 
+from authlib.common.security import generate_token
+from authlib.oauth2.rfc7636 import create_s256_code_challenge
+from joserfc import jwt
+from joserfc.jwk import KeySet
+
+CODE_VERIFIER = generate_token(48)
 REDIRECT_URI = "http://client.test/callback"
 
 
@@ -66,4 +72,43 @@ def client_credentials_token(testapp, client, *, status=200, **params):
         {"grant_type": "client_credentials", **params},
         headers=basic_auth(client),
         status=status,
+    )
+
+
+def oidc_url(client, **params):
+    """Build an OpenID Connect authorization URL. None leaves a parameter out."""
+    return authorize_url(
+        **{
+            "response_type": "code",
+            "client_id": client["client_id"],
+            "redirect_uri": REDIRECT_URI,
+            "scope": "openid profile",
+            "state": "xyz",
+            "nonce": generate_token(16),
+            "code_challenge": create_s256_code_challenge(CODE_VERIFIER),
+            "code_challenge_method": "S256",
+            **params,
+        }
+    )
+
+
+def exchange_code(testapp, client, code, *, status=200):
+    return testapp.post(
+        "/oauth/token",
+        {
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": REDIRECT_URI,
+            "code_verifier": CODE_VERIFIER,
+        },
+        headers=basic_auth(client),
+        status=status,
+    )
+
+
+def decode_id_token(testapp, id_token):
+    """Verify the ID token with the published JWKS. Return the joserfc token."""
+    key_set = KeySet.import_key_set(testapp.get("/oauth/jwks").json)
+    return jwt.decode(
+        id_token, key_set, algorithms=["RS256", "PS256", "ES256", "Ed25519"]
     )

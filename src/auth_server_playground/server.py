@@ -9,16 +9,27 @@ from authlib.integrations.sqla_oauth2 import create_query_client_func
 from authlib.integrations.sqla_oauth2 import create_revocation_endpoint
 from authlib.oauth2.rfc6749 import grants
 from authlib.oauth2.rfc7636 import CodeChallenge
+from authlib.oidc.core import OpenIDCode
 from flask import current_app
+from flask import request
 
+from .keys import active_kid
+from .keys import private_key_set
 from .models import AuthorizationCode
 from .models import Client
 from .models import Token
 from .models import db
 from .personas import find_by_username
+from .personas import user_info
+from .settings import is_oidc_enabled
 from .store import settings_row
 
 CACHE_KEY = "auth_server_playground.server"
+
+
+def issuer_for(configured):
+    """Return the configured issuer, else the URL of the request."""
+    return configured or request.url_root.rstrip("/")
 
 
 class AuthorizationCodeGrant(grants.AuthorizationCodeGrant):
@@ -29,6 +40,9 @@ class AuthorizationCodeGrant(grants.AuthorizationCodeGrant):
             redirect_uri=request.payload.redirect_uri,
             scope=request.scope,
             persona_id=request.user.id,
+            nonce=request.payload.data.get("nonce"),
+            # Only the OpenIDCode extension sets it.
+            auth_time=getattr(request, "auth_time", None),
             code_challenge=request.payload.data.get("code_challenge"),
             code_challenge_method=request.payload.data.get("code_challenge_method"),
         )
@@ -49,6 +63,41 @@ class AuthorizationCodeGrant(grants.AuthorizationCodeGrant):
 
     def authenticate_user(self, authorization_code):
         return authorization_code.persona
+
+
+class PlaygroundOpenIDCode(OpenIDCode):
+    def __init__(self, issuer, id_token_lifetime):
+        super().__init__(require_nonce=False)
+        self.issuer = issuer
+        # Authlib computes iat and exp from one clock reading.
+        self.DEFAULT_EXPIRES_IN = id_token_lifetime
+
+    def exists_nonce(self, nonce, request):
+        return (
+            AuthorizationCode.query.filter_by(
+                client_id=request.payload.client_id, nonce=nonce
+            ).first()
+            is not None
+        )
+
+    def get_client_claims(self, client):
+        return {"iss": issuer_for(self.issuer)}
+
+    def resolve_client_private_key(self, client):
+        return private_key_set()
+
+    def get_encode_header(self, client):
+        # Authlib has no separate hook for the keys that verify id_token_hint.
+        # So resolve_client_private_key returns the retired keys too, and joserfc
+        # would sign with a random key of the algorithm. The kid picks the active key.
+        alg = self.get_client_algorithm(client)
+        header = {"alg": alg}
+        if kid := active_kid(alg):
+            header["kid"] = kid
+        return header
+
+    def generate_user_info(self, user, scope, claims):
+        return user_info(user, scope, claims)
 
 
 class PasswordGrant(grants.ResourceOwnerPasswordCredentialsGrant):
@@ -164,6 +213,10 @@ def build_server(document):
         if grant_type == "authorization_code" and pkce_methods:
             extensions.append(
                 PlaygroundCodeChallenge(pkce_methods, settings["pkce_required"])
+            )
+        if grant_type == "authorization_code" and is_oidc_enabled(document):
+            extensions.append(
+                PlaygroundOpenIDCode(metadata["issuer"], settings["id_token_lifetime"])
             )
         server.register_grant(configured(GRANTS[grant_type], **attributes), extensions)
 

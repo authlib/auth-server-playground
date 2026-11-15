@@ -20,6 +20,7 @@ from .keys import public_jwks
 from .models import Persona
 from .models import db
 from .server import get_server
+from .server import issuer_for
 from .server import require_oauth
 from .settings import is_oidc_enabled
 from .settings import published_metadata
@@ -44,7 +45,8 @@ def current_metadata(document=None):
     """
     if document is None:
         document = current_document()
-    return published_metadata(document, request.url_root.rstrip("/"), endpoint_urls())
+    issuer = issuer_for(document["metadata"]["issuer"])
+    return published_metadata(document, issuer, endpoint_urls())
 
 
 @bp.route("/oauth/authorize", methods=["GET", "POST"])

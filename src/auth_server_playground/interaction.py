@@ -101,20 +101,40 @@ def after_interaction():
     return redirect(url_for("admin.index"))
 
 
-def requesting_client(next_url):
-    """Return the name of the client of the authorization request in next_url."""
+def authorization_params(next_url):
+    """Return the parameters of the authorization request in next_url, or {}."""
     if not next_url:
-        return None
+        return {}
     url = urlsplit(next_url)
     if url.path != url_for("oauth.authorize"):
-        return None
-    client_id = parse_qs(url.query).get("client_id", [None])[0]
+        return {}
+    return {key: values[0] for key, values in parse_qs(url.query).items()}
+
+
+def requesting_client(next_url):
+    """Return the name of the client of the authorization request in next_url."""
+    client_id = authorization_params(next_url).get("client_id")
     if not client_id:
         return None
     client = Client.query.filter_by(client_id=client_id).first()
     if client is None:
         return None
     return client.client_name or client.client_id
+
+
+def hinted_persona(personas, hint):
+    """Return the persona whose sub or email is the login_hint, or None."""
+    if not hint:
+        return None
+    folded = hint.casefold()
+    return next(
+        (
+            p
+            for p in personas
+            if hint == p.sub or folded == p.claims.get("email", "").casefold()
+        ),
+        None,
+    )
 
 
 @bp.route("/interaction/persona", methods=["GET", "POST"])
@@ -124,13 +144,18 @@ def select_persona():
     form.persona.choices = [
         SelectChoice(persona.id, str(persona)) for persona in all_personas
     ]
+    next_url = request.args.get("next")
+    if not form.is_submitted():
+        hint = authorization_params(next_url).get("login_hint")
+        selected = hinted_persona(all_personas, hint) or current_persona()
+        form.persona.data = selected.id if selected else None
     if not form.validate_on_submit():
         return render_template(
             "interaction/select_persona.html",
             form=form,
             random_form=ActionForm(prefix="random"),
             personas={persona.id: persona for persona in all_personas},
-            client_name=requesting_client(request.args.get("next")),
+            client_name=requesting_client(next_url),
         )
 
     act_as(form.persona.data)

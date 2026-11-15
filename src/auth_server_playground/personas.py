@@ -5,6 +5,7 @@ import unicodedata
 import uuid
 
 import python_avatars
+from authlib.oidc.core import UserInfo
 from faker import Faker
 
 from .models import Persona
@@ -157,6 +158,14 @@ def default_personas():
         },
     )
     return [complete, minimal]
+
+
+def user_info(persona, scope, claims=None):
+    """Return the claims of the persona that the scope and the claims request give."""
+    info = UserInfo(persona.claims, sub=persona.sub)
+    if persona.picture_url:
+        info["picture"] = persona.picture_url
+    return info.filter(scope, claims)
 
 
 def find_by_username(username):

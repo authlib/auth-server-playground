@@ -8,6 +8,8 @@ from flask_babel import get_locale
 from werkzeug.exceptions import NotFound
 from werkzeug.routing import BaseConverter
 
+from .interaction import authorization_params
+
 babel = Babel()
 
 #: The blueprint whose URLs start with the language code.
@@ -29,10 +31,28 @@ class LangConverter(BaseConverter):
         return value
 
 
+def requested_language():
+    """Return the first interface language in ui_locales, or None.
+
+    ui_locales comes from the authorization request, or from the request in
+    the next parameter of the interaction pages.
+    """
+    values = request.args.get("ui_locales") or authorization_params(
+        request.args.get("next")
+    ).get("ui_locales", "")
+    codes = available_language_codes()
+    for tag in values.split():
+        language = tag.split("-")[0].lower()
+        if language in codes:
+            return language
+    return None
+
+
 def preferred_language():
-    """Return the language of the URL, else the last one used, else the browser one."""
+    """Return the language of the URL, else the requested one, else the last one used, else the browser one."""
     return (
         g.get("lang_code")
+        or requested_language()
         or session.get("lang_code")
         or request.accept_languages.best_match(available_language_codes())
         or current_app.config["BABEL_DEFAULT_LOCALE"]

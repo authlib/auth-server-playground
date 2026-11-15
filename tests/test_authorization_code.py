@@ -4,14 +4,13 @@ from urllib.parse import urlparse
 from authlib.common.security import generate_token
 from authlib.oauth2.rfc7636 import create_s256_code_challenge
 
+from tests.utils import CODE_VERIFIER
 from tests.utils import REDIRECT_URI
 from tests.utils import authorize_url
 from tests.utils import basic_auth
 from tests.utils import bearer
 from tests.utils import callback_params
 from tests.utils import consent
-
-CODE_VERIFIER = generate_token(48)
 
 
 def code_url(client, **params):
