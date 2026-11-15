@@ -31,6 +31,7 @@ ENDPOINTS = [
     "authorization_endpoint",
     "token_endpoint",
     "revocation_endpoint",
+    "userinfo_endpoint",
     "jwks_uri",
 ]
 
@@ -130,6 +131,7 @@ def published_metadata(document, issuer, endpoint_urls):
     if settings["revocation_enabled"]:
         metadata["revocation_endpoint"] = endpoint_urls["revocation_endpoint"]
     if oidc:
+        metadata["userinfo_endpoint"] = endpoint_urls["userinfo_endpoint"]
         metadata["jwks_uri"] = endpoint_urls["jwks_uri"]
 
     # RFC 8414 §2 marks response_types_supported as REQUIRED, even when empty.

@@ -10,6 +10,7 @@ from authlib.integrations.sqla_oauth2 import create_revocation_endpoint
 from authlib.oauth2.rfc6749 import grants
 from authlib.oauth2.rfc7636 import CodeChallenge
 from authlib.oidc.core import OpenIDCode
+from authlib.oidc.core import UserInfoEndpoint
 from flask import current_app
 from flask import request
 
@@ -104,6 +105,11 @@ class PlaygroundOpenIDCode(OpenIDCode):
             header["kid"] = kid
         return header
 
+    def generate_user_info(self, user, scope, claims):
+        return user_info(user, scope, claims)
+
+
+class PlaygroundUserInfoEndpoint(UserInfoEndpoint):
     def generate_user_info(self, user, scope, claims):
         return user_info(user, scope, claims)
 
@@ -243,6 +249,10 @@ def build_server(document):
         endpoint = create_revocation_endpoint(db.session, Token)
         server.register_endpoint(
             configured(endpoint, CLIENT_AUTH_METHODS=list(auth_methods))
+        )
+    if is_oidc_enabled(document):
+        server.register_endpoint(
+            PlaygroundUserInfoEndpoint(resource_protector=require_oauth)
         )
     return server
 

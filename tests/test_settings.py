@@ -16,6 +16,7 @@ URLS = {
     "authorization_endpoint": "https://server.test/oauth/authorize",
     "token_endpoint": "https://server.test/oauth/token",
     "revocation_endpoint": "https://server.test/oauth/revoke",
+    "userinfo_endpoint": "https://server.test/oauth/userinfo",
     "jwks_uri": "https://server.test/oauth/jwks",
 }
 
@@ -25,6 +26,17 @@ def changed(metadata=None, settings=None):
     document["metadata"].update(metadata or {})
     document["settings"].update(settings or {})
     return document
+
+
+def test_published_userinfo_endpoint():
+    metadata = published_metadata(default_document(), "https://server.test", URLS)
+    assert metadata["userinfo_endpoint"] == URLS["userinfo_endpoint"]
+
+
+def test_no_userinfo_endpoint_without_openid():
+    document = changed(metadata={"scopes_supported": ["profile"]})
+    metadata = published_metadata(document, "https://server.test", URLS)
+    assert "userinfo_endpoint" not in metadata
 
 
 def errors_of(document):

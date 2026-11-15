@@ -34,6 +34,7 @@ def endpoint_urls():
         "authorization_endpoint": url_for("oauth.authorize", _external=True),
         "token_endpoint": url_for("oauth.issue_token", _external=True),
         "revocation_endpoint": url_for("oauth.revoke_token", _external=True),
+        "userinfo_endpoint": url_for("oauth.userinfo", _external=True),
         "jwks_uri": url_for("oauth.jwks", _external=True),
     }
 
@@ -96,6 +97,13 @@ def revoke_token():
     if not current_document()["settings"]["revocation_enabled"]:
         abort(404)
     return get_server().create_endpoint_response("revocation")
+
+
+@bp.route("/oauth/userinfo", methods=["GET", "POST"])
+def userinfo():
+    if not is_oidc_enabled(current_document()):
+        abort(404)
+    return get_server().create_endpoint_response("userinfo")
 
 
 @bp.route("/.well-known/oauth-authorization-server")

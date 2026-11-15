@@ -117,6 +117,12 @@ class Token(db.Model, OAuth2TokenMixin):
     # The authorization code that the token comes from, if any.
     authorization_code = db.Column(db.String(120), index=True)
 
+    def get_client(self):
+        return Client.query.filter_by(client_id=self.client_id).first()
+
+    def get_user(self):
+        return self.persona
+
     def is_refresh_token_active(self):
         if self.refresh_token_revoked_at:
             return False
