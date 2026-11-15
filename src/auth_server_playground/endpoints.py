@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 from authlib.integrations.flask_oauth2 import current_token
 from authlib.oauth2 import OAuth2Error
 from flask import Blueprint
@@ -28,6 +30,9 @@ from .store import current_document
 
 bp = Blueprint("oauth", __name__)
 
+#: The fields of the consent form. An authorization request has none of them.
+CONSENT_FIELDS = {"csrf_token", "persona_id", "accept", "deny"}
+
 
 def endpoint_urls():
     return {
@@ -52,6 +57,12 @@ def current_metadata(document=None):
 
 @bp.route("/oauth/authorize", methods=["GET", "POST"])
 def authorize():
+    # Per OIDC Core §3.1.2.1, the request may come as a POST. The selector
+    # and the consent form need its parameters in the URL.
+    if request.method == "POST" and not CONSENT_FIELDS & request.form.keys():
+        query = urlencode(list(request.values.items(multi=True)))
+        return redirect(f"{url_for('oauth.authorize')}?{query}", 303)
+
     persona = current_persona()
     server = get_server()
     try:

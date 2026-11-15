@@ -1,4 +1,5 @@
 import time
+from urllib.parse import parse_qsl
 from urllib.parse import urlparse
 
 import pytest
@@ -368,3 +369,27 @@ def test_deleted_client_algorithm_key(app, logged_in, configure):
                 keys.delete_key(key, ["RS256"])
     code = callback_params(consent(logged_in, oidc_url(signed, scope="openid")))["code"]
     assert exchange_code(logged_in, signed, code, status="*").status_int == 400
+
+
+def post_authorization(testapp, client):
+    """Send the authorization request with POST (OIDC Core §3.1.2.1)."""
+    params = dict(parse_qsl(urlparse(oidc_url(client)).query))
+    return testapp.post("/oauth/authorize", params, status=303)
+
+
+def test_post_authorization_request_without_persona(testapp, client, persona):
+    res = post_authorization(testapp, client).follow()
+    assert selector_path(res) == "/interaction/persona"
+    form = res.follow().forms["select-persona"]
+    form["persona"] = str(persona["id"])
+    res = form.submit().follow()
+    assert "consent" in res.forms
+
+
+def test_post_authorization_request_with_a_persona(logged_in, client):
+    res = post_authorization(logged_in, client)
+    assert urlparse(res.location).path == "/oauth/authorize"
+    res = res.follow()
+    assert "consent" in res.forms
+    params = callback_params(res.forms["consent"].submit("accept"))
+    assert "code" in params
