@@ -18,13 +18,6 @@ KEY_TYPES = {
 }
 
 
-@pytest.fixture(autouse=True)
-def rs256_key(app):
-    with app.app_context():
-        keys.ensure_keys(["RS256"])
-        db.session.commit()
-
-
 @pytest.mark.parametrize("alg", ID_TOKEN_ALGORITHMS)
 def test_generated_key(monkeypatch, alg):
     monkeypatch.setitem(keys.GENERATORS, alg, REAL_GENERATORS[alg])

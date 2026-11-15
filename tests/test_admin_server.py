@@ -1,5 +1,7 @@
 import pytest
 
+from auth_server_playground import keys
+from auth_server_playground.store import current_document
 from auth_server_playground.store import settings_row
 
 
@@ -63,7 +65,7 @@ def test_server_form_shows_the_stored_settings(testapp, configure):
     configure(settings={"refresh_token_lifetime": 600})
     form = testapp.get("/en/server").forms["server"]
     assert form["refresh_token_lifetime"].value == "600"
-    assert form["scopes_supported"].value == "profile email"
+    assert form["scopes_supported"].value == "openid profile email address phone"
 
 
 def test_invalid_lifetime_is_refused(app, testapp):
@@ -150,6 +152,7 @@ def test_document_error_without_a_field_goes_on_top(testapp):
     """Authlib refuses an empty response_types_supported, see RFC 8414 §2."""
     form = testapp.get("/en/server").forms["server"]
     form["grant_types_supported"] = ["client_credentials"]
+    form["scopes_supported"] = "profile"
     res = form.submit()
     assert "response_types_supported" in text(res, "#server")
 
@@ -176,3 +179,36 @@ def test_copy_button(testapp):
         "failed",
     }
     assert group.find_next_sibling()["role"] == "status"
+
+
+def test_server_form_sets_the_openid_settings(app, testapp):
+    form = testapp.get("/en/server").forms["server"]
+    form["id_token_signing_alg_values_supported"] = ["RS256", "Ed25519"]
+    form["id_token_lifetime"] = "600"
+    form.submit().follow()
+    with app.app_context():
+        document = current_document()
+        assert document["metadata"]["id_token_signing_alg_values_supported"] == [
+            "RS256",
+            "Ed25519",
+        ]
+        assert document["settings"]["id_token_lifetime"] == 600
+        assert keys.active_kid("Ed25519") is not None
+
+
+def test_server_form_shows_the_rs256_error(testapp):
+    form = testapp.get("/en/server").forms["server"]
+    form["id_token_signing_alg_values_supported"] = ["ES256"]
+    res = form.submit()
+    assert "RS256" in text(res, "#id_token_signing_alg_values_supported-error")
+
+
+def test_home_shows_the_discovery_url(testapp):
+    res = testapp.get("/en/")
+    assert "http://localhost/.well-known/openid-configuration" in res
+
+
+def test_home_hides_the_discovery_url_without_openid(testapp, configure):
+    configure(metadata={"scopes_supported": ["profile"]})
+    res = testapp.get("/en/")
+    assert "openid-configuration" not in res

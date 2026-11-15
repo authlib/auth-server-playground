@@ -4,6 +4,7 @@ import pytest
 from authlib.common.security import generate_token
 from authlib.oauth2.rfc7636 import create_s256_code_challenge
 
+from auth_server_playground import keys
 from auth_server_playground.models import Token
 from auth_server_playground.models import db
 from auth_server_playground.store import settings_row
@@ -258,3 +259,33 @@ def test_refresh_token_lifetime_does_not_follow_the_access_token(
         row.issued_at -= 10
         db.session.commit()
     assert refresh(logged_in, client, token["refresh_token"]).json["access_token"]
+
+
+def test_openid_configuration(testapp):
+    res = testapp.get("/.well-known/openid-configuration")
+    assert res.json["issuer"] == "http://localhost"
+    assert res.json["jwks_uri"] == "http://localhost/oauth/jwks"
+    assert res.json == testapp.get("/.well-known/oauth-authorization-server").json
+
+
+def test_openid_configuration_without_openid(testapp, configure):
+    configure(metadata={"scopes_supported": ["profile"]})
+    testapp.get("/.well-known/openid-configuration", status=404)
+
+
+def test_new_database_has_a_key(app):
+    with app.app_context():
+        assert keys.active_kid("RS256") is not None
+
+
+def test_saving_a_new_algorithm_creates_its_key(app, configure):
+    configure(metadata={"id_token_signing_alg_values_supported": ["RS256", "ES256"]})
+    with app.app_context():
+        assert keys.active_kid("ES256") is not None
+
+
+def test_disabling_an_algorithm_keeps_its_key(app, configure):
+    configure(metadata={"id_token_signing_alg_values_supported": ["RS256", "ES256"]})
+    configure(metadata={"id_token_signing_alg_values_supported": ["RS256"]})
+    with app.app_context():
+        assert keys.active_kid("ES256") is not None

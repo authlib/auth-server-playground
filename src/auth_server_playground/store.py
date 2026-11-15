@@ -5,6 +5,7 @@ import secrets
 from sqlalchemy.exc import DatabaseError
 from sqlalchemy.exc import IntegrityError
 
+from .keys import ensure_keys
 from .models import SETTINGS_ID
 from .models import AuthorizationCode
 from .models import Settings
@@ -26,7 +27,7 @@ def init_database(app, initial_snapshot=None):
 
     Several workers may run it at the same time on an empty database. The
     settings row has a fixed id, so only one worker can insert it, with the
-    personas and clients in the same transaction.
+    personas, clients and signing keys in the same transaction.
 
     Return the stored secret key.
     """
@@ -35,16 +36,18 @@ def init_database(app, initial_snapshot=None):
         create_tables()
         if settings_row() is not None:
             return settings_row().secret_key
+        document = snapshot["configuration"] if snapshot else default_document()
         db.session.add(
             Settings(
                 id=SETTINGS_ID,
-                document=snapshot["configuration"] if snapshot else default_document(),
+                document=document,
                 revision=1,
                 secret_key=secrets.token_hex(32),
             )
         )
         db.session.add_all(snapshot_rows(snapshot) if snapshot else default_personas())
         try:
+            ensure_keys(document["metadata"]["id_token_signing_alg_values_supported"])
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
@@ -87,6 +90,7 @@ def save_document(document):
     # Computed by the database, so that two saves at the same time do not
     # write the same revision.
     row.revision = Settings.revision + 1
+    ensure_keys(document["metadata"]["id_token_signing_alg_values_supported"])
     db.session.commit()
 
 

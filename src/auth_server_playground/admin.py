@@ -30,6 +30,7 @@ from .personas import render_avatar
 from .settings import ENDPOINTS
 from .settings import InvalidDocument
 from .settings import default_document
+from .settings import is_oidc_enabled
 from .settings import unsupported_values
 from .settings import validate_document
 from .snapshot import check_snapshot
@@ -64,14 +65,20 @@ def client_rows(document):
 
 @bp.route("/")
 def index():
+    document = current_document()
     return render_template(
         "admin/index.html",
-        metadata=current_metadata(),
+        metadata=current_metadata(document),
         metadata_url=url_for("oauth.server_metadata", _external=True),
+        discovery_url=(
+            url_for("oauth.openid_configuration", _external=True)
+            if is_oidc_enabled(document)
+            else None
+        ),
         endpoints=ENDPOINTS,
         client_count=Client.query.count(),
         persona_count=Persona.query.count(),
-        warnings=[row for row in client_rows(current_document()) if row[1]],
+        warnings=[row for row in client_rows(document) if row[1]],
     )
 
 

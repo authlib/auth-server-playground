@@ -1,7 +1,12 @@
 import pytest
 
+from auth_server_playground.i18n import available_language_codes
+from auth_server_playground.settings import MAX_LIFETIME
+from auth_server_playground.settings import UI_LOCALES
 from auth_server_playground.settings import InvalidDocument
+from auth_server_playground.settings import claims_supported
 from auth_server_playground.settings import default_document
+from auth_server_playground.settings import is_oidc_enabled
 from auth_server_playground.settings import published_metadata
 from auth_server_playground.settings import response_types_for
 from auth_server_playground.settings import unsupported_values
@@ -11,6 +16,7 @@ URLS = {
     "authorization_endpoint": "https://server.test/oauth/authorize",
     "token_endpoint": "https://server.test/oauth/token",
     "revocation_endpoint": "https://server.test/oauth/revoke",
+    "jwks_uri": "https://server.test/oauth/jwks",
 }
 
 
@@ -67,6 +73,8 @@ def test_response_types_must_match_the_grants():
         ("scopes_supported", ["two words"]),
         ("scopes_supported", "profile"),
         ("issuer", 42),
+        ("id_token_signing_alg_values_supported", ["EdDSA"]),
+        ("id_token_signing_alg_values_supported", "RS256"),
     ],
 )
 def test_invalid_metadata_values_are_refused(key, value):
@@ -86,6 +94,9 @@ def test_invalid_metadata_values_are_refused(key, value):
         ("refresh_token_lifetime", None),
         ("refresh_token_lifetime", 366 * 24 * 3600),
         ("access_token_lifetime", 10**10),
+        ("id_token_lifetime", 0),
+        ("id_token_lifetime", MAX_LIFETIME + 1),
+        ("id_token_lifetime", True),
     ],
 )
 def test_invalid_settings_are_refused(key, value):
@@ -225,9 +236,108 @@ def test_token_endpoint_needs_a_method():
 def test_implicit_only_needs_no_method():
     document = default_document()
     document["metadata"].update(
+        scopes_supported=["profile"],
         grant_types_supported=["implicit"],
         response_types_supported=["token"],
         token_endpoint_auth_methods_supported=[],
         code_challenge_methods_supported=[],
     )
     validate_document(document)
+
+
+def test_default_document_enables_openid_connect():
+    document = default_document()
+    assert document["metadata"]["scopes_supported"] == [
+        "openid",
+        "profile",
+        "email",
+        "address",
+        "phone",
+    ]
+    assert document["metadata"]["id_token_signing_alg_values_supported"] == ["RS256"]
+    assert document["settings"]["id_token_lifetime"] == 3600
+    assert is_oidc_enabled(document)
+
+
+def test_published_openid_metadata():
+    metadata = published_metadata(default_document(), "https://server.test", URLS)
+    assert metadata["jwks_uri"] == URLS["jwks_uri"]
+    assert metadata["subject_types_supported"] == ["public"]
+    assert metadata["id_token_signing_alg_values_supported"] == ["RS256"]
+    assert metadata["prompt_values_supported"] == [
+        "none",
+        "login",
+        "consent",
+        "select_account",
+    ]
+    assert metadata["ui_locales_supported"] == ["en", "fr"]
+    assert metadata["claims_supported"][:3] == ["sub", "iss", "auth_time"]
+    assert {"name", "email", "address", "phone_number"} <= set(
+        metadata["claims_supported"]
+    )
+
+
+def test_claims_follow_the_scopes():
+    assert claims_supported(["openid", "email"]) == [
+        "sub",
+        "iss",
+        "auth_time",
+        "email",
+        "email_verified",
+    ]
+
+
+def test_oauth_metadata_without_openid():
+    document = changed(metadata={"scopes_supported": ["profile"]})
+    metadata = published_metadata(document, "https://server.test", URLS)
+    assert not is_oidc_enabled(document)
+    for key in (
+        "jwks_uri",
+        "subject_types_supported",
+        "claims_supported",
+        "id_token_signing_alg_values_supported",
+        "prompt_values_supported",
+        "ui_locales_supported",
+    ):
+        assert key not in metadata
+
+
+def test_openid_needs_rs256():
+    errors = errors_of(
+        changed(metadata={"id_token_signing_alg_values_supported": ["ES256"]})
+    )
+    assert "id_token_signing_alg_values_supported" in errors
+
+
+def test_openid_needs_the_authorization_code_grant():
+    errors = errors_of(
+        changed(
+            metadata={
+                "grant_types_supported": ["client_credentials"],
+                "response_types_supported": [],
+            }
+        )
+    )
+    assert "grant_types_supported" in errors
+
+
+def test_rs256_is_not_needed_without_openid():
+    validate_document(
+        changed(
+            metadata={
+                "scopes_supported": ["profile"],
+                "id_token_signing_alg_values_supported": ["ES256"],
+            }
+        )
+    )
+
+
+def test_ui_locales_are_the_translations(app):
+    with app.app_context():
+        assert UI_LOCALES == sorted(available_language_codes())
+
+
+def test_rfc_8414_keys_are_checked_with_openid():
+    document = changed(metadata={"issuer": "http://server.test"})
+    assert is_oidc_enabled(document)
+    assert "revocation_endpoint" in errors_of(document)

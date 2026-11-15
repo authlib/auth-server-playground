@@ -30,6 +30,10 @@
             {{ form.refresh_token_rotation() }}
             {{ form.revocation_enabled() }}
             {{ form.scopes_supported() }}
+            <h3>{% trans %}OpenID Connect{% endtrans %}</h3>
+            <p><small>{% trans %}On when the scopes hold <code>openid</code>.{% endtrans %}</small></p>
+            {{ form.id_token_signing_alg_values_supported() }}
+            {{ form.id_token_lifetime() }}
             {{ form.save() }}
         </form>
         <section id="metadata-preview" aria-live="polite">

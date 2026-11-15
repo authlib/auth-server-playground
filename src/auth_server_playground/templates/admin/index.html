@@ -7,6 +7,9 @@
         <div class="copy-rows">
             {% call copy_field("issuer-value", metadata.issuer, _("Copy the issuer")) %}{% trans %}Issuer{% endtrans %}{% endcall %}
             {% call copy_field("metadata-value", metadata_url, _("Copy the metadata URL")) %}{% trans %}Metadata{% endtrans %}{% endcall %}
+            {% if discovery_url %}
+                {% call copy_field("discovery-value", discovery_url, _("Copy the discovery URL")) %}{% trans %}Discovery{% endtrans %}{% endcall %}
+            {% endif %}
             {% for key in endpoints if metadata[key] %}
                 {% call copy_field(key ~ "-value", metadata[key], _("Copy %(endpoint)s", endpoint=key)) %}<code>{{ key }}</code>{% endcall %}
             {% endfor %}

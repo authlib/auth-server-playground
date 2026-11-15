@@ -18,6 +18,7 @@ from .models import Persona
 from .models import db
 from .server import get_server
 from .server import require_oauth
+from .settings import is_oidc_enabled
 from .settings import published_metadata
 from .store import current_document
 
@@ -29,6 +30,7 @@ def endpoint_urls():
         "authorization_endpoint": url_for("oauth.authorize", _external=True),
         "token_endpoint": url_for("oauth.issue_token", _external=True),
         "revocation_endpoint": url_for("oauth.revoke_token", _external=True),
+        "jwks_uri": url_for("oauth.jwks", _external=True),
     }
 
 
@@ -90,6 +92,14 @@ def revoke_token():
 @bp.route("/.well-known/oauth-authorization-server")
 def server_metadata():
     return jsonify(current_metadata())
+
+
+@bp.route("/.well-known/openid-configuration")
+def openid_configuration():
+    document = current_document()
+    if not is_oidc_enabled(document):
+        abort(404)
+    return jsonify(current_metadata(document))
 
 
 @bp.route("/api/resource")

@@ -7,6 +7,8 @@ document.
 import copy
 
 from authlib.oauth2.rfc8414 import AuthorizationServerMetadata
+from authlib.oidc.core import UserInfo
+from authlib.oidc.discovery import OpenIDProviderMetadata
 
 GRANT_TYPES = [
     "authorization_code",
@@ -25,7 +27,19 @@ ID_TOKEN_ALGORITHMS = ["RS256", "PS256", "ES256", "Ed25519"]
 #: The issuer used to validate a document whose issuer comes from requests.
 DEFAULT_ISSUER = "http://localhost"
 
-ENDPOINTS = ["authorization_endpoint", "token_endpoint", "revocation_endpoint"]
+ENDPOINTS = [
+    "authorization_endpoint",
+    "token_endpoint",
+    "revocation_endpoint",
+    "jwks_uri",
+]
+
+#: The interface languages, published as ui_locales_supported.
+UI_LOCALES = ["en", "fr"]
+PROMPT_VALUES = ["none", "login", "consent", "select_account"]
+
+#: The stored metadata that only OpenID Connect publishes.
+OIDC_METADATA = ("id_token_signing_alg_values_supported",)
 
 #: The longest token lifetime, so that expiration dates fit in the database.
 MAX_LIFETIME = 365 * 24 * 3600
@@ -34,7 +48,7 @@ MAX_LIFETIME = 365 * 24 * 3600
 DEFAULT_DOCUMENT = {
     "metadata": {
         "issuer": None,
-        "scopes_supported": ["profile", "email"],
+        "scopes_supported": ["openid", "profile", "email", "address", "phone"],
         "response_types_supported": ["code"],
         "grant_types_supported": [
             "authorization_code",
@@ -43,6 +57,7 @@ DEFAULT_DOCUMENT = {
         ],
         "token_endpoint_auth_methods_supported": list(AUTH_METHODS),
         "code_challenge_methods_supported": ["S256"],
+        "id_token_signing_alg_values_supported": ["RS256"],
     },
     "settings": {
         "pkce_required": "all",
@@ -50,6 +65,7 @@ DEFAULT_DOCUMENT = {
         "access_token_lifetime": 3600,
         "refresh_token_lifetime": 14 * 24 * 3600,
         "refresh_token_rotation": True,
+        "id_token_lifetime": 3600,
     },
 }
 
@@ -58,6 +74,7 @@ LIST_CHOICES = {
     "response_types_supported": list(RESPONSE_TYPES.values()),
     "token_endpoint_auth_methods_supported": AUTH_METHODS,
     "code_challenge_methods_supported": PKCE_METHODS,
+    "id_token_signing_alg_values_supported": ID_TOKEN_ALGORITHMS,
 }
 
 
@@ -82,10 +99,27 @@ def response_types_for(grant_types):
     ]
 
 
+def is_oidc_enabled(document):
+    return "openid" in document["metadata"]["scopes_supported"]
+
+
+def claims_supported(scopes):
+    """Return the claims that the scopes give (OIDC Core §5.4)."""
+    claims = ["sub", "iss", "auth_time"]
+    for scope in scopes:
+        claims.extend(
+            claim
+            for claim in UserInfo.SCOPES_CLAIMS_MAPPING.get(scope, [])
+            if claim not in claims
+        )
+    return claims
+
+
 def published_metadata(document, issuer, endpoint_urls):
     """Return the metadata that the server publishes."""
     stored = document["metadata"]
     settings = document["settings"]
+    oidc = is_oidc_enabled(document)
     grant_types = set(stored["grant_types_supported"])
     # The issuer and the endpoints first, as in the examples of RFC 8414.
     metadata = {"issuer": stored["issuer"] or issuer}
@@ -95,19 +129,32 @@ def published_metadata(document, issuer, endpoint_urls):
         metadata["token_endpoint"] = endpoint_urls["token_endpoint"]
     if settings["revocation_enabled"]:
         metadata["revocation_endpoint"] = endpoint_urls["revocation_endpoint"]
+    if oidc:
+        metadata["jwks_uri"] = endpoint_urls["jwks_uri"]
 
     # RFC 8414 §2 marks response_types_supported as REQUIRED, even when empty.
     metadata.update(
         {
             key: value
             for key, value in stored.items()
-            if key != "issuer" and (key == "response_types_supported" or value != [])
+            if key != "issuer"
+            and (oidc or key not in OIDC_METADATA)
+            and (key == "response_types_supported" or value != [])
         }
     )
     if settings["revocation_enabled"]:
         metadata["revocation_endpoint_auth_methods_supported"] = stored[
             "token_endpoint_auth_methods_supported"
         ]
+    if oidc:
+        metadata.update(
+            {
+                "subject_types_supported": ["public"],
+                "claims_supported": claims_supported(stored["scopes_supported"]),
+                "prompt_values_supported": PROMPT_VALUES,
+                "ui_locales_supported": UI_LOCALES,
+            }
+        )
     return metadata
 
 
@@ -159,7 +206,18 @@ def validate_document(document):
             }
         )
 
-    errors = _rfc8414_errors(document)
+    if is_oidc_enabled(document) and (
+        "authorization_code" not in metadata["grant_types_supported"]
+    ):
+        raise InvalidDocument(
+            {
+                "grant_types_supported": (
+                    "OpenID Connect needs the authorization_code grant."
+                )
+            }
+        )
+
+    errors = _metadata_model_errors(document)
     if errors:
         raise InvalidDocument(errors)
 
@@ -209,7 +267,7 @@ def _settings_errors(settings):
         if not isinstance(settings.get(key), bool):
             errors[key] = "true or false."
 
-    for key in ("access_token_lifetime", "refresh_token_lifetime"):
+    for key in ("access_token_lifetime", "refresh_token_lifetime", "id_token_lifetime"):
         lifetime = settings.get(key)
         if (
             isinstance(lifetime, bool)
@@ -220,13 +278,26 @@ def _settings_errors(settings):
     return errors
 
 
-def _rfc8414_errors(document):
-    """Check the published metadata with Authlib, one key at a time."""
+def _metadata_model_errors(document):
+    """Check the published metadata with Authlib, one key at a time.
+
+    With OpenID Connect, OpenIDProviderMetadata also checks that RS256 is
+    an ID token signing algorithm (OIDC Discovery §3).
+    """
     base = document["metadata"]["issuer"] or DEFAULT_ISSUER
     urls = {key: f"{base}/{key}" for key in ENDPOINTS}
-    metadata = AuthorizationServerMetadata(published_metadata(document, base, urls))
+    model = (
+        OpenIDProviderMetadata
+        if is_oidc_enabled(document)
+        else AuthorizationServerMetadata
+    )
+    metadata = model(published_metadata(document, base, urls))
     errors = {}
-    for key in AuthorizationServerMetadata.REGISTRY_KEYS:
+    # Authlib's OpenIDProviderMetadata leaves out the RFC 7009, 7636 and 7662
+    # keys, so the RFC 8414 keys are checked too.
+    for key in dict.fromkeys(
+        [*AuthorizationServerMetadata.REGISTRY_KEYS, *model.REGISTRY_KEYS]
+    ):
         try:
             getattr(metadata, f"validate_{key}")()
         except ValueError as error:

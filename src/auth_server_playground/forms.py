@@ -53,6 +53,7 @@ from .personas import render_avatar
 from .settings import AUTH_METHODS
 from .settings import ENDPOINTS
 from .settings import GRANT_TYPES
+from .settings import ID_TOKEN_ALGORITHMS
 from .settings import MAX_LIFETIME
 from .settings import PKCE_METHODS
 from .settings import RESPONSE_TYPES
@@ -198,6 +199,17 @@ class ServerForm(BaseForm):
         description=_("Separated by spaces. Leave empty to accept any scope."),
         render_kw={"param": "scopes_supported"},
     )
+    id_token_signing_alg_values_supported = MultiCheckboxField(
+        _("ID token signing algorithms"),
+        choices=[SelectChoice(alg, alg) for alg in ID_TOKEN_ALGORITHMS],
+        description=_("RS256 is required."),
+        render_kw={"param": "id_token_signing_alg_values_supported"},
+    )
+    id_token_lifetime = IntegerField(
+        _("ID token lifetime"),
+        validators=[InputRequired(), NumberRange(min=1, max=MAX_LIFETIME)],
+        description=_("In seconds."),
+    )
     save = SubmitField(_("Save"))
 
     SETTINGS = (
@@ -206,6 +218,7 @@ class ServerForm(BaseForm):
         "refresh_token_lifetime",
         "refresh_token_rotation",
         "revocation_enabled",
+        "id_token_lifetime",
     )
 
     @classmethod
@@ -228,6 +241,9 @@ class ServerForm(BaseForm):
                 ),
                 "code_challenge_methods_supported": (
                     self.code_challenge_methods_supported.data
+                ),
+                "id_token_signing_alg_values_supported": (
+                    self.id_token_signing_alg_values_supported.data
                 ),
             },
             "settings": {name: self[name].data for name in self.SETTINGS},
