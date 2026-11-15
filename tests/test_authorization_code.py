@@ -11,6 +11,7 @@ from tests.utils import basic_auth
 from tests.utils import bearer
 from tests.utils import callback_params
 from tests.utils import consent
+from tests.utils import exchange_code
 
 
 def code_url(client, **params):
@@ -86,6 +87,66 @@ def test_authorization_code_is_single_use(logged_in, client):
 
     res = logged_in.post("/oauth/token", data, headers=basic_auth(client), status=400)
     assert res.json["error"] == "invalid_grant"
+
+
+def code_token(logged_in, client):
+    """Run the code flow and return the code and the token."""
+    code = callback_params(consent(logged_in, code_url(client)))["code"]
+    return code, exchange_code(logged_in, client, code).json
+
+
+def refresh(logged_in, client, refresh_token, *, status=200):
+    return logged_in.post(
+        "/oauth/token",
+        {"grant_type": "refresh_token", "refresh_token": refresh_token},
+        headers=basic_auth(client),
+        status=status,
+    )
+
+
+def reuse_code(logged_in, client, code):
+    res = exchange_code(logged_in, client, code, status=400)
+    assert res.json["error"] == "invalid_grant"
+
+
+def test_code_reuse_revokes_the_access_token(logged_in, client):
+    code, token = code_token(logged_in, client)
+    logged_in.get("/api/resource", headers=bearer(token["access_token"]))
+
+    reuse_code(logged_in, client, code)
+
+    logged_in.get("/api/resource", headers=bearer(token["access_token"]), status=401)
+
+
+def test_code_reuse_revokes_the_refresh_token(logged_in, client):
+    code, token = code_token(logged_in, client)
+
+    reuse_code(logged_in, client, code)
+
+    res = refresh(logged_in, client, token["refresh_token"], status=400)
+    assert res.json["error"] == "invalid_grant"
+
+
+def test_code_reuse_revokes_the_refreshed_tokens(logged_in, client):
+    code, token = code_token(logged_in, client)
+    refreshed = refresh(logged_in, client, token["refresh_token"]).json
+    logged_in.get("/api/resource", headers=bearer(refreshed["access_token"]))
+
+    reuse_code(logged_in, client, code)
+
+    logged_in.get(
+        "/api/resource", headers=bearer(refreshed["access_token"]), status=401
+    )
+    refresh(logged_in, client, refreshed["refresh_token"], status=400)
+
+
+def test_unknown_code_revokes_nothing(logged_in, client):
+    _, token = code_token(logged_in, client)
+
+    exchange_code(logged_in, client, "unknown", status=400)
+
+    logged_in.get("/api/resource", headers=bearer(token["access_token"]))
+    refresh(logged_in, client, token["refresh_token"])
 
 
 def test_pkce_is_required_for_public_clients(logged_in, public_client):

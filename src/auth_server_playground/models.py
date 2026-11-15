@@ -114,6 +114,8 @@ class Token(db.Model, OAuth2TokenMixin):
     persona_id = db.Column(db.Integer, db.ForeignKey("persona.id"))
     persona = db.relationship("Persona", back_populates="tokens")
     refresh_token_expires_at = db.Column(db.Integer)
+    # The authorization code that the token comes from, if any.
+    authorization_code = db.Column(db.String(120), index=True)
 
     def is_refresh_token_active(self):
         if self.refresh_token_revoked_at:

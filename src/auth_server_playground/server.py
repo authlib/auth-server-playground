@@ -64,6 +64,14 @@ class AuthorizationCodeGrant(grants.AuthorizationCodeGrant):
     def authenticate_user(self, authorization_code):
         return authorization_code.persona
 
+    def revoke_authorization_code_tokens(self, code, client):
+        """Revoke every token based on the code (RFC 6749 §4.1.2)."""
+        now = int(time.time())
+        Token.query.filter_by(authorization_code=code).update(
+            {"access_token_revoked_at": now, "refresh_token_revoked_at": now}
+        )
+        db.session.commit()
+
 
 class PlaygroundOpenIDCode(OpenIDCode):
     def __init__(self, issuer, id_token_lifetime):
@@ -147,6 +155,16 @@ GRANTS = {
 }
 
 
+def code_of(request):
+    """Return the authorization code that the new token comes from, if any."""
+    if authorization_code := getattr(request, "authorization_code", None):
+        return authorization_code.code
+    # A refreshed token keeps the code of the token it replaces.
+    if refresh_token := getattr(request, "refresh_token", None):
+        return refresh_token.authorization_code
+    return None
+
+
 def token_saver(refresh_token_lifetime):
     """Return a save_token function that sets the expiration of refresh tokens."""
 
@@ -155,6 +173,7 @@ def token_saver(refresh_token_lifetime):
         item = Token(
             client_id=request.client.client_id,
             persona_id=request.user.id if request.user else None,
+            authorization_code=code_of(request),
             **{**token, "issued_at": now},
         )
         if item.refresh_token:
