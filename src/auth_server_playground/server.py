@@ -9,10 +9,13 @@ from authlib.integrations.sqla_oauth2 import create_query_client_func
 from authlib.integrations.sqla_oauth2 import create_revocation_endpoint
 from authlib.oauth2.rfc6749 import grants
 from authlib.oauth2.rfc7636 import CodeChallenge
+from authlib.oauth2.rfc9101 import JWTAuthenticationRequest
+from authlib.oidc.core import ClaimsParameter
 from authlib.oidc.core import OpenIDCode
 from authlib.oidc.core import UserInfoEndpoint
 from flask import current_app
 from flask import request
+from joserfc.jwk import KeySet
 
 from .keys import active_kid
 from .keys import private_key_set
@@ -22,6 +25,7 @@ from .models import Token
 from .models import db
 from .personas import find_by_username
 from .personas import user_info
+from .settings import REQUEST_OBJECT_ALGORITHMS
 from .settings import is_oidc_enabled
 from .store import settings_row
 
@@ -42,8 +46,11 @@ class AuthorizationCodeGrant(grants.AuthorizationCodeGrant):
             scope=request.scope,
             persona_id=request.user.id,
             nonce=request.payload.data.get("nonce"),
-            # Only the OpenIDCode extension sets it.
+            # Only the OpenIDCode extension sets them.
             auth_time=getattr(request, "auth_time", None),
+            acr=getattr(request, "acr", None),
+            # Only the ClaimsParameter extension sets it.
+            claims_request=getattr(request, "claims_request", None),
             code_challenge=request.payload.data.get("code_challenge"),
             code_challenge_method=request.payload.data.get("code_challenge_method"),
         )
@@ -113,6 +120,30 @@ class PlaygroundUserInfoEndpoint(UserInfoEndpoint):
     def generate_user_info(self, user, scope, claims):
         return user_info(user, scope, claims)
 
+    def get_token_claims_request(self, token):
+        return token.claims_request
+
+
+class PlaygroundJWTAuthenticationRequest(JWTAuthenticationRequest):
+    """Accept unsigned request objects. The clients have no keys yet."""
+
+    def __init__(self, issuer):
+        # Per RFC 9101 §10.4, fetching a request_uri exposes the server to SSRF.
+        super().__init__(support_request=True, support_request_uri=False)
+        self.issuer = issuer
+
+    def resolve_client_public_key(self, client):
+        # Authlib imports the client key before it reads the alg of the request
+        # object, even for alg none. An empty key set lets unsigned objects
+        # through.
+        return KeySet([])
+
+    def get_server_metadata(self):
+        return {
+            "issuer": issuer_for(self.issuer),
+            "request_object_signing_alg_values_supported": REQUEST_OBJECT_ALGORITHMS,
+        }
+
 
 class PasswordGrant(grants.ResourceOwnerPasswordCredentialsGrant):
     def authenticate_user(self, username, password):
@@ -171,6 +202,16 @@ def code_of(request):
     return None
 
 
+def claims_request_of(request):
+    """Return the claims parameter of the request behind the new token, if any."""
+    if authorization_code := getattr(request, "authorization_code", None):
+        return authorization_code.claims_request
+    # A refreshed token keeps the claims request of the token it replaces.
+    if refresh_token := getattr(request, "refresh_token", None):
+        return refresh_token.claims_request
+    return None
+
+
 def token_saver(refresh_token_lifetime):
     """Return a save_token function that sets the expiration of refresh tokens."""
 
@@ -180,6 +221,7 @@ def token_saver(refresh_token_lifetime):
             client_id=request.client.client_id,
             persona_id=request.user.id if request.user else None,
             authorization_code=code_of(request),
+            claims_request=claims_request_of(request),
             **{**token, "issued_at": now},
         )
         if item.refresh_token:
@@ -253,6 +295,10 @@ def build_server(document):
     if is_oidc_enabled(document):
         server.register_endpoint(
             PlaygroundUserInfoEndpoint(resource_protector=require_oauth)
+        )
+        server.register_extension(ClaimsParameter())
+        server.register_extension(
+            PlaygroundJWTAuthenticationRequest(metadata["issuer"])
         )
     return server
 

@@ -1,6 +1,7 @@
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
+import pytest
 from authlib.common.security import generate_token
 from authlib.oauth2.rfc7636 import create_s256_code_challenge
 
@@ -188,6 +189,13 @@ def test_wrong_code_verifier(logged_in, client):
     assert res.json["error"] == "invalid_grant"
 
 
-def test_unknown_client(logged_in):
-    res = logged_in.get(code_url({"client_id": "unknown"}), status=400)
-    assert "invalid_client" in res
+@pytest.mark.parametrize("client_id", ["unknown", None])
+@pytest.mark.parametrize(("scopes", "status"), [(None, 404), (["profile"], 400)])
+def test_unknown_client(logged_in, configure, client_id, scopes, status):
+    # With OpenID Connect, the request object extension of Authlib checks the
+    # client first. It answers 404, where the grant answers 400.
+    if scopes:
+        configure(metadata={"scopes_supported": scopes})
+    url = code_url({"client_id": "unknown"}, client_id=client_id)
+    res = logged_in.get(url, status=status)
+    assert res.json["error"] == "invalid_client"

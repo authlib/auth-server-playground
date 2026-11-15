@@ -39,6 +39,9 @@ ENDPOINTS = [
 UI_LOCALES = ["en", "fr"]
 PROMPT_VALUES = ["none", "login", "consent", "select_account"]
 
+#: The request object signing algorithms. The clients have no keys yet.
+REQUEST_OBJECT_ALGORITHMS = ["none"]
+
 #: The stored metadata that only OpenID Connect publishes.
 OIDC_METADATA = ("id_token_signing_alg_values_supported",)
 
@@ -106,7 +109,7 @@ def is_oidc_enabled(document):
 
 def claims_supported(scopes):
     """Return the claims that the scopes give (OIDC Core §5.4)."""
-    claims = ["sub", "iss", "auth_time"]
+    claims = ["sub", "iss", "auth_time", "acr"]
     for scope in scopes:
         claims.extend(
             claim
@@ -155,6 +158,13 @@ def published_metadata(document, issuer, endpoint_urls):
                 "claims_supported": claims_supported(stored["scopes_supported"]),
                 "prompt_values_supported": PROMPT_VALUES,
                 "ui_locales_supported": UI_LOCALES,
+                "claims_parameter_supported": True,
+                "request_parameter_supported": True,
+                # Per OIDC Discovery §3, the default value is true.
+                "request_uri_parameter_supported": False,
+                "request_object_signing_alg_values_supported": (
+                    REQUEST_OBJECT_ALGORITHMS
+                ),
             }
         )
     return metadata

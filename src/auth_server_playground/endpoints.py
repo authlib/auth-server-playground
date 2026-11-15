@@ -17,6 +17,7 @@ from flask_babel import gettext as _
 from .forms import ConsentForm
 from .interaction import PlaygroundSession
 from .interaction import current_persona
+from .interaction import extra_claims
 from .interaction import grant_consent
 from .keys import public_jwks
 from .models import Persona
@@ -77,6 +78,8 @@ def authorize():
             url_for(
                 "interaction.select_persona",
                 next=request.script_root + request.full_path,
+                # A request object hides the login_hint from the next URL.
+                login_hint=grant.request.payload.data.get("login_hint"),
             )
         )
 
@@ -94,7 +97,13 @@ def authorize():
     elif "consent" not in grant.interactions:
         return server.create_authorization_response(grant=grant, grant_user=persona)
     return render_template(
-        "interaction/consent.html", form=form, grant=grant, persona=persona
+        "interaction/consent.html",
+        form=form,
+        grant=grant,
+        persona=persona,
+        extra_claims=extra_claims(
+            getattr(grant.request, "claims_request", None), grant.request.scope
+        ),
     )
 
 

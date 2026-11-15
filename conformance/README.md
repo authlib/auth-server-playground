@@ -2,7 +2,7 @@
 
 This folder runs the [OpenID Foundation conformance suite](https://gitlab.com/openid/conformance-suite) against the playground built from this repository.
 The CI runs it on pushes and pull requests, in the `conformance` job of `.github/workflows/tests.yaml`.
-The job does not block a merge yet.
+The `check` job needs it, so a failed run blocks a merge.
 
 This page is for the maintainers of the playground.
 It explains how to run the bench, read its results, and update the suite version and the expected results.

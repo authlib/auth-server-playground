@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-15 10:08+0100\n"
+"POT-Creation-Date: 2026-11-15 16:50+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -84,7 +84,7 @@ msgstr ""
 msgid "The snapshot is imported."
 msgstr ""
 
-#: src/auth_server_playground/endpoints.py:81
+#: src/auth_server_playground/endpoints.py:95
 msgid "The persona changed since this page was shown."
 msgstr ""
 
@@ -873,6 +873,10 @@ msgid "Requested scopes:"
 msgstr ""
 
 #: src/auth_server_playground/templates/interaction/consent.html:22
+msgid "Claims requested beyond the scopes:"
+msgstr ""
+
+#: src/auth_server_playground/templates/interaction/consent.html:30
 msgid "Authorization request"
 msgstr ""
 

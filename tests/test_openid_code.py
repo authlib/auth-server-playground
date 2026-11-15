@@ -1,3 +1,4 @@
+import json
 import time
 from urllib.parse import parse_qsl
 from urllib.parse import urlparse
@@ -44,6 +45,29 @@ def test_id_token(app, logged_in, client):
     assert "email" not in claims
     with app.app_context():
         assert token.header["kid"] == keys.active_kid("RS256")
+
+
+def test_acr_is_the_first_requested_value(logged_in, client):
+    claims = id_token_for(logged_in, client, acr_values="urn:a urn:b").claims
+    assert claims["acr"] == "urn:a"
+
+
+def test_acr_of_the_claims_parameter_comes_first(logged_in, client):
+    claims_request = {"id_token": {"acr": {"values": ["urn:c"]}}}
+    claims = id_token_for(
+        logged_in, client, acr_values="urn:a", claims=json.dumps(claims_request)
+    ).claims
+    assert claims["acr"] == "urn:c"
+
+
+def test_essential_acr_is_met(logged_in, client):
+    claims_request = {"id_token": {"acr": {"essential": True, "values": ["urn:c"]}}}
+    claims = id_token_for(logged_in, client, claims=json.dumps(claims_request)).claims
+    assert claims["acr"] == "urn:c"
+
+
+def test_no_acr_without_requested_values(logged_in, client):
+    assert "acr" not in id_token_for(logged_in, client).claims
 
 
 def test_id_token_lifetime_follows_the_setting(logged_in, client, configure):

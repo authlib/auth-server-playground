@@ -283,10 +283,14 @@ def test_published_openid_metadata():
         "select_account",
     ]
     assert metadata["ui_locales_supported"] == ["en", "fr"]
-    assert metadata["claims_supported"][:3] == ["sub", "iss", "auth_time"]
+    assert metadata["claims_supported"][:4] == ["sub", "iss", "auth_time", "acr"]
     assert {"name", "email", "address", "phone_number"} <= set(
         metadata["claims_supported"]
     )
+    assert metadata["claims_parameter_supported"] is True
+    assert metadata["request_parameter_supported"] is True
+    assert metadata["request_uri_parameter_supported"] is False
+    assert metadata["request_object_signing_alg_values_supported"] == ["none"]
 
 
 def test_claims_follow_the_scopes():
@@ -294,6 +298,7 @@ def test_claims_follow_the_scopes():
         "sub",
         "iss",
         "auth_time",
+        "acr",
         "email",
         "email_verified",
     ]
@@ -310,6 +315,10 @@ def test_oauth_metadata_without_openid():
         "id_token_signing_alg_values_supported",
         "prompt_values_supported",
         "ui_locales_supported",
+        "claims_parameter_supported",
+        "request_parameter_supported",
+        "request_uri_parameter_supported",
+        "request_object_signing_alg_values_supported",
     ):
         assert key not in metadata
 

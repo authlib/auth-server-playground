@@ -1,5 +1,17 @@
 [
   {
+    "test-name": "oidcc-discovery-endpoint-verification",
+    "variant": {
+      "server_metadata": "discovery",
+      "client_registration": "static_client"
+    },
+    "configuration-filename": "config.json",
+    "current-block": "",
+    "condition": "CheckDiscEndpointRequestObjectSigningAlgValuesSupportedIncludesRS256",
+    "expected-result": "warning",
+    "comment": "The playground only accepts unsigned request objects, because its clients have no keys yet. Per OIDC Discovery §3, servers SHOULD also support RS256. Signed request objects come with dynamic client registration."
+  },
+  {
     "test-name": "oidcc-userinfo-post-body",
     "variant": {
       "client_auth_type": "client_secret_basic",
@@ -34,29 +46,5 @@
     "condition": "EnsureIdTokenDoesNotContainEmailForScopeEmail",
     "expected-result": "warning",
     "comment": "The playground follows the documented example of OpenIDCode.generate_user_info in Authlib. The example filters the claims by the token scope, so the ID token of the code flow gets the email claims. Per OIDC Core §5.4, they belong to the userinfo response when an access token is issued. Reported to Authlib."
-  },
-  {
-    "test-name": "oidcc-unsigned-request-object-supported-correctly-or-rejected-as-unsupported",
-    "variant": {
-      "client_auth_type": "client_secret_basic",
-      "response_type": "code"
-    },
-    "configuration-filename": "config.json",
-    "current-block": "Verify authorization endpoint response",
-    "condition": "CheckStateInAuthorizationResponse",
-    "expected-result": "failure",
-    "comment": "Without the RFC 9101 extension, Authlib ignores the request parameter. Per OIDC Core §6.1, it must return request_not_supported. Reported to Authlib."
-  },
-  {
-    "test-name": "oidcc-unsigned-request-object-supported-correctly-or-rejected-as-unsupported",
-    "variant": {
-      "client_auth_type": "client_secret_basic",
-      "response_type": "code"
-    },
-    "configuration-filename": "config.json",
-    "current-block": "Verify authorization endpoint response",
-    "condition": "ValidateIdTokenNonce",
-    "expected-result": "failure",
-    "comment": "Without the RFC 9101 extension, Authlib ignores the request parameter. Per OIDC Core §6.1, it must return request_not_supported. Reported to Authlib."
   }
 ]

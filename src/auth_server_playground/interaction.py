@@ -5,6 +5,7 @@ from urllib.parse import urlsplit
 from authlib.oauth2 import AuthorizationSession
 from authlib.oauth2.rfc6749.util import scope_to_list
 from authlib.oidc.core import AuthorizationSessionMixin
+from authlib.oidc.core import get_requested_acr_values
 from flask import Blueprint
 from flask import abort
 from flask import redirect
@@ -22,6 +23,7 @@ from .models import Client
 from .models import Consent
 from .models import Persona
 from .models import db
+from .settings import claims_supported
 
 bp = Blueprint("interaction", __name__)
 
@@ -44,6 +46,11 @@ class PlaygroundSession(AuthorizationSession, AuthorizationSessionMixin):
             if consent is not None and consent.covers(request.scope):
                 return consent.granted_at
         return None
+
+    def get_acr(self, request):
+        """Return the first requested acr value. The playground meets any value."""
+        values = get_requested_acr_values(request)
+        return values[0] if values else None
 
     def is_account_selection_needed(self, request):
         """Tell if the login_hint is about another persona."""
@@ -77,6 +84,19 @@ def grant_consent(persona, client_id, scope):
     consent.granted_at = int(time.time())
     db.session.commit()
     return consent
+
+
+def extra_claims(claims_request, scope):
+    """Return the claims that the claims parameter asks for beyond the scope."""
+    if not claims_request:
+        return []
+    given = claims_supported(scope_to_list(scope) or [])
+    requested = [
+        claim
+        for member in ("userinfo", "id_token")
+        for claim in claims_request.get(member) or {}
+    ]
+    return [claim for claim in dict.fromkeys(requested) if claim not in given]
 
 
 def current_persona():
@@ -154,7 +174,7 @@ def select_persona():
     ]
     next_url = request.args.get("next")
     if not form.is_submitted():
-        hint = authorization_params(next_url).get("login_hint")
+        hint = request.args.get("login_hint")
         selected = hinted_persona(all_personas, hint) or current_persona()
         form.persona.data = selected.id if selected else None
     if not form.validate_on_submit():

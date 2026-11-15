@@ -147,22 +147,6 @@
           ]
         }
       ]
-    },
-    "oidcc-ensure-request-object-with-redirect-uri": {
-      "browser": [
-        {
-          "match": "https://playground/oauth/authorize*",
-          "tasks": [
-            {
-              "task": "Expect a redirect URI error",
-              "match": "https://playground/oauth/authorize*",
-              "commands": [
-                ["wait", "xpath", "//*", 10, "invalid_request", "update-image-placeholder"]
-              ]
-            }
-          ]
-        }
-      ]
     }
   }
 }

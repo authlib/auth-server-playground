@@ -18,6 +18,14 @@
                 {% endfor %}
             </ul>
         {% endif %}
+        {% if extra_claims %}
+            <p>{% trans %}Claims requested beyond the scopes:{% endtrans %}</p>
+            <ul>
+                {% for claim in extra_claims %}
+                    <li><code>{{ claim }}</code></li>
+                {% endfor %}
+            </ul>
+        {% endif %}
         <details>
             <summary>{% trans %}Authorization request{% endtrans %}</summary>
             <table>

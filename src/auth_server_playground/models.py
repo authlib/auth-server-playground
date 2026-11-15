@@ -104,6 +104,10 @@ class AuthorizationCode(db.Model, OAuth2AuthorizationCodeMixin):
     id = db.Column(db.Integer, primary_key=True)
     persona_id = db.Column(db.Integer, db.ForeignKey("persona.id"), nullable=False)
     persona = db.relationship("Persona", back_populates="codes")
+    claims_request = db.Column(db.JSON)
+
+    def get_claims_request(self):
+        return self.claims_request
 
 
 class Token(db.Model, OAuth2TokenMixin):
@@ -116,6 +120,8 @@ class Token(db.Model, OAuth2TokenMixin):
     refresh_token_expires_at = db.Column(db.Integer)
     # The authorization code that the token comes from, if any.
     authorization_code = db.Column(db.String(120), index=True)
+    # The claims parameter of the authorization request, if any.
+    claims_request = db.Column(db.JSON)
 
     def get_client(self):
         return Client.query.filter_by(client_id=self.client_id).first()
