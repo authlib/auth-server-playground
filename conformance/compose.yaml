@@ -1,0 +1,65 @@
+# The OpenID Foundation conformance suite, from its prebuilt images, and the
+# playground built from this repository, behind Caddy for TLS.
+name: auth-server-playground-conformance
+
+services:
+  mongodb:
+    image: mongo:6.0.13
+
+  server:
+    image: registry.gitlab.com/openid/conformance-suite:${SUITE_TAG:-release-v5.3.4}
+    environment:
+      BASE_URL: https://localhost.emobix.co.uk:8443
+      BASE_MTLS_URL: https://localhost.emobix.co.uk:8444
+      MONGODB_HOST: mongodb
+      SPRING_PROFILES_ACTIVE: dev
+      OIDC_GOOGLE_CLIENTID: google-client
+      OIDC_GOOGLE_SECRET: google-secret
+      OIDC_GITLAB_CLIENTID: gitlab-client
+      OIDC_GITLAB_SECRET: gitlab-secret
+    depends_on:
+      mongodb:
+        condition: service_started
+      caddy:
+        condition: service_healthy
+
+  nginx:
+    image: registry.gitlab.com/openid/conformance-suite/nginx:${SUITE_TAG:-release-v5.3.4}
+    ports:
+      - "127.0.0.1:8443:8443"
+      - "127.0.0.1:8444:8444"
+    networks:
+      default:
+        aliases:
+          # The suite calls its own public host name.
+          - localhost.emobix.co.uk
+    depends_on:
+      - server
+
+  caddy:
+    image: caddy:2.11.9-alpine
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    networks:
+      default:
+        aliases:
+          - playground
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--no-check-certificate", "--output-document=/dev/null", "https://playground/"]
+      interval: 30s
+      timeout: 3s
+      start_period: 30s
+      start_interval: 1s
+      retries: 3
+    depends_on:
+      app:
+        condition: service_healthy
+
+  app:
+    build:
+      context: ..
+    environment:
+      PROXY_FIX: "true"
+      INITIAL_SNAPSHOT: /conformance/snapshot.json
+    volumes:
+      - ./snapshot.json:/conformance/snapshot.json:ro

@@ -1,0 +1,168 @@
+{
+  "alias": "auth-server-playground",
+  "description": "auth-server-playground, built from source",
+  "server": {
+    "discoveryUrl": "https://playground/.well-known/openid-configuration"
+  },
+  "client": {
+    "client_id": "client",
+    "client_secret": "client-secret"
+  },
+  "client2": {
+    "client_id": "client2",
+    "client_secret": "client2-secret"
+  },
+  "client_secret_post": {
+    "client_id": "client-post",
+    "client_secret": "client-post-secret"
+  },
+  "browser": [
+    {
+      "match": "https://playground/oauth/authorize*",
+      "tasks": [
+        {
+          "task": "Select the persona",
+          "match": "https://playground/interaction/persona*",
+          "optional": true,
+          "commands": [
+            ["click", "id", "persona-0"],
+            ["click", "id", "select"]
+          ]
+        },
+        {
+          "task": "Accept",
+          "match": "https://playground/oauth/authorize*",
+          "optional": true,
+          "commands": [
+            ["click", "id", "accept"]
+          ]
+        },
+        {
+          "task": "Verify Complete",
+          "match": "https://localhost.emobix.co.uk:8443/test/a/auth-server-playground/callback*",
+          "commands": [
+            ["wait", "id", "submission_complete", 10]
+          ]
+        }
+      ]
+    }
+  ],
+  "override": {
+    "oidcc-prompt-login": {
+      "browser": [
+        {
+          "match": "https://playground/oauth/authorize*",
+          "tasks": [
+            {
+              "task": "Select the persona",
+              "match": "https://playground/interaction/persona*",
+              "optional": true,
+              "commands": [
+                ["wait", "xpath", "//*", 10, "Choose a persona", "update-image-placeholder-optional"],
+                ["click", "id", "persona-0"],
+                ["click", "id", "select"]
+              ]
+            },
+            {
+              "task": "Accept",
+              "match": "https://playground/oauth/authorize*",
+              "optional": true,
+              "commands": [
+                ["click", "id", "accept"]
+              ]
+            },
+            {
+              "task": "Verify Complete",
+              "match": "https://localhost.emobix.co.uk:8443/test/a/auth-server-playground/callback*",
+              "commands": [
+                ["wait", "id", "submission_complete", 10]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "oidcc-max-age-1": {
+      "browser": [
+        {
+          "match": "https://playground/oauth/authorize*",
+          "tasks": [
+            {
+              "task": "Select the persona",
+              "match": "https://playground/interaction/persona*",
+              "optional": true,
+              "commands": [
+                ["wait", "xpath", "//*", 10, "Choose a persona", "update-image-placeholder-optional"],
+                ["click", "id", "persona-0"],
+                ["click", "id", "select"]
+              ]
+            },
+            {
+              "task": "Accept",
+              "match": "https://playground/oauth/authorize*",
+              "optional": true,
+              "commands": [
+                ["click", "id", "accept"]
+              ]
+            },
+            {
+              "task": "Verify Complete",
+              "match": "https://localhost.emobix.co.uk:8443/test/a/auth-server-playground/callback*",
+              "commands": [
+                ["wait", "id", "submission_complete", 10]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "oidcc-response-type-missing": {
+      "browser": [
+        {
+          "match": "https://playground/oauth/authorize*",
+          "tasks": [
+            {
+              "task": "Expect a missing response type error",
+              "match": "https://playground/oauth/authorize*",
+              "commands": [
+                ["wait", "xpath", "//*", 10, "unsupported_response_type|invalid_request", "update-image-placeholder"]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "oidcc-ensure-registered-redirect-uri": {
+      "browser": [
+        {
+          "match": "https://playground/oauth/authorize*",
+          "tasks": [
+            {
+              "task": "Expect a redirect URI error",
+              "match": "https://playground/oauth/authorize*",
+              "commands": [
+                ["wait", "xpath", "//*", 10, "invalid_request", "update-image-placeholder"]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "oidcc-ensure-request-object-with-redirect-uri": {
+      "browser": [
+        {
+          "match": "https://playground/oauth/authorize*",
+          "tasks": [
+            {
+              "task": "Expect a redirect URI error",
+              "match": "https://playground/oauth/authorize*",
+              "commands": [
+                ["wait", "xpath", "//*", 10, "invalid_request", "update-image-placeholder"]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -12,3 +12,5 @@ build
 dist
 *.mo
 node_modules
+conformance/.cache/
+conformance/results/

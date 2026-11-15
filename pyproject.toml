@@ -39,6 +39,10 @@ granian = [
 ]
 
 [dependency-groups]
+conformance = [
+    "httpx>=0.28.1",
+    "pyparsing>=3.3.3",
+]
 dev = [
     "flask-webtest>=0.1.6",
     "prek>=0.5.10",

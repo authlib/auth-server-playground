@@ -1,0 +1,13 @@
+# TLS in front of the playground. The certificate comes from the Caddy
+# internal CA. The suite accepts any certificate.
+{
+	skip_install_trust
+	auto_https disable_redirects
+	# Java sends no SNI for a host name without a dot.
+	default_sni playground
+}
+
+playground {
+	tls internal
+	reverse_proxy app:3000
+}
