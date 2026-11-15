@@ -316,6 +316,7 @@ def unsupported_values(client_metadata, document):
     metadata = document["metadata"]
     method = client_metadata.get("token_endpoint_auth_method", "client_secret_basic")
     scopes = (client_metadata.get("scope") or "").split()
+    alg = client_metadata.get("id_token_signed_response_alg")
     result = {
         "grant_types": [
             grant
@@ -338,5 +339,12 @@ def unsupported_values(client_metadata, document):
             if metadata["scopes_supported"]
             and scope not in metadata["scopes_supported"]
         ],
+        "id_token_signed_response_alg": (
+            [alg]
+            if alg
+            and is_oidc_enabled(document)
+            and alg not in metadata["id_token_signing_alg_values_supported"]
+            else []
+        ),
     }
     return {key: values for key, values in result.items() if values}

@@ -1,6 +1,7 @@
 """Export and import the whole state of the playground."""
 
 from authlib.oauth2.rfc7591 import ClientMetadataClaims
+from authlib.oidc.registration import ClientMetadataClaims as OIDCClientMetadataClaims
 from joserfc.errors import JoseError
 
 from .models import SETTINGS_ID
@@ -14,6 +15,8 @@ from .models import db
 from .models import is_valid_client_id
 from .personas import invalid_claims
 from .personas import is_valid_sub
+from .settings import ID_TOKEN_ALGORITHMS
+from .settings import MAX_LIFETIME
 from .settings import InvalidDocument
 from .settings import validate_document
 
@@ -129,12 +132,55 @@ def is_timestamp(value):
     return value is None or (isinstance(value, int) and not isinstance(value, bool))
 
 
+#: The client metadata of features that the server does not support. With
+#: server options, Authlib's get_claims_options would not refuse them either:
+#: it only checks a value when the server publishes the matching list.
+UNSUPPORTED_CLIENT_METADATA = (
+    "userinfo_signed_response_alg",
+    "userinfo_encrypted_response_alg",
+    "userinfo_encrypted_response_enc",
+    "id_token_encrypted_response_alg",
+    "id_token_encrypted_response_enc",
+)
+
+
+def check_openid_values(client_id, metadata):
+    """Refuse the OpenID Connect values that the form or the signing cannot handle."""
+    max_age = metadata.get("default_max_age")
+    # Authlib accepts any number here, including negative, NaN and Infinity.
+    if max_age is not None and not (
+        isinstance(max_age, int)
+        and not isinstance(max_age, bool)
+        and 0 <= max_age <= MAX_LIFETIME
+    ):
+        raise SnapshotError(
+            f"Client {client_id!r}: default_max_age is a number of seconds, "
+            f"from 0 to {MAX_LIFETIME}."
+        )
+    alg = metadata.get("id_token_signed_response_alg")
+    if alg is not None and alg not in ID_TOKEN_ALGORITHMS:
+        raise SnapshotError(
+            f"Client {client_id!r}: id_token_signed_response_alg is one of "
+            f"{', '.join(ID_TOKEN_ALGORITHMS)}."
+        )
+
+
 def check_client_metadata(client):
     metadata = client.get("client_metadata")
     if not isinstance(metadata, dict):
         raise SnapshotError("The metadata of a client is a JSON object.")
+    if unsupported := [
+        key for key in UNSUPPORTED_CLIENT_METADATA if metadata.get(key) is not None
+    ]:
+        raise SnapshotError(
+            f"Client {client['client_id']!r}: the server does not support "
+            f"{', '.join(unsupported)}."
+        )
+    check_openid_values(client["client_id"], metadata)
+    # Without server options: a client may disagree with the server.
     try:
         ClientMetadataClaims(metadata, {}).validate()
+        OIDCClientMetadataClaims(metadata, {}).validate()
     except JoseError as error:
         raise SnapshotError(f"Client {client['client_id']!r}: {error}") from error
 

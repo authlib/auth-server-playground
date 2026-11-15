@@ -21,6 +21,12 @@
                 {{ form.scope() }}
                 {{ form.token_endpoint_auth_method() }}
             </div>
+            {% if form.id_token_signed_response_alg %}
+                <div class="grid">
+                    {{ form.id_token_signed_response_alg() }}
+                    {{ form.default_max_age() }}
+                </div>
+            {% endif %}
             {{ form.contacts() }}
             <div class="grid">
                 {{ form.tos_uri() }}

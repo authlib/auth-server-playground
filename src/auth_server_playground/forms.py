@@ -57,6 +57,7 @@ from .settings import ID_TOKEN_ALGORITHMS
 from .settings import MAX_LIFETIME
 from .settings import PKCE_METHODS
 from .settings import RESPONSE_TYPES
+from .settings import is_oidc_enabled
 from .settings import response_types_for
 
 # The render_kw keys that field_wrapper reads, and that are not HTML attributes.
@@ -361,8 +362,19 @@ class ClientForm(BaseForm):
         validators=[check_url],
         render_kw={"param": "policy_uri"},
     )
+    id_token_signed_response_alg = SelectField(
+        _("ID token signing algorithm"),
+        render_kw={"param": "id_token_signed_response_alg"},
+    )
+    default_max_age = IntegerField(
+        _("Maximum authentication age"),
+        validators=[Optional(), NumberRange(min=0)],
+        description=_("In seconds. Leave empty for no limit."),
+        render_kw={"param": "default_max_age"},
+    )
     save = SubmitField(_("Save"))
 
+    OIDC_METADATA = ("id_token_signed_response_alg", "default_max_age")
     TEXT_METADATA = (
         "client_name",
         "client_uri",
@@ -411,6 +423,28 @@ class ClientForm(BaseForm):
             for method in methods
         ]
 
+        self.oidc = is_oidc_enabled(document)
+        if not self.oidc:
+            del self.id_token_signed_response_alg
+            del self.default_max_age
+            return
+
+        supported = metadata["id_token_signing_alg_values_supported"]
+        stored_alg = stored.get("id_token_signed_response_alg")
+        algorithms = with_stored(supported, [stored_alg] if stored_alg else [])
+        self.id_token_signed_response_alg.choices = [
+            SelectChoice("", _("Default (RS256)")),
+            *(
+                SelectChoice(
+                    alg,
+                    alg
+                    if alg in supported
+                    else _("%(value)s (not supported by the server)", value=alg),
+                )
+                for alg in algorithms
+            ),
+        ]
+
     def validate_client_id(self, field):
         if not field.data:
             return
@@ -435,6 +469,11 @@ class ClientForm(BaseForm):
         metadata["contacts"] = lines(self.contacts.data)
         metadata["grant_types"] = self.grant_types.data
         metadata["response_types"] = self.response_types.data
+        if self.oidc:
+            for name in self.OIDC_METADATA:
+                metadata.pop(name, None)
+                if self[name].data not in (None, ""):
+                    metadata[name] = self[name].data
         return metadata
 
     def save_client(self):

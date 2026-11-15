@@ -4,13 +4,16 @@ import pytest
 from webtest import Upload
 
 from auth_server_playground.models import SETTINGS_ID
+from auth_server_playground.models import Client
 from auth_server_playground.models import Consent
 from auth_server_playground.models import Persona
 from auth_server_playground.models import Settings
 from auth_server_playground.models import Token
 from auth_server_playground.models import db
 from auth_server_playground.personas import COMPLETE_SUB
+from auth_server_playground.settings import MAX_LIFETIME
 from auth_server_playground.snapshot import SnapshotError
+from auth_server_playground.snapshot import check_snapshot
 from auth_server_playground.snapshot import export_snapshot
 from auth_server_playground.snapshot import import_snapshot
 from auth_server_playground.store import save_document
@@ -281,3 +284,72 @@ def test_invalid_initial_snapshot(tmp_path, make_app, monkeypatch):
     monkeypatch.setenv("INITIAL_SNAPSHOT", str(path))
     with pytest.raises(SnapshotError):
         make_app()
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "userinfo_signed_response_alg",
+        "userinfo_encrypted_response_alg",
+        "userinfo_encrypted_response_enc",
+        "id_token_encrypted_response_alg",
+        "id_token_encrypted_response_enc",
+    ],
+)
+def test_unsupported_client_metadata_is_refused(app, client, key):
+    with app.app_context():
+        snapshot = export_snapshot()
+    snapshot["clients"][0]["client_metadata"][key] = "RS256"
+    with pytest.raises(SnapshotError, match=key):
+        check_snapshot(snapshot)
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["soon", True, -1, 1.5, float("nan"), float("inf"), 10**30, MAX_LIFETIME + 1],
+)
+def test_invalid_default_max_age_is_refused(app, client, value):
+    with app.app_context():
+        snapshot = export_snapshot()
+    snapshot["clients"][0]["client_metadata"]["default_max_age"] = value
+    with pytest.raises(SnapshotError, match="default_max_age"):
+        check_snapshot(snapshot)
+
+
+@pytest.mark.parametrize("value", [0, 30, MAX_LIFETIME])
+def test_valid_default_max_age_is_accepted(app, client, value):
+    with app.app_context():
+        snapshot = export_snapshot()
+    snapshot["clients"][0]["client_metadata"]["default_max_age"] = value
+    check_snapshot(snapshot)
+
+
+@pytest.mark.parametrize("alg", ["none", "HS256", "foo", "EdDSA", "RS384"])
+def test_unsignable_client_algorithm_is_refused(app, client, alg):
+    with app.app_context():
+        snapshot = export_snapshot()
+    snapshot["clients"][0]["client_metadata"]["id_token_signed_response_alg"] = alg
+    with pytest.raises(SnapshotError, match="id_token_signed_response_alg"):
+        check_snapshot(snapshot)
+
+
+def test_null_unsupported_client_metadata_is_accepted(app, client):
+    with app.app_context():
+        snapshot = export_snapshot()
+    snapshot["clients"][0]["client_metadata"]["userinfo_signed_response_alg"] = None
+    check_snapshot(snapshot)
+
+
+def test_client_algorithm_unknown_to_the_server_is_accepted(app, client):
+    with app.app_context():
+        snapshot = export_snapshot()
+    snapshot["clients"][0]["client_metadata"]["id_token_signed_response_alg"] = "ES256"
+    check_snapshot(snapshot)
+
+
+def test_imported_client_has_no_default_algorithm(app, client):
+    with app.app_context():
+        snapshot = export_snapshot()
+        import_snapshot(snapshot)
+        stored = Client.query.filter_by(client_id="confidential-client").one()
+        assert "id_token_signed_response_alg" not in stored.client_metadata

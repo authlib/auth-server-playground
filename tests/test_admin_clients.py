@@ -3,6 +3,7 @@ import pytest
 from auth_server_playground.models import Client
 from auth_server_playground.models import Token
 from auth_server_playground.models import db
+from tests.conftest import make_client
 from tests.utils import client_credentials_token
 
 
@@ -256,3 +257,73 @@ def test_navigation_marks_the_clients_section(testapp, client):
     res = testapp.get(f"/en/clients/{client['client_id']}")
     assert text(res, 'nav [aria-current="true"]') == "Clients"
     assert not res.html.select('nav [aria-current="page"]')
+
+
+def test_client_openid_fields(app, testapp, configure):
+    configure(metadata={"id_token_signing_alg_values_supported": ["RS256", "ES256"]})
+    form = testapp.get("/en/clients/new").forms["client"]
+    form["client_id"] = "oidc-client"
+    form["redirect_uris"] = "https://client.test/cb"
+    form["id_token_signed_response_alg"] = "ES256"
+    form["default_max_age"] = "600"
+    form.submit().follow()
+    with app.app_context():
+        metadata = Client.query.filter_by(client_id="oidc-client").one().client_metadata
+        assert metadata["id_token_signed_response_alg"] == "ES256"
+        assert metadata["default_max_age"] == 600
+
+
+def test_client_openid_fields_are_optional(app, testapp):
+    form = testapp.get("/en/clients/new").forms["client"]
+    form["client_id"] = "plain-client"
+    form.submit().follow()
+    with app.app_context():
+        metadata = (
+            Client.query.filter_by(client_id="plain-client").one().client_metadata
+        )
+        assert "id_token_signed_response_alg" not in metadata
+        assert "default_max_age" not in metadata
+
+
+def test_no_openid_fields_without_openid(testapp, configure):
+    configure(metadata={"scopes_supported": ["profile"]})
+    form = testapp.get("/en/clients/new").forms["client"]
+    assert "id_token_signed_response_alg" not in form.fields
+
+
+def test_openid_values_are_kept_without_openid(app, testapp, configure, client):
+    with app.app_context():
+        stored = Client.query.filter_by(client_id="confidential-client").one()
+        stored.set_client_metadata(
+            {
+                **stored.client_metadata,
+                "default_max_age": 60,
+                "id_token_signed_response_alg": "ES256",
+            }
+        )
+        db.session.commit()
+    configure(metadata={"scopes_supported": ["profile"]})
+    testapp.get("/en/clients/confidential-client").forms["client"].submit()
+    with app.app_context():
+        stored = Client.query.filter_by(client_id="confidential-client").one()
+        assert stored.client_metadata["default_max_age"] == 60
+        assert stored.client_metadata["id_token_signed_response_alg"] == "ES256"
+
+
+def test_disabled_algorithm_is_marked(app, testapp, configure):
+    configure(metadata={"id_token_signing_alg_values_supported": ["RS256", "ES256"]})
+    make_client(
+        app,
+        client_id="es-client",
+        client_secret="es-secret",
+        metadata={"id_token_signed_response_alg": "ES256"},
+    )
+    configure(metadata={"id_token_signing_alg_values_supported": ["RS256"]})
+    res = testapp.get("/en/clients/es-client")
+    assert "ES256 (not supported by the server)" in res
+    assert "id_token_signed_response_alg" in testapp.get("/en/clients")
+    res.forms["client"].submit().follow()
+    assert (
+        stored(app, "es-client")["client_metadata"]["id_token_signed_response_alg"]
+        == "ES256"
+    )

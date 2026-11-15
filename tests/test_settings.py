@@ -353,3 +353,16 @@ def test_rfc_8414_keys_are_checked_with_openid():
     document = changed(metadata={"issuer": "http://server.test"})
     assert is_oidc_enabled(document)
     assert "revocation_endpoint" in errors_of(document)
+
+
+def test_unsupported_id_token_algorithm():
+    client_metadata = {"id_token_signed_response_alg": "ES256"}
+    assert unsupported_values(client_metadata, default_document()) == {
+        "id_token_signed_response_alg": ["ES256"]
+    }
+
+
+def test_id_token_algorithm_without_openid():
+    document = changed(metadata={"scopes_supported": ["profile"]})
+    client_metadata = {"id_token_signed_response_alg": "ES256"}
+    assert unsupported_values(client_metadata, document) == {}

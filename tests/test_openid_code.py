@@ -186,6 +186,28 @@ def test_recent_login_with_max_age(logged_in, client):
     assert "consent" in res.forms
 
 
+@pytest.mark.parametrize(
+    ("default_max_age", "expected"), [(30, "persona"), (3600, "consent")]
+)
+def test_default_max_age_of_the_client(app, logged_in, default_max_age, expected):
+    signed = make_client(
+        app,
+        client_id="aged-client",
+        client_secret="aged-secret",
+        metadata={
+            "grant_types": ["authorization_code"],
+            "response_types": ["code"],
+            "scope": "openid",
+            "default_max_age": default_max_age,
+        },
+    )
+    res = logged_in.get(oidc_url(signed, scope="openid"))
+    if expected == "persona":
+        assert selector_path(res) == "/interaction/persona"
+    else:
+        assert "consent" in res.forms
+
+
 def test_id_token_hint(logged_in, client):
     consent(logged_in, oidc_url(client))
     hint = exchange_code(
@@ -295,3 +317,54 @@ def test_openid_is_refused_when_disabled(logged_in, client, configure):
     configure(metadata={"scopes_supported": ["profile"]})
     res = logged_in.get(oidc_url(client))
     assert callback_params(res)["error"] == "invalid_scope"
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="Authlib signs with an algorithm that the server no longer publishes.",
+)
+def test_disabled_client_algorithm_is_refused(app, logged_in, configure):
+    configure(metadata={"id_token_signing_alg_values_supported": ["RS256", "ES256"]})
+    signed = make_client(
+        app,
+        client_id="es-client",
+        client_secret="es-secret",
+        metadata={
+            "grant_types": ["authorization_code"],
+            "response_types": ["code"],
+            "scope": "openid",
+            "id_token_signed_response_alg": "ES256",
+        },
+    )
+    configure(metadata={"id_token_signing_alg_values_supported": ["RS256"]})
+    code = callback_params(consent(logged_in, oidc_url(signed, scope="openid")))["code"]
+    res = exchange_code(logged_in, signed, code, status="*")
+    assert "id_token" not in res.json
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=ValueError,
+    reason="Authlib raises ValueError, not an OAuth error, when no key has the client algorithm.",
+)
+def test_deleted_client_algorithm_key(app, logged_in, configure):
+    configure(metadata={"id_token_signing_alg_values_supported": ["RS256", "ES256"]})
+    signed = make_client(
+        app,
+        client_id="es-client",
+        client_secret="es-secret",
+        metadata={
+            "grant_types": ["authorization_code"],
+            "response_types": ["code"],
+            "scope": "openid",
+            "id_token_signed_response_alg": "ES256",
+        },
+    )
+    configure(metadata={"id_token_signing_alg_values_supported": ["RS256"]})
+    with app.app_context():
+        for key in keys.all_keys():
+            if key.alg == "ES256":
+                keys.delete_key(key, ["RS256"])
+    code = callback_params(consent(logged_in, oidc_url(signed, scope="openid")))["code"]
+    assert exchange_code(logged_in, signed, code, status="*").status_int == 400
