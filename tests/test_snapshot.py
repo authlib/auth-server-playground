@@ -3,6 +3,7 @@ import json
 import pytest
 from webtest import Upload
 
+from auth_server_playground import keys
 from auth_server_playground.models import SETTINGS_ID
 from auth_server_playground.models import Client
 from auth_server_playground.models import Consent
@@ -12,6 +13,7 @@ from auth_server_playground.models import Token
 from auth_server_playground.models import db
 from auth_server_playground.personas import COMPLETE_SUB
 from auth_server_playground.settings import MAX_LIFETIME
+from auth_server_playground.snapshot import MAX_TIMESTAMP
 from auth_server_playground.snapshot import SnapshotError
 from auth_server_playground.snapshot import check_snapshot
 from auth_server_playground.snapshot import export_snapshot
@@ -264,13 +266,18 @@ def lifetime(app):
 
 
 def test_initial_snapshot_on_empty_database(app, tmp_path, make_app, monkeypatch):
+    with app.app_context():
+        keys.rotate_key("RS256")
     path = write_snapshot(app, tmp_path, 42)
+    snapshot_keys = json.loads(path.read_text())["keys"]
     monkeypatch.setenv("INITIAL_SNAPSHOT", str(path))
     database = f"sqlite:///{tmp_path}/db.sqlite"
 
     first = make_app(database)
     assert lifetime(first) == 42
+    assert len(snapshot_keys) == 2
     with first.app_context():
+        assert export_snapshot()["keys"] == snapshot_keys
         document = export_snapshot()["configuration"]
         document["settings"]["access_token_lifetime"] = 7
         save_document(document)
@@ -353,3 +360,95 @@ def test_imported_client_has_no_default_algorithm(app, client):
         import_snapshot(snapshot)
         stored = Client.query.filter_by(client_id="confidential-client").one()
         assert "id_token_signed_response_alg" not in stored.client_metadata
+
+
+def test_export_has_the_keys(app):
+    with app.app_context():
+        snapshot = export_snapshot()
+        assert [key["kid"] for key in snapshot["keys"]] == [
+            key.kid for key in keys.all_keys()
+        ]
+        assert "d" in snapshot["keys"][0]["jwk"]
+
+
+def test_export_then_import_keeps_the_keys(app):
+    with app.app_context():
+        keys.rotate_key("RS256")
+        snapshot = export_snapshot()
+        import_snapshot(snapshot)
+        assert export_snapshot()["keys"] == snapshot["keys"]
+
+
+def test_missing_key_is_generated(app):
+    with app.app_context():
+        snapshot = export_snapshot()
+        snapshot["keys"] = []
+        import_snapshot(snapshot)
+        assert keys.active_kid("RS256") is not None
+
+
+def with_key(snapshot, **changes):
+    snapshot["keys"][0].update(changes)
+    return snapshot
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        (lambda s: s.pop("keys"), "no 'keys'"),
+        (lambda s: s.update(keys="none"), "list of JSON objects"),
+        (lambda s: s.update(keys=["none"]), "list of JSON objects"),
+        (lambda s: with_key(s, alg="EdDSA"), "Unknown key algorithm"),
+        (lambda s: with_key(s, alg=["RS256"]), "Unknown key algorithm"),
+        (lambda s: with_key(s, alg="ES256"), "private ES256 key"),
+        (lambda s: with_key(s, kid="other"), "private RS256 key"),
+        (lambda s: with_key(s, jwk="text"), "private RS256 key"),
+        (lambda s: with_key(s, jwk={"kty": "unknown"}), "private RS256 key"),
+        (lambda s: with_key(s, jwk={"kty": ["RSA"]}), "private RS256 key"),
+        (lambda s: with_key(s, jwk={"kty": "RSA"}), "private RS256 key"),
+        (lambda s: s["keys"][0]["jwk"].update(use="enc"), "private RS256 key"),
+        (lambda s: s["keys"][0]["jwk"].update(key_ops=["verify"]), "private RS256 key"),
+        (lambda s: s["keys"][0]["jwk"].pop("d"), "private RS256 key"),
+        (lambda s: with_key(s, created_at="today"), "created_at"),
+        (lambda s: with_key(s, created_at=True), "created_at"),
+        (lambda s: with_key(s, created_at=None), "created_at"),
+        (lambda s: with_key(s, created_at=-1), "created_at"),
+        (lambda s: with_key(s, created_at=10**12), "created_at"),
+        (lambda s: with_key(s, created_at=2**70), "created_at"),
+        (lambda s: with_key(s, active="yes"), "true or false"),
+        (lambda s: s["keys"].append(dict(s["keys"][0])), "own kid"),
+    ],
+)
+def test_invalid_keys_are_refused(app, change, message):
+    with app.app_context():
+        snapshot = export_snapshot()
+    change(snapshot)
+    with pytest.raises(SnapshotError, match=message):
+        check_snapshot(snapshot)
+
+
+def test_key_with_the_maximum_created_at_is_accepted(app):
+    with app.app_context():
+        snapshot = export_snapshot()
+    with_key(snapshot, created_at=MAX_TIMESTAMP)
+    check_snapshot(snapshot)
+
+
+def test_two_active_keys_for_one_algorithm_are_refused(app):
+    with app.app_context():
+        keys.rotate_key("RS256")
+        snapshot = export_snapshot()
+    for key in snapshot["keys"]:
+        key["active"] = True
+    with pytest.raises(SnapshotError, match="active"):
+        check_snapshot(snapshot)
+
+
+def test_confirm_page_counts_the_keys(app, testapp):
+    with app.app_context():
+        snapshot = export_snapshot()
+    form = testapp.get("/en/snapshot").forms["import"]
+    form["file"] = Upload(
+        "snapshot.json", json.dumps(snapshot).encode(), "application/json"
+    )
+    assert "1 key." in form.submit().text

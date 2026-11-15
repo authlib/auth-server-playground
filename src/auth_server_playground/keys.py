@@ -2,11 +2,13 @@
 
 import time
 
+from joserfc.errors import JoseError
 from joserfc.jwk import ECKey
 from joserfc.jwk import KeySet
 from joserfc.jwk import OKPKey
 from joserfc.jwk import RSAKey
 from joserfc.jwk import import_key
+from joserfc.util import base64_to_int
 
 from .models import SigningKey
 from .models import db
@@ -18,6 +20,18 @@ GENERATORS = {
     "Ed25519": lambda parameters: OKPKey.generate_key("Ed25519", parameters),
 }
 
+#: The key type and curve of each algorithm.
+KEY_TYPES = {
+    "RS256": ("RSA", None),
+    "PS256": ("RSA", None),
+    "ES256": ("EC", "P-256"),
+    "Ed25519": ("OKP", "Ed25519"),
+}
+
+
+#: Per RFC 7518 §3.3 and §3.5, RS256 and PS256 need a key of 2048 bits or more.
+MIN_RSA_BITS = 2048
+
 
 class KeyInUse(ValueError):
     """The key signs the ID tokens of an enabled algorithm."""
@@ -28,6 +42,35 @@ def generate_jwk(alg):
     key = GENERATORS[alg]({"alg": alg, "use": "sig"})
     key.ensure_kid()
     return key.as_dict(private=True)
+
+
+def is_long_rsa_modulus(n):
+    return isinstance(n, str) and base64_to_int(n).bit_length() >= MIN_RSA_BITS
+
+
+def is_valid_key(jwk, alg, kid):
+    """Tell if the JWK is a private signing key of the algorithm, with its thumbprint as kid."""
+    if not isinstance(jwk, dict) or (jwk.get("kty"), jwk.get("crv")) != KEY_TYPES[alg]:
+        return False
+    try:
+        # joserfc only warns about a short RSA key, and signs with it.
+        if jwk["kty"] == "RSA" and not is_long_rsa_modulus(jwk.get("n")):
+            return False
+        # joserfc raises ValueError, KeyError or TypeError, not only JoseError,
+        # for some malformed keys. The pre-check above covers kty and crv.
+        key = import_key(jwk)
+        key.check_use("sig")
+        key.check_key_op("sign")
+        # joserfc builds a private OKP key from "d" and ignores "x". So the
+        # public part of the JWK must give the same thumbprint as "d".
+        public = import_key(key.as_pem(private=False), key.key_type)
+    except (JoseError, ValueError):
+        return False
+    return (
+        key.is_private
+        and key.alg == alg
+        and key.kid == kid == key.thumbprint() == public.thumbprint()
+    )
 
 
 def active_key(alg):

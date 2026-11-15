@@ -10,9 +10,10 @@
         <ul>
             <li>{% trans %}the server configuration;{% endtrans %}</li>
             <li>{% trans count=snapshot.personas|length %}{{ count }} persona;{% pluralize %}{{ count }} personas;{% endtrans %}</li>
-            <li>{% trans count=snapshot.clients|length %}{{ count }} client.{% pluralize %}{{ count }} clients.{% endtrans %}</li>
+            <li>{% trans count=snapshot.clients|length %}{{ count }} client;{% pluralize %}{{ count }} clients;{% endtrans %}</li>
+            <li>{% trans count=snapshot["keys"]|length %}{{ count }} key.{% pluralize %}{{ count }} keys.{% endtrans %}</li>
         </ul>
-        <p>{% trans %}The current personas and clients are deleted, with all the codes, tokens and consents. The selected persona is forgotten.{% endtrans %}</p>
+        <p>{% trans %}The current personas, clients and keys are deleted, with all the codes, tokens and consents. The selected persona is forgotten.{% endtrans %}</p>
         <footer>
             {% call render_form(form, url_for('admin.confirm_import'), id="confirm") %}
                 <div class="grid">

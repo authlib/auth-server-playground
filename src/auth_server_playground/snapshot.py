@@ -4,12 +4,17 @@ from authlib.oauth2.rfc7591 import ClientMetadataClaims
 from authlib.oidc.registration import ClientMetadataClaims as OIDCClientMetadataClaims
 from joserfc.errors import JoseError
 
+from .keys import KEY_TYPES
+from .keys import all_keys
+from .keys import ensure_keys
+from .keys import is_valid_key
 from .models import SETTINGS_ID
 from .models import AuthorizationCode
 from .models import Client
 from .models import Consent
 from .models import Persona
 from .models import Settings
+from .models import SigningKey
 from .models import Token
 from .models import db
 from .models import is_valid_client_id
@@ -22,6 +27,9 @@ from .settings import validate_document
 
 SNAPSHOT_VERSION = 1
 
+#: The last second of the year 9999, the end of what a datetime holds.
+MAX_TIMESTAMP = 253402300799
+
 CLIENT_TIMESTAMPS = ("client_id_issued_at", "client_secret_expires_at")
 
 
@@ -30,9 +38,9 @@ class SnapshotError(ValueError):
 
 
 def export_snapshot():
-    """Return the configuration, the personas and the clients.
+    """Return the configuration, the personas, the clients and the keys.
 
-    The client secrets are included. The secret key is not.
+    The client secrets and the private keys are included. The secret key is not.
     """
     return {
         "version": SNAPSHOT_VERSION,
@@ -51,6 +59,16 @@ def export_snapshot():
             }
             for c in Client.query.order_by(Client.id)
         ],
+        "keys": [
+            {
+                "kid": key.kid,
+                "alg": key.alg,
+                "jwk": key.jwk,
+                "created_at": key.created_at,
+                "active": key.active,
+            }
+            for key in all_keys()
+        ],
     }
 
 
@@ -64,7 +82,7 @@ def check_snapshot(data):
         raise SnapshotError("A snapshot is a JSON object.")
     if data.get("version") != SNAPSHOT_VERSION:
         raise SnapshotError(f"Unknown snapshot version: {data.get('version')!r}.")
-    for key in ("configuration", "personas", "clients"):
+    for key in ("configuration", "personas", "clients", "keys"):
         if key not in data:
             raise SnapshotError(f"The snapshot has no {key!r}.")
     try:
@@ -73,6 +91,7 @@ def check_snapshot(data):
         raise SnapshotError(str(error)) from error
     check_personas(data["personas"])
     check_clients(data["clients"])
+    check_keys(data["keys"])
 
 
 def check_personas(personas):
@@ -185,8 +204,36 @@ def check_client_metadata(client):
         raise SnapshotError(f"Client {client['client_id']!r}: {error}") from error
 
 
+def check_keys(items):
+    if not isinstance(items, list) or not all(isinstance(item, dict) for item in items):
+        raise SnapshotError("The keys are a list of JSON objects.")
+    for item in items:
+        if not isinstance(item.get("alg"), str) or item["alg"] not in KEY_TYPES:
+            raise SnapshotError(f"Unknown key algorithm: {item.get('alg')!r}.")
+        if not is_valid_key(item.get("jwk"), item["alg"], item.get("kid")):
+            raise SnapshotError(
+                f"Key {item.get('kid')!r} is not a private {item['alg']} key "
+                "whose kid is its thumbprint."
+            )
+        created_at = item.get("created_at")
+        if not (
+            isinstance(created_at, int)
+            and not isinstance(created_at, bool)
+            and 0 <= created_at <= MAX_TIMESTAMP
+        ):
+            raise SnapshotError(
+                f"The created_at of a key is a number of seconds, from 0 to {MAX_TIMESTAMP}."
+            )
+        if not isinstance(item.get("active"), bool):
+            raise SnapshotError("The active value of a key is true or false.")
+    if not all_unique([item["kid"] for item in items]):
+        raise SnapshotError("Each key needs its own kid.")
+    if not all_unique([item["alg"] for item in items if item["active"]]):
+        raise SnapshotError("Each algorithm has at most one active key.")
+
+
 def snapshot_rows(data):
-    """Return the personas and the clients of a checked snapshot, to add to the session."""
+    """Return the personas, the clients and the keys of a checked snapshot."""
     rows = [
         Persona(
             sub=persona["sub"],
@@ -204,23 +251,37 @@ def snapshot_rows(data):
         )
         client.set_client_metadata(item["client_metadata"])
         rows.append(client)
+    rows.extend(
+        SigningKey(
+            kid=item["kid"],
+            alg=item["alg"],
+            jwk=item["jwk"],
+            created_at=item["created_at"],
+            active=item["active"],
+        )
+        for item in data["keys"]
+    )
     return rows
 
 
 def import_snapshot(data):
-    """Replace the configuration, the personas and the clients.
+    """Replace the configuration, the personas, the clients and the keys.
 
-    Codes, tokens and consents are deleted. The secret key is kept. Nothing changes
-    if the snapshot is not valid.
+    Codes, tokens and consents are deleted. The secret key is kept. Each enabled
+    algorithm without an active key gets a new key. Nothing changes if the
+    snapshot is not valid.
     """
     check_snapshot(data)
     try:
-        for model in (Token, AuthorizationCode, Consent, Client, Persona):
+        for model in (Token, AuthorizationCode, Consent, Client, Persona, SigningKey):
             model.query.delete()
         db.session.add_all(snapshot_rows(data))
         row = db.session.get(Settings, SETTINGS_ID)
         row.document = data["configuration"]
         row.revision = Settings.revision + 1
+        ensure_keys(
+            data["configuration"]["metadata"]["id_token_signing_alg_values_supported"]
+        )
         db.session.commit()
     except Exception:
         db.session.rollback()

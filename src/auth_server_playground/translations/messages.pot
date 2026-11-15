@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-15 09:31+0100\n"
+"POT-Creation-Date: 2026-11-15 10:08+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -778,8 +778,8 @@ msgstr ""
 
 #: src/auth_server_playground/templates/admin/snapshot.html:5
 msgid ""
-"A snapshot is a JSON file with the server configuration, the personas and"
-" the clients."
+"A snapshot is a JSON file with the server configuration, the personas, "
+"the clients and the signing keys."
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/snapshot.html:8
@@ -791,7 +791,7 @@ msgid "Download the current state of the playground."
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/snapshot.html:10
-msgid "The file holds the client secrets."
+msgid "The file holds the client secrets and the private keys."
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/snapshot.html:12
@@ -828,18 +828,25 @@ msgstr[1] ""
 
 #: src/auth_server_playground/templates/admin/snapshot_confirm.html:13
 #, python-format
-msgid "%(count)s client."
-msgid_plural "%(count)s clients."
+msgid "%(count)s client;"
+msgid_plural "%(count)s clients;"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/auth_server_playground/templates/admin/snapshot_confirm.html:15
+#: src/auth_server_playground/templates/admin/snapshot_confirm.html:14
+#, python-format
+msgid "%(count)s key."
+msgid_plural "%(count)s keys."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/auth_server_playground/templates/admin/snapshot_confirm.html:16
 msgid ""
-"The current personas and clients are deleted, with all the codes, tokens "
-"and consents. The selected persona is forgotten."
+"The current personas, clients and keys are deleted, with all the codes, "
+"tokens and consents. The selected persona is forgotten."
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/snapshot_confirm.html:20
+#: src/auth_server_playground/templates/admin/snapshot_confirm.html:21
 msgid "Cancel"
 msgstr ""
 
