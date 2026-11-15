@@ -140,9 +140,12 @@ def other_persona(app):
 
 
 @pytest.fixture
-def logged_in(testapp, persona):
-    """Select the persona in the test application session."""
-    select_persona(testapp, persona)
+def logged_in(testapp, persona, monkeypatch):
+    """Select the persona in the test application session, one minute ago."""
+    login_time = time.time() - 60
+    with monkeypatch.context() as patch:
+        patch.setattr(time, "time", lambda: login_time)
+        select_persona(testapp, persona)
     return testapp
 
 

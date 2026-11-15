@@ -6,6 +6,7 @@ from joserfc.errors import JoseError
 from .models import SETTINGS_ID
 from .models import AuthorizationCode
 from .models import Client
+from .models import Consent
 from .models import Persona
 from .models import Settings
 from .models import Token
@@ -163,12 +164,12 @@ def snapshot_rows(data):
 def import_snapshot(data):
     """Replace the configuration, the personas and the clients.
 
-    Codes and tokens are deleted. The secret key is kept. Nothing changes
+    Codes, tokens and consents are deleted. The secret key is kept. Nothing changes
     if the snapshot is not valid.
     """
     check_snapshot(data)
     try:
-        for model in (Token, AuthorizationCode, Client, Persona):
+        for model in (Token, AuthorizationCode, Consent, Client, Persona):
             model.query.delete()
         db.session.add_all(snapshot_rows(data))
         row = db.session.get(Settings, SETTINGS_ID)

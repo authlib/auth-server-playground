@@ -63,8 +63,22 @@
                     </article>
                 {% endif %}
                 <article>
+                    <header><h3>{% trans %}Consents{% endtrans %}</h3></header>
+                    {% for consent, revoke in consents %}
+                        <p>
+                            <code>{{ consent.client_id }}</code><br>
+                            <small>{% for scope in consent.scope.split() %}<code>{{ scope }}</code> {% endfor %}</small>
+                        </p>
+                        {% call render_form(revoke, url_for('admin.revoke_consent', persona_id=persona.id, consent_id=consent.id), id="revoke-" ~ consent.id) %}
+                            {{ revoke.submit(value=_("Revoke"), class="outline secondary") }}
+                        {% endcall %}
+                    {% else %}
+                        <p><small>{% trans %}No client has a consent yet.{% endtrans %}</small></p>
+                    {% endfor %}
+                </article>
+                <article>
                     <header><h3>{% trans %}Delete{% endtrans %}</h3></header>
-                    <p><small>{% trans %}Deletes the persona, its codes and its tokens.{% endtrans %}</small></p>
+                    <p><small>{% trans %}Deletes the persona, its codes, its tokens and its consents.{% endtrans %}</small></p>
                     <footer>
                         {% call render_form(delete_form, url_for('admin.remove_persona', persona_id=persona.id), id="delete") %}
                             {{ delete_form.submit(value=_("Delete the persona"), class="contrast") }}

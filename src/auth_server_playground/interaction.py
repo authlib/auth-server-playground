@@ -2,6 +2,9 @@ import time
 from urllib.parse import parse_qs
 from urllib.parse import urlsplit
 
+from authlib.oauth2 import AuthorizationSession
+from authlib.oauth2.rfc6749.util import scope_to_list
+from authlib.oidc.core import AuthorizationSessionMixin
 from flask import Blueprint
 from flask import abort
 from flask import redirect
@@ -16,6 +19,7 @@ from . import personas
 from .forms import ActionForm
 from .forms import SelectPersonaForm
 from .models import Client
+from .models import Consent
 from .models import Persona
 from .models import db
 
@@ -23,6 +27,48 @@ bp = Blueprint("interaction", __name__)
 
 SESSION_PERSONA = "persona_id"
 SESSION_AUTH_TIME = "auth_time"
+
+
+class PlaygroundSession(AuthorizationSession, AuthorizationSessionMixin):
+    """The facts that Authlib needs to apply prompt, max_age and the consents.
+
+    AuthorizationSession keeps the start time of the requests in the Flask
+    session.
+    """
+
+    def get_interaction_time(self, request, interaction):
+        if interaction == "login":
+            return self.session.get(SESSION_AUTH_TIME)
+        if interaction == "consent":
+            consent = self.stored_consent(request)
+            if consent is not None and consent.covers(request.scope):
+                return consent.granted_at
+        return None
+
+    def is_consent_needed(self, request):
+        consent = self.stored_consent(request)
+        return consent is None or not consent.covers(request.scope)
+
+    def stored_consent(self, request):
+        return Consent.query.filter_by(
+            persona_id=self.user.id, client_id=request.client.client_id
+        ).first()
+
+
+def grant_consent(persona, client_id, scope):
+    """Store the consent, merged with the scopes granted before."""
+    consent = Consent.query.filter_by(
+        persona_id=persona.id, client_id=client_id
+    ).first()
+    if consent is None:
+        consent = Consent(persona_id=persona.id, client_id=client_id, scope="")
+        db.session.add(consent)
+    scopes = consent.scope.split()
+    scopes.extend(item for item in scope_to_list(scope) or [] if item not in scopes)
+    consent.scope = " ".join(scopes)
+    consent.granted_at = int(time.time())
+    db.session.commit()
+    return consent
 
 
 def current_persona():

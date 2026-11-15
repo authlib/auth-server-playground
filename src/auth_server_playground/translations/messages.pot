@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-14 23:57+0100\n"
+"POT-Creation-Date: 2026-11-15 08:35+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,57 +17,61 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: src/auth_server_playground/admin.py:108
+#: src/auth_server_playground/admin.py:109
 msgid "The server configuration is saved."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:134
+#: src/auth_server_playground/admin.py:135
 msgid "The default configuration is restored."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:150
+#: src/auth_server_playground/admin.py:151
 msgid "The client is created."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:172
+#: src/auth_server_playground/admin.py:173
 msgid "The client is saved."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:182
+#: src/auth_server_playground/admin.py:183
 msgid "The client secret is regenerated."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:193
+#: src/auth_server_playground/admin.py:194
 msgid "The client is deleted."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:215
+#: src/auth_server_playground/admin.py:216
 msgid "The persona is created."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:226
+#: src/auth_server_playground/admin.py:227
 msgid "A random persona is created."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:248
+#: src/auth_server_playground/admin.py:254
 msgid "The persona is saved."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:272
+#: src/auth_server_playground/admin.py:279
+msgid "The consent is revoked."
+msgstr ""
+
+#: src/auth_server_playground/admin.py:292
 msgid "The persona is deleted."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:287
-#: src/auth_server_playground/admin.py:303
+#: src/auth_server_playground/admin.py:307
+#: src/auth_server_playground/admin.py:323
 #, python-format
 msgid "This snapshot cannot be imported: %(error)s"
 msgstr ""
 
-#: src/auth_server_playground/admin.py:305
+#: src/auth_server_playground/admin.py:325
 msgid "The snapshot is imported."
 msgstr ""
 
-#: src/auth_server_playground/endpoints.py:73
+#: src/auth_server_playground/endpoints.py:78
 msgid "The persona changed since this page was shown."
 msgstr ""
 
@@ -488,12 +492,12 @@ msgid "A public client has no secret."
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/client.html:49
-#: src/auth_server_playground/templates/admin/persona.html:66
+#: src/auth_server_playground/templates/admin/persona.html:80
 msgid "Delete"
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/client.html:50
-msgid "Deletes the client, its codes and its tokens."
+msgid "Deletes the client, its codes, its tokens and its consents."
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/client.html:53
@@ -641,11 +645,23 @@ msgstr ""
 msgid "Set on each save."
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/persona.html:67
-msgid "Deletes the persona, its codes and its tokens."
+#: src/auth_server_playground/templates/admin/persona.html:66
+msgid "Consents"
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/persona.html:70
+#: src/auth_server_playground/templates/admin/persona.html:73
+msgid "Revoke"
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/persona.html:76
+msgid "No client has a consent yet."
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/persona.html:81
+msgid "Deletes the persona, its codes, its tokens and its consents."
+msgstr ""
+
+#: src/auth_server_playground/templates/admin/persona.html:84
 msgid "Delete the persona"
 msgstr ""
 
@@ -724,8 +740,8 @@ msgstr[1] ""
 
 #: src/auth_server_playground/templates/admin/snapshot_confirm.html:15
 msgid ""
-"The current personas and clients are deleted, with all the codes and "
-"tokens. The selected persona is forgotten."
+"The current personas and clients are deleted, with all the codes, tokens "
+"and consents. The selected persona is forgotten."
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/snapshot_confirm.html:20

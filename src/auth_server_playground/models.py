@@ -5,6 +5,7 @@ import time
 from authlib.integrations.sqla_oauth2 import OAuth2AuthorizationCodeMixin
 from authlib.integrations.sqla_oauth2 import OAuth2ClientMixin
 from authlib.integrations.sqla_oauth2 import OAuth2TokenMixin
+from authlib.oauth2.rfc6749.util import scope_to_list
 from flask import url_for
 from flask_sqlalchemy import SQLAlchemy
 
@@ -55,6 +56,9 @@ class Persona(db.Model):
     )
     tokens = db.relationship(
         "Token", back_populates="persona", cascade="all, delete-orphan"
+    )
+    consents = db.relationship(
+        "Consent", back_populates="persona", cascade="all, delete-orphan"
     )
 
     def __str__(self):
@@ -115,3 +119,20 @@ class Token(db.Model, OAuth2TokenMixin):
         if self.refresh_token_revoked_at:
             return False
         return self.refresh_token_expires_at >= time.time()
+
+
+class Consent(db.Model):
+    """The scopes that a persona granted to a client."""
+
+    __tablename__ = "consent"
+    __table_args__ = (db.UniqueConstraint("persona_id", "client_id"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    persona_id = db.Column(db.Integer, db.ForeignKey("persona.id"), nullable=False)
+    client_id = db.Column(db.String(48), nullable=False)
+    scope = db.Column(db.Text, nullable=False, default="")
+    granted_at = db.Column(db.Integer, nullable=False)
+    persona = db.relationship("Persona", back_populates="consents")
+
+    def covers(self, scope):
+        return set(scope_to_list(scope) or []) <= set(self.scope.split())

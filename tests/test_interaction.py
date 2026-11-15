@@ -139,8 +139,8 @@ def test_selector_names_the_client(testapp, client):
 
 
 def test_selector_does_not_name_an_unknown_client(testapp):
-    url = authorize_url(response_type="code", client_id="Your Bank")
-    res = testapp.get(url).follow()
+    next_url = authorize_url(response_type="code", client_id="Your Bank")
+    res = testapp.get("/interaction/persona?" + urlencode({"next": next_url}))
     assert "Your Bank" not in res.html.select_one("main").get_text()
 
 

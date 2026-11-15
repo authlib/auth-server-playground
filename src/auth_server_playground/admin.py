@@ -22,6 +22,7 @@ from .forms import RandomPersonaForm
 from .forms import ServerForm
 from .interaction import current_persona
 from .models import Client
+from .models import Consent
 from .models import Persona
 from .models import db
 from .personas import create_random_persona
@@ -231,6 +232,10 @@ def get_persona(persona_id):
     return db.get_or_404(Persona, persona_id)
 
 
+def revoke_form(consent):
+    return ActionForm(prefix=f"revoke-{consent.id}")
+
+
 @bp.route("/personas/<int:persona_id>", methods=["GET", "POST"])
 def edit_persona(persona_id):
     persona = get_persona(persona_id)
@@ -242,6 +247,7 @@ def edit_persona(persona_id):
             persona=persona,
             avatar_form=ActionForm(prefix="avatar"),
             delete_form=ActionForm(prefix="delete"),
+            consents=[(consent, revoke_form(consent)) for consent in persona.consents],
         )
 
     form.save_persona()
@@ -260,13 +266,27 @@ def redraw_avatar(persona_id):
     return redirect(url_for("admin.edit_persona", persona_id=persona_id))
 
 
+@bp.route(
+    "/personas/<int:persona_id>/consents/<int:consent_id>/revoke", methods=["POST"]
+)
+def revoke_consent(persona_id, consent_id):
+    consent = db.first_or_404(
+        db.select(Consent).filter_by(id=consent_id, persona_id=persona_id)
+    )
+    if revoke_form(consent).validate_on_submit():
+        db.session.delete(consent)
+        db.session.commit()
+        flash(_("The consent is revoked."), "success")
+    return redirect(url_for("admin.edit_persona", persona_id=persona_id))
+
+
 @bp.route("/personas/<int:persona_id>/delete", methods=["POST"])
 def remove_persona(persona_id):
     persona = get_persona(persona_id)
     if not ActionForm(prefix="delete").validate_on_submit():
         return redirect(url_for("admin.edit_persona", persona_id=persona_id))
 
-    # The cascade of the model deletes the codes and the tokens of the persona.
+    # The cascade of the model deletes the codes, tokens and consents of the persona.
     db.session.delete(persona)
     db.session.commit()
     flash(_("The persona is deleted."), "success")

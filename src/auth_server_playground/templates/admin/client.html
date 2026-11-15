@@ -47,7 +47,7 @@
                 </article>
                 <article>
                     <header><h3>{% trans %}Delete{% endtrans %}</h3></header>
-                    <p><small>{% trans %}Deletes the client, its codes and its tokens.{% endtrans %}</small></p>
+                    <p><small>{% trans %}Deletes the client, its codes, its tokens and its consents.{% endtrans %}</small></p>
                     <footer>
                         {% call render_form(delete_form, url_for('admin.remove_client', client_id=client.client_id), id="delete") %}
                             {{ delete_form.submit(value=_("Delete the client"), class="contrast") }}

@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from .keys import ensure_keys
 from .models import SETTINGS_ID
 from .models import AuthorizationCode
+from .models import Consent
 from .models import Settings
 from .models import Token
 from .models import db
@@ -95,8 +96,9 @@ def save_document(document):
 
 
 def delete_client(client):
-    """Delete the client with its codes and tokens."""
+    """Delete the client with its codes, tokens and consents."""
     AuthorizationCode.query.filter_by(client_id=client.client_id).delete()
     Token.query.filter_by(client_id=client.client_id).delete()
+    Consent.query.filter_by(client_id=client.client_id).delete()
     db.session.delete(client)
     db.session.commit()

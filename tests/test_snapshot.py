@@ -4,6 +4,7 @@ import pytest
 from webtest import Upload
 
 from auth_server_playground.models import SETTINGS_ID
+from auth_server_playground.models import Consent
 from auth_server_playground.models import Persona
 from auth_server_playground.models import Settings
 from auth_server_playground.models import Token
@@ -13,7 +14,9 @@ from auth_server_playground.snapshot import SnapshotError
 from auth_server_playground.snapshot import export_snapshot
 from auth_server_playground.snapshot import import_snapshot
 from auth_server_playground.store import save_document
+from tests.test_authorization_code import code_url
 from tests.utils import client_credentials_token
+from tests.utils import consent
 
 
 def test_round_trip(app, client, configure):
@@ -44,6 +47,14 @@ def test_import_purges_tokens_and_keeps_the_secret_key(app, testapp, client):
         import_snapshot(export_snapshot())
         assert Token.query.count() == 0
         assert db.session.get(Settings, SETTINGS_ID).secret_key == key
+
+
+def test_import_deletes_the_consents(app, logged_in, client):
+    consent(logged_in, code_url(client))
+    with app.app_context():
+        assert Consent.query.count() == 1
+        import_snapshot(export_snapshot())
+        assert Consent.query.count() == 0
 
 
 def test_import_bumps_the_revision(app):

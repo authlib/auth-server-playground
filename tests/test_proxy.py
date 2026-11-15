@@ -4,6 +4,7 @@ from urllib.parse import urlsplit
 import pytest
 
 from auth_server_playground import is_proxy_fix_enabled
+from tests.test_authorization_code import code_url
 from tests.utils import basic_auth
 
 
@@ -42,17 +43,17 @@ def login_next(res):
     return parse_qs(urlsplit(res.location).query)["next"][0]
 
 
-def test_forwarded_prefix_is_ignored_by_default(testapp):
-    res = testapp.get("/oauth/authorize", headers={"X-Forwarded-Prefix": "/auth"})
+def test_forwarded_prefix_is_ignored_by_default(testapp, client):
+    res = testapp.get(code_url(client), headers={"X-Forwarded-Prefix": "/auth"})
     assert urlsplit(res.location).path == "/interaction/persona"
-    assert login_next(res) == "/oauth/authorize?"
+    assert login_next(res).startswith("/oauth/authorize?")
 
 
 @pytest.mark.parametrize("proxy_fix", [True])
-def test_forwarded_prefix_is_used_behind_a_proxy(testapp):
-    res = testapp.get("/oauth/authorize", headers={"X-Forwarded-Prefix": "/auth"})
+def test_forwarded_prefix_is_used_behind_a_proxy(testapp, client):
+    res = testapp.get(code_url(client), headers={"X-Forwarded-Prefix": "/auth"})
     assert urlsplit(res.location).path == "/auth/interaction/persona"
-    assert login_next(res) == "/auth/oauth/authorize?"
+    assert login_next(res).startswith("/auth/oauth/authorize?")
 
 
 @pytest.mark.parametrize(

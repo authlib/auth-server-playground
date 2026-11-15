@@ -8,11 +8,14 @@ from flask import jsonify
 from flask import redirect
 from flask import render_template
 from flask import request
+from flask import session
 from flask import url_for
 from flask_babel import gettext as _
 
 from .forms import ConsentForm
+from .interaction import PlaygroundSession
 from .interaction import current_persona
+from .interaction import grant_consent
 from .keys import public_jwks
 from .models import Persona
 from .models import db
@@ -47,7 +50,15 @@ def current_metadata(document=None):
 @bp.route("/oauth/authorize", methods=["GET", "POST"])
 def authorize():
     persona = current_persona()
-    if persona is None:
+    server = get_server()
+    try:
+        grant = server.get_consent_grant(session=PlaygroundSession(persona, session))
+    except OAuth2Error as error:
+        return server.handle_error_response(request, error)
+
+    # Authlib stores the start time of the request before the selector, so
+    # that a selection after it counts as a new login.
+    if {"login", "select_account"} & set(grant.interactions):
         return redirect(
             url_for(
                 "interaction.select_persona",
@@ -55,23 +66,19 @@ def authorize():
             )
         )
 
-    server = get_server()
-    try:
-        grant = server.get_consent_grant(end_user=persona)
-    except OAuth2Error as error:
-        return server.handle_error_response(request, error)
-
     form = ConsentForm(persona_id=persona.id)
     if request.method == "POST":
         if not form.validate():
             abort(400)
         if form.persona_id.data == persona.id:
-            grant_user = persona if form.accept.data else None
-            return server.create_authorization_response(
-                grant=grant, grant_user=grant_user
-            )
+            if not form.accept.data:
+                return server.create_authorization_response(grant=grant)
+            grant_consent(persona, grant.client.client_id, grant.request.scope)
+            return server.create_authorization_response(grant=grant, grant_user=persona)
         flash(_("The persona changed since this page was shown."), "warning")
         form.persona_id.data = persona.id
+    elif "consent" not in grant.interactions:
+        return server.create_authorization_response(grant=grant, grant_user=persona)
     return render_template(
         "interaction/consent.html", form=form, grant=grant, persona=persona
     )
