@@ -45,6 +45,14 @@ class PlaygroundSession(AuthorizationSession, AuthorizationSessionMixin):
                 return consent.granted_at
         return None
 
+    def is_account_selection_needed(self, request):
+        """Tell if the login_hint is about another persona."""
+        hint = request.payload.data.get("login_hint")
+        if not hint:
+            return False
+        hinted = hinted_persona(Persona.query.all(), hint)
+        return hinted is not None and hinted.id != self.user.id
+
     def is_consent_needed(self, request):
         consent = self.stored_consent(request)
         return consent is None or not consent.covers(request.scope)

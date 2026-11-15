@@ -239,6 +239,34 @@ def test_selector_selects_the_current_persona(logged_in, client, persona, hint):
     assert res.forms["select-persona"]["persona"].value == str(persona["id"])
 
 
+def test_login_hint_for_another_persona_opens_the_selector(
+    logged_in, client, other_persona
+):
+    res = logged_in.get(oidc_url(client, login_hint=MINIMAL_SUB))
+    assert selector_path(res) == "/interaction/persona"
+    res = res.follow()
+    assert res.forms["select-persona"]["persona"].value == str(other_persona["id"])
+
+
+def test_selection_after_the_login_hint_goes_on(logged_in, client):
+    res = logged_in.get(oidc_url(client, login_hint=MINIMAL_SUB)).follow()
+    res = res.forms["select-persona"].submit().follow()
+    assert "consent" in res.forms
+
+
+@pytest.mark.parametrize("hint", [COMPLETE_SUB, "nobody@example.com"])
+def test_login_hint_without_another_persona_skips_the_selector(logged_in, client, hint):
+    res = logged_in.get(oidc_url(client, login_hint=hint))
+    assert "consent" in res.forms
+
+
+def test_prompt_none_with_a_login_hint_for_another_persona(logged_in, client):
+    consent(logged_in, oidc_url(client))
+    url = oidc_url(client, prompt="none", login_hint=MINIMAL_SUB, state="silent")
+    res = logged_in.get(url)
+    assert callback_params(res)["error"] == "account_selection_required"
+
+
 def test_ui_locales_choose_the_language(testapp, client):
     res = testapp.get(oidc_url(client, ui_locales="de fr-CA")).follow()
     assert '<html lang="fr"' in res.text
