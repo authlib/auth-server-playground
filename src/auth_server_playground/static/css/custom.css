@@ -233,7 +233,8 @@ fieldset ul li {
     padding-block: calc(var(--pico-spacing) / 2);
 }
 
-.wrap code {
+.wrap code,
+.param-name {
     overflow-wrap: anywhere;
 }
 

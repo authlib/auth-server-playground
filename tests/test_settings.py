@@ -1,7 +1,9 @@
 import pytest
 
 from auth_server_playground.i18n import available_language_codes
+from auth_server_playground.settings import CLIENT_JWT_ALGORITHMS
 from auth_server_playground.settings import MAX_LIFETIME
+from auth_server_playground.settings import REQUEST_OBJECT_ALGORITHMS
 from auth_server_playground.settings import UI_LOCALES
 from auth_server_playground.settings import InvalidDocument
 from auth_server_playground.settings import claims_supported
@@ -290,7 +292,9 @@ def test_published_openid_metadata():
     assert metadata["claims_parameter_supported"] is True
     assert metadata["request_parameter_supported"] is True
     assert metadata["request_uri_parameter_supported"] is False
-    assert metadata["request_object_signing_alg_values_supported"] == ["none"]
+    assert metadata["request_object_signing_alg_values_supported"] == (
+        REQUEST_OBJECT_ALGORITHMS
+    )
 
 
 def test_claims_follow_the_scopes():
@@ -375,3 +379,98 @@ def test_id_token_algorithm_without_openid():
     document = changed(metadata={"scopes_supported": ["profile"]})
     client_metadata = {"id_token_signed_response_alg": "ES256"}
     assert unsupported_values(client_metadata, document) == {}
+
+
+def test_default_registration_settings():
+    document = default_document()
+    assert document["settings"]["registration"] == "open"
+    assert document["settings"]["initial_access_token"] is None
+    assert document["settings"]["outbound_private_addresses"] is True
+    assert document["metadata"]["require_signed_request_object"] is False
+    assert (
+        document["metadata"]["token_endpoint_auth_signing_alg_values_supported"]
+        == CLIENT_JWT_ALGORITHMS
+    )
+    assert (
+        document["metadata"]["request_object_signing_alg_values_supported"]
+        == REQUEST_OBJECT_ALGORITHMS
+    )
+
+
+def test_published_request_object_metadata():
+    metadata = published_metadata(default_document(), "https://server.test", URLS)
+    assert metadata["request_object_signing_alg_values_supported"] == [
+        "none",
+        "RS256",
+        "PS256",
+        "ES256",
+        "Ed25519",
+        "HS256",
+    ]
+    assert metadata["require_signed_request_object"] is False
+
+
+def test_request_object_metadata_needs_openid():
+    document = changed(metadata={"scopes_supported": ["profile"]})
+    metadata = published_metadata(document, "https://server.test", URLS)
+    assert "request_object_signing_alg_values_supported" not in metadata
+    assert "require_signed_request_object" not in metadata
+
+
+def test_client_jwt_algorithms_need_a_jwt_method():
+    metadata = published_metadata(default_document(), "https://server.test", URLS)
+    assert "token_endpoint_auth_signing_alg_values_supported" not in metadata
+    assert "revocation_endpoint_auth_signing_alg_values_supported" not in metadata
+
+
+def test_client_jwt_algorithms_are_published_with_a_jwt_method():
+    document = changed(
+        metadata={
+            "token_endpoint_auth_methods_supported": ["private_key_jwt"],
+            "token_endpoint_auth_signing_alg_values_supported": ["ES256"],
+        }
+    )
+    metadata = published_metadata(document, "https://server.test", URLS)
+    assert metadata["token_endpoint_auth_signing_alg_values_supported"] == ["ES256"]
+    assert metadata["revocation_endpoint_auth_signing_alg_values_supported"] == [
+        "ES256"
+    ]
+
+
+@pytest.mark.parametrize(
+    "key,value",
+    [
+        ("token_endpoint_auth_signing_alg_values_supported", ["none"]),
+        ("token_endpoint_auth_signing_alg_values_supported", ["HS512"]),
+        ("request_object_signing_alg_values_supported", ["EdDSA"]),
+        ("require_signed_request_object", "no"),
+    ],
+)
+def test_invalid_registration_metadata_is_refused(key, value):
+    assert key in errors_of(changed(metadata={key: value}))
+
+
+@pytest.mark.parametrize(
+    "settings,key",
+    [
+        ({"registration": "maybe"}, "registration"),
+        ({"initial_access_token": 42}, "initial_access_token"),
+        ({"registration": "token"}, "initial_access_token"),
+        ({"registration": "token", "initial_access_token": ""}, "initial_access_token"),
+        ({"outbound_private_addresses": "yes"}, "outbound_private_addresses"),
+    ],
+)
+def test_invalid_registration_settings_are_refused(settings, key):
+    assert key in errors_of(changed(settings=settings))
+
+
+def test_token_mode_with_a_token():
+    validate_document(
+        changed(settings={"registration": "token", "initial_access_token": "iat"})
+    )
+
+
+def test_missing_settings_are_refused():
+    document = default_document()
+    del document["settings"]["initial_access_token"]
+    assert "initial_access_token" in errors_of(document)

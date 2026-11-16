@@ -62,7 +62,7 @@ def test_signed_request_object_is_refused(logged_in, client, rsa_pool):
     request = jwt.encode({"alg": "RS256"}, request_claims(client), key)
     url = authorize_url(client_id=client["client_id"], request=request)
     res = logged_in.get(url, status=400)
-    assert res.json["error"] == "invalid_request"
+    assert res.json["error"] == "invalid_request_object"
 
 
 def test_request_uri_is_refused(logged_in, client):
@@ -120,3 +120,21 @@ def test_change_persona_keeps_the_ui_locales_of_the_request_object(logged_in, cl
     page = logged_in.get(fr_request_url(client))
     link = page.html.select_one("a[href^='/interaction/persona']")["href"]
     assert '<html lang="fr"' in logged_in.get(link).text
+
+
+def test_unsigned_request_object_refused_without_none(logged_in, client, configure):
+    configure(metadata={"request_object_signing_alg_values_supported": ["RS256"]})
+    url = authorize_url(
+        client_id=client["client_id"], request=unsigned(request_claims(client))
+    )
+    assert logged_in.get(url, status=400).json["error"] == "invalid_request"
+
+
+def test_unsigned_request_object_refused_when_signature_required(
+    logged_in, client, configure
+):
+    configure(metadata={"require_signed_request_object": True})
+    url = authorize_url(
+        client_id=client["client_id"], request=unsigned(request_claims(client))
+    )
+    assert logged_in.get(url, status=400).json["error"] == "invalid_request"

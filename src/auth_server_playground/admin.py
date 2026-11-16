@@ -90,11 +90,15 @@ def index():
     )
 
 
+def stored_token():
+    return current_document()["settings"]["initial_access_token"]
+
+
 def preview_of(form):
     """Return the metadata the form would publish, and the errors."""
     if not form.validate():
         return None, form.errors
-    document = form.to_document()
+    document = form.to_document(stored_token())
     try:
         validate_document(document)
     except InvalidDocument as error:
@@ -104,11 +108,14 @@ def preview_of(form):
 
 @bp.route("/server", methods=["GET", "POST"])
 def server():
-    form = ServerForm.from_document(current_document())
+    document = current_document()
+    form = ServerForm.from_document(document)
     metadata, errors = current_metadata(), {}
     if form.validate_on_submit():
         try:
-            save_document(form.to_document())
+            save_document(
+                form.to_document(document["settings"]["initial_access_token"])
+            )
         except InvalidDocument as error:
             form.add_document_errors(error.errors)
             metadata, errors = None, error.errors
@@ -118,13 +125,30 @@ def server():
     elif request.method == "POST":
         metadata, errors = None, form.errors
 
+    settings = document["settings"]
     return render_template(
         "admin/server.html",
         form=form,
         defaults_form=ActionForm(),
+        renew_form=ActionForm(prefix="renew"),
+        initial_access_token=(
+            settings["initial_access_token"]
+            if settings["registration"] == "token"
+            else None
+        ),
         metadata=metadata,
         errors=errors,
     )
+
+
+@bp.route("/server/initial-access-token", methods=["POST"])
+def renew_initial_access_token():
+    if ActionForm(prefix="renew").validate_on_submit():
+        document = current_document()
+        document["settings"]["initial_access_token"] = secrets.token_urlsafe(32)
+        save_document(document)
+        flash(_("A new initial access token replaces the old one."), "success")
+    return redirect(url_for("admin.server"))
 
 
 @bp.route("/server/preview", methods=["POST"])

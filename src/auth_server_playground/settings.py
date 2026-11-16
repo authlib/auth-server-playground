@@ -21,8 +21,16 @@ RESPONSE_TYPES = {"authorization_code": "code", "implicit": "token"}
 AUTH_METHODS = ["client_secret_basic", "client_secret_post", "none"]
 PKCE_METHODS = ["S256", "plain"]
 PKCE_REQUIRED = ["all", "public"]
-#: The ID token signing algorithms. RFC 9864 deprecates EdDSA for Ed25519.
-ID_TOKEN_ALGORITHMS = ["RS256", "PS256", "ES256", "Ed25519"]
+#: The asymmetric signing algorithms. RFC 9864 deprecates EdDSA for Ed25519.
+ASYMMETRIC_ALGORITHMS = ["RS256", "PS256", "ES256", "Ed25519"]
+ID_TOKEN_ALGORITHMS = ASYMMETRIC_ALGORITHMS
+#: The algorithms that use the client secret as key.
+HMAC_ALGORITHMS = ["HS256"]
+#: The algorithms of the JWTs that clients sign: assertions and request objects.
+CLIENT_JWT_ALGORITHMS = [*ASYMMETRIC_ALGORITHMS, *HMAC_ALGORITHMS]
+REQUEST_OBJECT_ALGORITHMS = ["none", *CLIENT_JWT_ALGORITHMS]
+
+REGISTRATION_MODES = ["disabled", "open", "token"]
 
 #: The issuer used to validate a document whose issuer comes from requests.
 DEFAULT_ISSUER = "http://localhost"
@@ -39,11 +47,15 @@ ENDPOINTS = [
 UI_LOCALES = ["en", "fr"]
 PROMPT_VALUES = ["none", "login", "consent", "select_account"]
 
-#: The request object signing algorithms. The clients have no keys yet.
-REQUEST_OBJECT_ALGORITHMS = ["none"]
-
 #: The stored metadata that only OpenID Connect publishes.
-OIDC_METADATA = ("id_token_signing_alg_values_supported",)
+OIDC_METADATA = (
+    "id_token_signing_alg_values_supported",
+    "request_object_signing_alg_values_supported",
+    "require_signed_request_object",
+)
+
+#: The client authentication methods that sign a JWT.
+JWT_AUTH_METHODS = ("private_key_jwt", "client_secret_jwt")
 
 #: The longest token lifetime, so that expiration dates fit in the database.
 MAX_LIFETIME = 365 * 24 * 3600
@@ -60,8 +72,11 @@ DEFAULT_DOCUMENT = {
             "client_credentials",
         ],
         "token_endpoint_auth_methods_supported": list(AUTH_METHODS),
+        "token_endpoint_auth_signing_alg_values_supported": list(CLIENT_JWT_ALGORITHMS),
         "code_challenge_methods_supported": ["S256"],
         "id_token_signing_alg_values_supported": ["RS256"],
+        "request_object_signing_alg_values_supported": list(REQUEST_OBJECT_ALGORITHMS),
+        "require_signed_request_object": False,
     },
     "settings": {
         "pkce_required": "all",
@@ -70,6 +85,9 @@ DEFAULT_DOCUMENT = {
         "refresh_token_lifetime": 14 * 24 * 3600,
         "refresh_token_rotation": True,
         "id_token_lifetime": 3600,
+        "registration": "open",
+        "initial_access_token": None,
+        "outbound_private_addresses": True,
     },
 }
 
@@ -77,8 +95,10 @@ LIST_CHOICES = {
     "grant_types_supported": GRANT_TYPES,
     "response_types_supported": list(RESPONSE_TYPES.values()),
     "token_endpoint_auth_methods_supported": AUTH_METHODS,
+    "token_endpoint_auth_signing_alg_values_supported": CLIENT_JWT_ALGORITHMS,
     "code_challenge_methods_supported": PKCE_METHODS,
     "id_token_signing_alg_values_supported": ID_TOKEN_ALGORITHMS,
+    "request_object_signing_alg_values_supported": REQUEST_OBJECT_ALGORITHMS,
 }
 
 
@@ -137,20 +157,28 @@ def published_metadata(document, issuer, endpoint_urls):
         metadata["userinfo_endpoint"] = endpoint_urls["userinfo_endpoint"]
         metadata["jwks_uri"] = endpoint_urls["jwks_uri"]
 
+    methods = stored["token_endpoint_auth_methods_supported"]
+    jwt_methods = set(methods) & set(JWT_AUTH_METHODS)
+    hidden = set() if oidc else set(OIDC_METADATA)
+    if not jwt_methods:
+        hidden.add("token_endpoint_auth_signing_alg_values_supported")
     # RFC 8414 §2 marks response_types_supported as REQUIRED, even when empty.
     metadata.update(
         {
             key: value
             for key, value in stored.items()
             if key != "issuer"
-            and (oidc or key not in OIDC_METADATA)
+            and key not in hidden
             and (key == "response_types_supported" or value != [])
         }
     )
     if settings["revocation_enabled"]:
-        metadata["revocation_endpoint_auth_methods_supported"] = stored[
-            "token_endpoint_auth_methods_supported"
-        ]
+        metadata["revocation_endpoint_auth_methods_supported"] = methods
+        # Per RFC 8414 §2, required when a JWT method is listed.
+        if jwt_methods:
+            metadata["revocation_endpoint_auth_signing_alg_values_supported"] = stored[
+                "token_endpoint_auth_signing_alg_values_supported"
+            ]
     if oidc:
         metadata.update(
             {
@@ -162,9 +190,6 @@ def published_metadata(document, issuer, endpoint_urls):
                 "request_parameter_supported": True,
                 # Per OIDC Discovery §3, the default value is true.
                 "request_uri_parameter_supported": False,
-                "request_object_signing_alg_values_supported": (
-                    REQUEST_OBJECT_ALGORITHMS
-                ),
             }
         )
     return metadata
@@ -262,6 +287,8 @@ def _metadata_errors(metadata):
     issuer = metadata.get("issuer")
     if issuer is not None and not isinstance(issuer, str):
         errors["issuer"] = "A URL, or null."
+    if not isinstance(metadata.get("require_signed_request_object"), bool):
+        errors["require_signed_request_object"] = "true or false."
     return errors
 
 
@@ -271,11 +298,22 @@ def _settings_errors(settings):
         for key in settings
         if key not in DEFAULT_DOCUMENT["settings"]
     }
+    errors.update(
+        {
+            key: "Missing key."
+            for key in DEFAULT_DOCUMENT["settings"]
+            if key not in settings
+        }
+    )
 
     if settings.get("pkce_required") not in PKCE_REQUIRED:
         errors["pkce_required"] = f"One of {PKCE_REQUIRED}."
 
-    for key in ("revocation_enabled", "refresh_token_rotation"):
+    for key in (
+        "revocation_enabled",
+        "refresh_token_rotation",
+        "outbound_private_addresses",
+    ):
         if not isinstance(settings.get(key), bool):
             errors[key] = "true or false."
 
@@ -287,6 +325,14 @@ def _settings_errors(settings):
             or not 1 <= lifetime <= MAX_LIFETIME
         ):
             errors[key] = f"A number of seconds, from 1 to {MAX_LIFETIME}."
+
+    if settings.get("registration") not in REGISTRATION_MODES:
+        errors["registration"] = f"One of {REGISTRATION_MODES}."
+    token = settings.get("initial_access_token")
+    if token is not None and not isinstance(token, str):
+        errors["initial_access_token"] = "A string, or null."
+    elif settings.get("registration") == "token" and not token:
+        errors["initial_access_token"] = "The token mode needs a token."
     return errors
 
 

@@ -23,12 +23,28 @@
         "client_secret_post",
         "none"
       ],
+      "token_endpoint_auth_signing_alg_values_supported": [
+        "RS256",
+        "PS256",
+        "ES256",
+        "Ed25519",
+        "HS256"
+      ],
       "code_challenge_methods_supported": [
         "S256"
       ],
       "id_token_signing_alg_values_supported": [
         "RS256"
-      ]
+      ],
+      "request_object_signing_alg_values_supported": [
+        "none",
+        "RS256",
+        "PS256",
+        "ES256",
+        "Ed25519",
+        "HS256"
+      ],
+      "require_signed_request_object": false
     },
     "settings": {
       "pkce_required": "public",
@@ -36,7 +52,10 @@
       "access_token_lifetime": 3600,
       "refresh_token_lifetime": 1209600,
       "refresh_token_rotation": true,
-      "id_token_lifetime": 3600
+      "id_token_lifetime": 3600,
+      "registration": "disabled",
+      "initial_access_token": null,
+      "outbound_private_addresses": true
     }
   },
   "personas": [

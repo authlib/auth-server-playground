@@ -25,7 +25,6 @@ from .models import Token
 from .models import db
 from .personas import find_by_username
 from .personas import user_info
-from .settings import REQUEST_OBJECT_ALGORITHMS
 from .settings import is_oidc_enabled
 from .store import settings_row
 
@@ -127,10 +126,12 @@ class PlaygroundUserInfoEndpoint(UserInfoEndpoint):
 class PlaygroundJWTAuthenticationRequest(JWTAuthenticationRequest):
     """Accept unsigned request objects. The clients have no keys yet."""
 
-    def __init__(self, issuer):
+    def __init__(self, issuer, algorithms, require_signed):
         # Per RFC 9101 §10.4, fetching a request_uri exposes the server to SSRF.
         super().__init__(support_request=True, support_request_uri=False)
         self.issuer = issuer
+        self.algorithms = algorithms
+        self.require_signed = require_signed
 
     def resolve_client_public_key(self, client):
         # Authlib imports the client key before it reads the alg of the request
@@ -141,7 +142,8 @@ class PlaygroundJWTAuthenticationRequest(JWTAuthenticationRequest):
     def get_server_metadata(self):
         return {
             "issuer": issuer_for(self.issuer),
-            "request_object_signing_alg_values_supported": REQUEST_OBJECT_ALGORITHMS,
+            "request_object_signing_alg_values_supported": self.algorithms,
+            "require_signed_request_object": self.require_signed,
         }
 
 
@@ -298,7 +300,11 @@ def build_server(document):
         )
         server.register_extension(ClaimsParameter())
         server.register_extension(
-            PlaygroundJWTAuthenticationRequest(metadata["issuer"])
+            PlaygroundJWTAuthenticationRequest(
+                metadata["issuer"],
+                metadata["request_object_signing_alg_values_supported"],
+                metadata["require_signed_request_object"],
+            )
         )
     return server
 

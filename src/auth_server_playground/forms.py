@@ -51,11 +51,13 @@ from .personas import find_by_username
 from .personas import is_valid_sub
 from .personas import render_avatar
 from .settings import AUTH_METHODS
+from .settings import CLIENT_JWT_ALGORITHMS
 from .settings import ENDPOINTS
 from .settings import GRANT_TYPES
 from .settings import ID_TOKEN_ALGORITHMS
 from .settings import MAX_LIFETIME
 from .settings import PKCE_METHODS
+from .settings import REQUEST_OBJECT_ALGORITHMS
 from .settings import RESPONSE_TYPES
 from .settings import is_oidc_enabled
 from .settings import response_types_for
@@ -164,6 +166,12 @@ class ServerForm(BaseForm):
         choices=[SelectChoice(method, method) for method in AUTH_METHODS],
         render_kw={"param": "token_endpoint_auth_methods_supported"},
     )
+    token_endpoint_auth_signing_alg_values_supported = MultiCheckboxField(
+        _("Client assertion signing algorithms"),
+        choices=[SelectChoice(alg, alg) for alg in CLIENT_JWT_ALGORITHMS],
+        description=_("For private_key_jwt and client_secret_jwt."),
+        render_kw={"param": "token_endpoint_auth_signing_alg_values_supported"},
+    )
     code_challenge_methods_supported = MultiCheckboxField(
         _("PKCE methods"),
         choices=[SelectChoice(method, method) for method in PKCE_METHODS],
@@ -211,6 +219,29 @@ class ServerForm(BaseForm):
         validators=[InputRequired(), NumberRange(min=1, max=MAX_LIFETIME)],
         description=_("In seconds."),
     )
+    request_object_signing_alg_values_supported = MultiCheckboxField(
+        _("Request object signing algorithms"),
+        choices=[SelectChoice(alg, alg) for alg in REQUEST_OBJECT_ALGORITHMS],
+        render_kw={"param": "request_object_signing_alg_values_supported"},
+    )
+    require_signed_request_object = BooleanField(
+        _("Refuse unsigned request objects"),
+        render_kw={"role": "switch", "param": "require_signed_request_object"},
+    )
+    registration = RadioField(
+        _("Dynamic client registration"),
+        choices=[
+            SelectChoice("disabled", _("Disabled")),
+            SelectChoice("open", _("Open to any client")),
+            SelectChoice("token", _("With an initial access token")),
+        ],
+        render_kw={"param": "registration_endpoint"},
+    )
+    outbound_private_addresses = BooleanField(
+        _("Fetch client URLs at private addresses"),
+        description=_("Such as jwks_uri. Private, loopback and link-local addresses."),
+        render_kw={"role": "switch"},
+    )
     save = SubmitField(_("Save"))
 
     SETTINGS = (
@@ -220,6 +251,8 @@ class ServerForm(BaseForm):
         "refresh_token_rotation",
         "revocation_enabled",
         "id_token_lifetime",
+        "registration",
+        "outbound_private_addresses",
     )
 
     @classmethod
@@ -229,8 +262,16 @@ class ServerForm(BaseForm):
         data["scopes_supported"] = " ".join(data["scopes_supported"])
         return cls(data=data)
 
-    def to_document(self):
+    def to_document(self, initial_access_token):
+        """Return the document of the form.
+
+        The token mode gets a new initial access token if it has none.
+        """
         grant_types = self.grant_types_supported.data
+        settings = {name: self[name].data for name in self.SETTINGS}
+        if settings["registration"] == "token" and not initial_access_token:
+            initial_access_token = secrets.token_urlsafe(32)
+        settings["initial_access_token"] = initial_access_token
         return {
             "metadata": {
                 "issuer": self.issuer.data or None,
@@ -240,14 +281,23 @@ class ServerForm(BaseForm):
                 "token_endpoint_auth_methods_supported": (
                     self.token_endpoint_auth_methods_supported.data
                 ),
+                "token_endpoint_auth_signing_alg_values_supported": (
+                    self.token_endpoint_auth_signing_alg_values_supported.data
+                ),
                 "code_challenge_methods_supported": (
                     self.code_challenge_methods_supported.data
                 ),
                 "id_token_signing_alg_values_supported": (
                     self.id_token_signing_alg_values_supported.data
                 ),
+                "request_object_signing_alg_values_supported": (
+                    self.request_object_signing_alg_values_supported.data
+                ),
+                "require_signed_request_object": (
+                    self.require_signed_request_object.data
+                ),
             },
-            "settings": {name: self[name].data for name in self.SETTINGS},
+            "settings": settings,
         }
 
     def add_document_errors(self, errors):

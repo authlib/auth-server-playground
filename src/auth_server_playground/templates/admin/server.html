@@ -1,5 +1,6 @@
 {% extends "admin/layout.html" %}
 {% from "_form.html" import render_form %}
+{% from "_copy.html" import copy_field %}
 {% block title %}{% trans %}Server{% endtrans %}{% endblock %}
 {% block content %}
     <div class="page-title">
@@ -21,6 +22,7 @@
             {{ form.issuer() }}
             {{ form.grant_types_supported() }}
             {{ form.token_endpoint_auth_methods_supported() }}
+            {{ form.token_endpoint_auth_signing_alg_values_supported() }}
             {{ form.code_challenge_methods_supported() }}
             {{ form.pkce_required() }}
             <div class="grid">
@@ -34,10 +36,27 @@
             <p><small>{% trans %}On when the scopes hold <code>openid</code>.{% endtrans %}</small></p>
             {{ form.id_token_signing_alg_values_supported() }}
             {{ form.id_token_lifetime() }}
+            {{ form.request_object_signing_alg_values_supported() }}
+            {{ form.require_signed_request_object() }}
+            <h3>{% trans %}Dynamic registration{% endtrans %}</h3>
+            {{ form.registration() }}
+            {{ form.outbound_private_addresses() }}
             {{ form.save() }}
         </form>
         <section id="metadata-preview" aria-live="polite">
             {% include "admin/_metadata_preview.html" %}
         </section>
     </div>
+    {% if initial_access_token %}
+        <article id="initial-access-token">
+            <header><h3>{% trans %}Initial access token{% endtrans %}</h3></header>
+            <p><small>{% trans %}Clients send it as a Bearer token to register.{% endtrans %}</small></p>
+            {% call copy_field("initial-access-token-value", initial_access_token, _("Copy the initial access token")) %}{% trans %}Initial access token{% endtrans %}{% endcall %}
+            <footer>
+                {% call render_form(renew_form, url_for('admin.renew_initial_access_token'), id="renew") %}
+                    {{ renew_form.submit(value=_("Renew the token"), class="outline") }}
+                {% endcall %}
+            </footer>
+        </article>
+    {% endif %}
 {% endblock %}

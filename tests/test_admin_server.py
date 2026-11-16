@@ -212,3 +212,64 @@ def test_home_hides_the_discovery_url_without_openid(testapp, configure):
     configure(metadata={"scopes_supported": ["profile"]})
     res = testapp.get("/en/")
     assert "openid-configuration" not in res
+
+
+def stored_settings(app):
+    with app.app_context():
+        return current_document()["settings"]
+
+
+def test_token_mode_generates_a_token(app, testapp):
+    form = testapp.get("/en/server").forms["server"]
+    form["registration"] = "token"
+    res = form.submit().follow()
+    token = stored_settings(app)["initial_access_token"]
+    assert token
+    assert res.html.select_one(f'input.copy-value[value="{token}"]')
+
+
+def test_open_mode_keeps_the_token(app, testapp, configure):
+    configure(settings={"registration": "token", "initial_access_token": "kept"})
+    form = testapp.get("/en/server").forms["server"]
+    form["registration"] = "open"
+    res = form.submit().follow()
+    assert stored_settings(app)["initial_access_token"] == "kept"
+    assert "kept" not in res
+
+
+def test_renew_the_initial_access_token(app, testapp, configure):
+    configure(settings={"registration": "token", "initial_access_token": "old"})
+    res = testapp.get("/en/server").forms["renew"].submit().follow()
+    assert 'data-type="success"' in res
+    assert stored_settings(app)["initial_access_token"] not in ("old", None)
+
+
+def test_renew_needs_a_csrf_token(app, testapp, configure):
+    configure(settings={"registration": "token", "initial_access_token": "old"})
+    testapp.post("/en/server/initial-access-token")
+    assert stored_settings(app)["initial_access_token"] == "old"
+
+
+def test_save_registration_settings(app, testapp):
+    form = testapp.get("/en/server").forms["server"]
+    form["registration"] = "disabled"
+    form["outbound_private_addresses"] = False
+    form["require_signed_request_object"] = True
+    form["request_object_signing_alg_values_supported"] = ["RS256"]
+    form.submit().follow()
+    with app.app_context():
+        document = current_document()
+    assert document["settings"]["registration"] == "disabled"
+    assert document["settings"]["outbound_private_addresses"] is False
+    assert document["metadata"]["require_signed_request_object"] is True
+    assert document["metadata"]["request_object_signing_alg_values_supported"] == [
+        "RS256"
+    ]
+
+
+def test_preview_in_token_mode(testapp):
+    form = testapp.get("/en/server").forms["server"]
+    form["registration"] = "token"
+    res = testapp.post("/en/server/preview", form.submit_fields())
+    assert 'role="alert"' not in res
+    assert "token_endpoint" in res
