@@ -1,12 +1,15 @@
 import itertools
 import time
+from types import SimpleNamespace
 
+import httpx2
 import pytest
 from flask_webtest import TestApp
 from joserfc.jwk import RSAKey
 
 from auth_server_playground import create_app
 from auth_server_playground import keys
+from auth_server_playground import outbound
 from auth_server_playground.models import Client
 from auth_server_playground.models import Persona
 from auth_server_playground.models import db
@@ -203,3 +206,32 @@ def public_client(app):
             "token_endpoint_auth_method": "none",
         },
     )
+
+
+@pytest.fixture
+def outbound_urls(monkeypatch):
+    """Answer the outbound requests from a dict of URL to response."""
+    urls = SimpleNamespace(responses={}, requested=[])
+
+    def handle(request):
+        url = str(request.url)
+        urls.requested.append(url)
+        stored = urls.responses.get(url)
+        if stored is None:
+            return httpx2.Response(404)
+        if not stored.is_stream_consumed:
+            return stored
+        # MockTransport returns responses as they are, and a Response built
+        # with content is already read: iter_raw would fail.
+        return httpx2.Response(
+            stored.status_code,
+            headers=stored.headers,
+            stream=httpx2.ByteStream(stored.content),
+        )
+
+    monkeypatch.setattr(
+        outbound,
+        "make_transport",
+        lambda allow_private_addresses: httpx2.MockTransport(handle),
+    )
+    return urls
