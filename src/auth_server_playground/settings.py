@@ -39,6 +39,7 @@ ENDPOINTS = [
     "authorization_endpoint",
     "token_endpoint",
     "revocation_endpoint",
+    "registration_endpoint",
     "userinfo_endpoint",
     "jwks_uri",
 ]
@@ -158,6 +159,8 @@ def published_metadata(document, issuer, endpoint_urls):
         metadata["token_endpoint"] = endpoint_urls["token_endpoint"]
     if settings["revocation_enabled"]:
         metadata["revocation_endpoint"] = endpoint_urls["revocation_endpoint"]
+    if settings["registration"] != "disabled":
+        metadata["registration_endpoint"] = endpoint_urls["registration_endpoint"]
     if oidc:
         metadata["userinfo_endpoint"] = endpoint_urls["userinfo_endpoint"]
         metadata["jwks_uri"] = endpoint_urls["jwks_uri"]

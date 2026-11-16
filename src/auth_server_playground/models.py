@@ -1,5 +1,6 @@
 import datetime
 import re
+import secrets
 import time
 
 from authlib.integrations.sqla_oauth2 import OAuth2AuthorizationCodeMixin
@@ -8,6 +9,8 @@ from authlib.integrations.sqla_oauth2 import OAuth2TokenMixin
 from authlib.oauth2.rfc6749.util import scope_to_list
 from flask import url_for
 from flask_sqlalchemy import SQLAlchemy
+
+from .settings import SECRET_AUTH_METHODS
 
 db = SQLAlchemy()
 
@@ -102,6 +105,13 @@ class Client(db.Model, OAuth2ClientMixin):
     @property
     def is_dynamic(self):
         return self.registration_access_token is not None
+
+    def update_secret(self):
+        """Give a secret to a client whose method needs one, and drop it otherwise."""
+        if self.token_endpoint_auth_method not in SECRET_AUTH_METHODS:
+            self.client_secret = ""
+        elif not self.client_secret:
+            self.client_secret = secrets.token_urlsafe(36)
 
 
 class ClientAssertion(db.Model):

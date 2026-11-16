@@ -21,40 +21,18 @@ from .interaction import current_persona
 from .interaction import extra_claims
 from .interaction import grant_consent
 from .keys import public_jwks
+from .metadata import current_metadata
 from .models import Persona
 from .models import db
 from .server import get_server
-from .server import issuer_for
 from .server import require_oauth
 from .settings import is_oidc_enabled
-from .settings import published_metadata
 from .store import current_document
 
 bp = Blueprint("oauth", __name__)
 
 #: The fields of the consent form. An authorization request has none of them.
 CONSENT_FIELDS = {"csrf_token", "persona_id", "accept", "deny"}
-
-
-def endpoint_urls():
-    return {
-        "authorization_endpoint": url_for("oauth.authorize", _external=True),
-        "token_endpoint": url_for("oauth.issue_token", _external=True),
-        "revocation_endpoint": url_for("oauth.revoke_token", _external=True),
-        "userinfo_endpoint": url_for("oauth.userinfo", _external=True),
-        "jwks_uri": url_for("oauth.jwks", _external=True),
-    }
-
-
-def current_metadata(document=None):
-    """Return the metadata of the document, with URLs for this request.
-
-    Without a document, use the stored one.
-    """
-    if document is None:
-        document = current_document()
-    issuer = issuer_for(document["metadata"]["issuer"])
-    return published_metadata(document, issuer, endpoint_urls())
 
 
 @bp.route("/oauth/authorize", methods=["GET", "POST"])
@@ -128,6 +106,25 @@ def revoke_token():
     if not current_document()["settings"]["revocation_enabled"]:
         abort(404)
     return get_server().create_endpoint_response("revocation")
+
+
+def registration_enabled():
+    return current_document()["settings"]["registration"] != "disabled"
+
+
+@bp.route("/oauth/register", methods=["POST"])
+def register_client():
+    if not registration_enabled():
+        abort(404)
+    return get_server().create_endpoint_response("client_registration")
+
+
+@bp.route("/oauth/register/<client_id>", methods=["GET", "PUT", "DELETE"])
+def client_configuration(client_id):
+    # ConfigurationEndpoint reads the client_id from the URL.
+    if not registration_enabled():
+        abort(404)
+    return get_server().create_endpoint_response("client_configuration")
 
 
 @bp.route("/oauth/userinfo", methods=["GET", "POST"])

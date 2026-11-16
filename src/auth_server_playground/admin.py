@@ -13,7 +13,6 @@ from flask import url_for
 from flask_babel import get_locale
 from flask_babel import gettext as _
 
-from .endpoints import current_metadata
 from .forms import ActionForm
 from .forms import ClientForm
 from .forms import ConfirmImportForm
@@ -27,6 +26,7 @@ from .keys import all_keys
 from .keys import delete_key
 from .keys import public_jwks
 from .keys import rotate_key as rotate_signing_key
+from .metadata import current_metadata
 from .models import Client
 from .models import Consent
 from .models import Persona

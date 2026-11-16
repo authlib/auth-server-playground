@@ -18,6 +18,7 @@ URLS = {
     "authorization_endpoint": "https://server.test/oauth/authorize",
     "token_endpoint": "https://server.test/oauth/token",
     "revocation_endpoint": "https://server.test/oauth/revoke",
+    "registration_endpoint": "https://server.test/oauth/register",
     "userinfo_endpoint": "https://server.test/oauth/userinfo",
     "jwks_uri": "https://server.test/oauth/jwks",
 }

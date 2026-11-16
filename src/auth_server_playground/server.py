@@ -14,26 +14,23 @@ from authlib.oidc.core import ClaimsParameter
 from authlib.oidc.core import OpenIDCode
 from authlib.oidc.core import UserInfoEndpoint
 from flask import current_app
-from flask import request
 from joserfc.jwk import KeySet
 
 from .keys import active_kid
 from .keys import private_key_set
+from .metadata import issuer_for
 from .models import AuthorizationCode
 from .models import Client
 from .models import Token
 from .models import db
 from .personas import find_by_username
 from .personas import user_info
+from .registration import ConfigurationEndpoint
+from .registration import RegistrationEndpoint
 from .settings import is_oidc_enabled
 from .store import settings_row
 
 CACHE_KEY = "auth_server_playground.server"
-
-
-def issuer_for(configured):
-    """Return the configured issuer, else the URL of the request."""
-    return configured or request.url_root.rstrip("/")
 
 
 class AuthorizationCodeGrant(grants.AuthorizationCodeGrant):
@@ -306,6 +303,13 @@ def build_server(document):
                 metadata["require_signed_request_object"],
             )
         )
+    registration = settings["registration"]
+    if registration != "disabled":
+        oidc = is_oidc_enabled(document)
+        server.register_endpoint(
+            RegistrationEndpoint(registration, settings["initial_access_token"], oidc)
+        )
+        server.register_endpoint(ConfigurationEndpoint(oidc))
     return server
 
 

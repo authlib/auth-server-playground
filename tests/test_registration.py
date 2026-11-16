@@ -1,0 +1,132 @@
+import pytest
+from authlib.oauth2.rfc7591 import InvalidClientMetadataError
+
+from auth_server_playground.models import Client
+from auth_server_playground.registration import checked_metadata
+from tests.utils import REDIRECT_URI
+from tests.utils import bearer
+from tests.utils import callback_params
+from tests.utils import consent
+from tests.utils import exchange_code
+from tests.utils import oidc_url
+
+REGISTRATION = {
+    "redirect_uris": [REDIRECT_URI],
+    "client_name": "Dynamic client",
+    "scope": "openid profile",
+}
+
+
+def register(testapp, metadata=None, *, token=None, status=201):
+    return testapp.post_json(
+        "/oauth/register",
+        REGISTRATION if metadata is None else metadata,
+        headers=bearer(token) if token else {},
+        status=status,
+    )
+
+
+def test_registration_endpoint_is_published(testapp):
+    metadata = testapp.get("/.well-known/openid-configuration").json
+    assert metadata["registration_endpoint"] == "http://localhost/oauth/register"
+
+
+def test_open_registration(app, testapp):
+    body = register(testapp).json
+    client_id = body["client_id"]
+    assert body["client_name"] == "Dynamic client"
+    assert body["client_secret"]
+    assert body["client_secret_expires_at"] == 0
+    assert body["grant_types"] == ["authorization_code"]
+    assert body["response_types"] == ["code"]
+    assert body["token_endpoint_auth_method"] == "client_secret_basic"
+    assert (
+        body["registration_client_uri"]
+        == f"http://localhost/oauth/register/{client_id}"
+    )
+    with app.app_context():
+        client = Client.query.filter_by(client_id=client_id).one()
+        assert client.registration_access_token == body["registration_access_token"]
+        assert client.is_dynamic
+
+
+def test_registered_client_runs_the_code_flow(logged_in):
+    client = register(logged_in).json
+    code = callback_params(consent(logged_in, oidc_url(client)))["code"]
+    assert exchange_code(logged_in, client, code).json["id_token"]
+
+
+def test_public_client_gets_no_secret(testapp):
+    body = register(
+        testapp, {**REGISTRATION, "token_endpoint_auth_method": "none"}
+    ).json
+    assert "client_secret" not in body
+
+
+def test_open_registration_ignores_a_token(testapp):
+    register(testapp, token="anything")
+
+
+def test_disabled_registration(testapp, configure):
+    configure(settings={"registration": "disabled"})
+    register(testapp, status=404)
+    metadata = testapp.get("/.well-known/openid-configuration").json
+    assert "registration_endpoint" not in metadata
+
+
+@pytest.fixture
+def token_mode(configure):
+    configure(settings={"registration": "token", "initial_access_token": "iat-value"})
+
+
+def test_token_mode_needs_the_token(testapp, token_mode):
+    register(testapp, status=401)
+
+
+def test_token_mode_refuses_a_wrong_token(testapp, token_mode):
+    res = register(testapp, token="wrong", status=401)
+    assert res.json["error"] == "invalid_token"
+
+
+def test_token_mode_accepts_the_token(testapp, token_mode):
+    register(testapp, token="iat-value")
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        {**REGISTRATION, "redirect_uris": ["not a url"]},
+        {**REGISTRATION, "grant_types": ["password"]},
+        {**REGISTRATION, "token_endpoint_auth_method": "tls_client_auth"},
+        {**REGISTRATION, "userinfo_signed_response_alg": "RS256"},
+        {**REGISTRATION, "subject_type": "pairwise"},
+    ],
+)
+def test_invalid_metadata(testapp, metadata):
+    res = register(testapp, metadata, status=400)
+    assert res.json["error"] == "invalid_client_metadata"
+
+
+def test_openid_metadata_dropped_without_openid(testapp, configure):
+    configure(metadata={"scopes_supported": ["profile"]})
+    body = register(
+        testapp,
+        {**REGISTRATION, "scope": "profile", "id_token_signed_response_alg": "RS256"},
+    ).json
+    assert "id_token_signed_response_alg" not in body
+
+
+def test_software_statement_is_ignored(testapp):
+    body = register(testapp, {**REGISTRATION, "software_statement": "a.b.c"}).json
+    assert "software_statement" not in body
+
+
+def test_body_must_be_an_object(testapp):
+    res = register(testapp, [], status=400)
+    assert res.json["error"] == "invalid_request"
+
+
+def test_key_errors_refuse_the_metadata():
+    # Authlib refuses these methods first, until the server publishes them.
+    with pytest.raises(InvalidClientMetadataError):
+        checked_metadata({"token_endpoint_auth_method": "private_key_jwt"})
