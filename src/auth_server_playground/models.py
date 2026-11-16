@@ -96,6 +96,24 @@ class Client(db.Model, OAuth2ClientMixin):
     __tablename__ = "client"
 
     id = db.Column(db.Integer, primary_key=True)
+    #: Set for the clients that registered themselves (RFC 7591).
+    registration_access_token = db.Column(db.String(255), unique=True)
+
+    @property
+    def is_dynamic(self):
+        return self.registration_access_token is not None
+
+
+class ClientAssertion(db.Model):
+    """The jti of a client assertion, so that it is used only once (RFC 7523 §3)."""
+
+    __tablename__ = "client_assertion"
+    __table_args__ = (db.UniqueConstraint("client_id", "jti"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.String(48), nullable=False)
+    jti = db.Column(db.Text, nullable=False)
+    expires_at = db.Column(db.Integer, nullable=False)
 
 
 class AuthorizationCode(db.Model, OAuth2AuthorizationCodeMixin):

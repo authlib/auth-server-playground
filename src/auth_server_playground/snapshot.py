@@ -1,9 +1,11 @@
 """Export and import the whole state of the playground."""
 
 from authlib.oauth2.rfc7591 import ClientMetadataClaims
+from authlib.oauth2.rfc9101 import ClientMetadataClaims as RequestObjectClaims
 from authlib.oidc.registration import ClientMetadataClaims as OIDCClientMetadataClaims
 from joserfc.errors import JoseError
 
+from .client_keys import client_key_errors
 from .keys import KEY_TYPES
 from .keys import all_keys
 from .keys import ensure_keys
@@ -11,6 +13,7 @@ from .keys import is_valid_key
 from .models import SETTINGS_ID
 from .models import AuthorizationCode
 from .models import Client
+from .models import ClientAssertion
 from .models import Consent
 from .models import Persona
 from .models import Settings
@@ -20,8 +23,10 @@ from .models import db
 from .models import is_valid_client_id
 from .personas import invalid_claims
 from .personas import is_valid_sub
+from .settings import CLIENT_JWT_ALGORITHMS
 from .settings import ID_TOKEN_ALGORITHMS
 from .settings import MAX_LIFETIME
+from .settings import REQUEST_OBJECT_ALGORITHMS
 from .settings import InvalidDocument
 from .settings import validate_document
 
@@ -55,6 +60,7 @@ def export_snapshot():
                 "client_secret": c.client_secret,
                 "client_id_issued_at": c.client_id_issued_at,
                 "client_secret_expires_at": c.client_secret_expires_at,
+                "registration_access_token": c.registration_access_token,
                 "client_metadata": c.client_metadata,
             }
             for c in Client.query.order_by(Client.id)
@@ -139,6 +145,17 @@ def check_clients(clients):
         isinstance(client.get("client_secret"), str | None) for client in clients
     ):
         raise SnapshotError("The client_secret of a client is a string.")
+    tokens = [client.get("registration_access_token") for client in clients]
+    if not all(
+        token is None or (isinstance(token, str) and 0 < len(token) <= 255)
+        for token in tokens
+    ):
+        raise SnapshotError(
+            "The registration_access_token of a client is a string "
+            "of 1 to 255 characters, or null."
+        )
+    if not all_unique([token for token in tokens if token is not None]):
+        raise SnapshotError("Each client needs its own registration_access_token.")
     if not all(
         client.get(key) is None or is_timestamp(client[key])
         for client in clients
@@ -193,6 +210,21 @@ def check_openid_values(client_id, metadata):
         )
 
 
+def check_key_values(client_id, metadata):
+    """Refuse the key values that the server cannot use."""
+    for key, algorithms in (
+        ("token_endpoint_auth_signing_alg", CLIENT_JWT_ALGORITHMS),
+        ("request_object_signing_alg", REQUEST_OBJECT_ALGORITHMS),
+    ):
+        alg = metadata.get(key)
+        if alg is not None and alg not in algorithms:
+            raise SnapshotError(
+                f"Client {client_id!r}: {key} is one of {', '.join(algorithms)}."
+            )
+    if errors := client_key_errors(metadata):
+        raise SnapshotError(f"Client {client_id!r}: {' '.join(errors.values())}")
+
+
 def check_client_metadata(client):
     metadata = client.get("client_metadata")
     if not isinstance(metadata, dict):
@@ -209,8 +241,11 @@ def check_client_metadata(client):
     try:
         ClientMetadataClaims(metadata, {}).validate()
         OIDCClientMetadataClaims(metadata, {}).validate()
+        RequestObjectClaims(metadata, {}).validate()
     except JoseError as error:
         raise SnapshotError(f"Client {client['client_id']!r}: {error}") from error
+    # After the claims: Authlib refuses the values of the wrong type.
+    check_key_values(client["client_id"], metadata)
 
 
 def check_keys(items):
@@ -252,6 +287,7 @@ def snapshot_rows(data):
             client_secret=item.get("client_secret") or "",
             client_id_issued_at=item.get("client_id_issued_at") or 0,
             client_secret_expires_at=item.get("client_secret_expires_at") or 0,
+            registration_access_token=item.get("registration_access_token"),
         )
         client.set_client_metadata(item["client_metadata"])
         rows.append(client)
@@ -277,7 +313,15 @@ def import_snapshot(data):
     """
     check_snapshot(data)
     try:
-        for model in (Token, AuthorizationCode, Consent, Client, Persona, SigningKey):
+        for model in (
+            Token,
+            AuthorizationCode,
+            Consent,
+            ClientAssertion,
+            Client,
+            Persona,
+            SigningKey,
+        ):
             model.query.delete()
         db.session.add_all(snapshot_rows(data))
         row = db.session.get(Settings, SETTINGS_ID)

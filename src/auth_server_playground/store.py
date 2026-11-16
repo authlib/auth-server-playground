@@ -8,6 +8,8 @@ from sqlalchemy.exc import IntegrityError
 from .keys import ensure_keys
 from .models import SETTINGS_ID
 from .models import AuthorizationCode
+from .models import Client
+from .models import ClientAssertion
 from .models import Consent
 from .models import Settings
 from .models import Token
@@ -95,10 +97,24 @@ def save_document(document):
     db.session.commit()
 
 
+def delete_client_rows(client_id):
+    """Delete the codes, tokens, consents and assertions of the client."""
+    for model in (AuthorizationCode, Token, Consent, ClientAssertion):
+        model.query.filter_by(client_id=client_id).delete()
+
+
 def delete_client(client):
-    """Delete the client with its codes, tokens and consents."""
-    AuthorizationCode.query.filter_by(client_id=client.client_id).delete()
-    Token.query.filter_by(client_id=client.client_id).delete()
-    Consent.query.filter_by(client_id=client.client_id).delete()
+    """Delete the client with its codes, tokens, consents and assertions."""
+    delete_client_rows(client.client_id)
     db.session.delete(client)
     db.session.commit()
+
+
+def delete_dynamic_clients():
+    """Delete the dynamic clients as delete_client does. Return their number."""
+    clients = Client.query.filter(Client.registration_access_token.is_not(None)).all()
+    for client in clients:
+        delete_client_rows(client.client_id)
+        db.session.delete(client)
+    db.session.commit()
+    return len(clients)

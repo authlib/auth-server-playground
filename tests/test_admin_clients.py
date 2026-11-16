@@ -1,8 +1,10 @@
 import pytest
 
 from auth_server_playground.models import Client
+from auth_server_playground.models import ClientAssertion
 from auth_server_playground.models import Token
 from auth_server_playground.models import db
+from auth_server_playground.store import delete_dynamic_clients
 from tests.conftest import make_client
 from tests.utils import client_credentials_token
 
@@ -327,3 +329,29 @@ def test_disabled_algorithm_is_marked(app, testapp, configure):
         stored(app, "es-client")["client_metadata"]["id_token_signed_response_alg"]
         == "ES256"
     )
+
+
+def test_delete_client_deletes_its_assertions(app, testapp, client):
+    with app.app_context():
+        db.session.add(
+            ClientAssertion(client_id=client["client_id"], jti="j", expires_at=0)
+        )
+        db.session.commit()
+    form = testapp.get(f"/en/clients/{client['client_id']}").forms["delete"]
+    form.submit()
+    with app.app_context():
+        assert ClientAssertion.query.count() == 0
+
+
+def test_delete_dynamic_clients(app, client, dynamic_client):
+    with app.app_context():
+        assert delete_dynamic_clients() == 1
+        assert [c.client_id for c in Client.query] == [client["client_id"]]
+
+
+def test_is_dynamic(app, client, dynamic_client):
+    with app.app_context():
+        assert Client.query.filter_by(client_id="dynamic-client").one().is_dynamic
+        assert (
+            not Client.query.filter_by(client_id=client["client_id"]).one().is_dynamic
+        )

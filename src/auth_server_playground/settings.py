@@ -55,7 +55,12 @@ OIDC_METADATA = (
 )
 
 #: The client authentication methods that sign a JWT.
-JWT_AUTH_METHODS = ("private_key_jwt", "client_secret_jwt")
+JWT_AUTH_METHODS = {
+    "private_key_jwt": ASYMMETRIC_ALGORITHMS,
+    "client_secret_jwt": HMAC_ALGORITHMS,
+}
+#: The client authentication methods that need a client secret.
+SECRET_AUTH_METHODS = ["client_secret_basic", "client_secret_post", "client_secret_jwt"]
 
 #: The longest token lifetime, so that expiration dates fit in the database.
 MAX_LIFETIME = 365 * 24 * 3600
@@ -373,6 +378,8 @@ def unsupported_values(client_metadata, document):
     method = client_metadata.get("token_endpoint_auth_method", "client_secret_basic")
     scopes = (client_metadata.get("scope") or "").split()
     alg = client_metadata.get("id_token_signed_response_alg")
+    auth_alg = client_metadata.get("token_endpoint_auth_signing_alg")
+    request_alg = client_metadata.get("request_object_signing_alg")
     result = {
         "grant_types": [
             grant
@@ -400,6 +407,21 @@ def unsupported_values(client_metadata, document):
             if alg
             and is_oidc_enabled(document)
             and alg not in metadata["id_token_signing_alg_values_supported"]
+            else []
+        ),
+        "token_endpoint_auth_signing_alg": (
+            [auth_alg]
+            if auth_alg
+            and auth_alg
+            not in metadata["token_endpoint_auth_signing_alg_values_supported"]
+            else []
+        ),
+        "request_object_signing_alg": (
+            [request_alg]
+            if request_alg
+            and is_oidc_enabled(document)
+            and request_alg
+            not in metadata["request_object_signing_alg_values_supported"]
             else []
         ),
     }

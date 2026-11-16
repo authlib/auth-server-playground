@@ -152,12 +152,15 @@ def logged_in(testapp, persona, monkeypatch):
     return testapp
 
 
-def make_client(app, *, client_id, client_secret, metadata):
+def make_client(
+    app, *, client_id, client_secret, metadata, registration_access_token=None
+):
     with app.app_context():
         client = Client(
             client_id=client_id,
             client_secret=client_secret,
             client_id_issued_at=int(time.time()),
+            registration_access_token=registration_access_token,
         )
         client.set_client_metadata(
             {
@@ -170,6 +173,22 @@ def make_client(app, *, client_id, client_secret, metadata):
         db.session.add(client)
         db.session.commit()
     return {"client_id": client_id, "client_secret": client_secret}
+
+
+@pytest.fixture
+def dynamic_client(app):
+    """Return a client that registered itself."""
+    return make_client(
+        app,
+        client_id="dynamic-client",
+        client_secret="dynamic-secret",
+        registration_access_token="dynamic-registration-token",
+        metadata={
+            "grant_types": ["client_credentials"],
+            "response_types": [],
+            "token_endpoint_auth_method": "client_secret_basic",
+        },
+    )
 
 
 @pytest.fixture

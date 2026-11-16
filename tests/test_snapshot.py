@@ -454,3 +454,71 @@ def test_confirm_page_counts_the_keys(app, testapp):
         "snapshot.json", json.dumps(snapshot).encode(), "application/json"
     )
     assert "1 key." in form.submit().text
+
+
+def test_dynamic_client_survives_export_and_import(app, dynamic_client):
+    with app.app_context():
+        data = export_snapshot()
+        import_snapshot(data)
+        client = Client.query.filter_by(client_id="dynamic-client").one()
+        assert client.registration_access_token == "dynamic-registration-token"
+
+
+@pytest.mark.parametrize(
+    "client_values,message",
+    [
+        ({"registration_access_token": 42}, "string of 1 to 255"),
+        ({"registration_access_token": ""}, "string of 1 to 255"),
+        (
+            {"client_metadata": {"token_endpoint_auth_method": "private_key_jwt"}},
+            "private_key_jwt needs jwks or jwks_uri",
+        ),
+        (
+            {"client_metadata": {"token_endpoint_auth_method": ["private_key_jwt"]}},
+            "token_endpoint_auth_method",
+        ),
+        (
+            {"client_metadata": {"token_endpoint_auth_signing_alg": "HS512"}},
+            "token_endpoint_auth_signing_alg",
+        ),
+        (
+            {"client_metadata": {"request_object_signing_alg": "EdDSA"}},
+            "request_object_signing_alg",
+        ),
+        (
+            {"client_metadata": {"require_signed_request_object": "yes"}},
+            "require_signed_request_object",
+        ),
+        (
+            {
+                "client_metadata": {
+                    "jwks": {
+                        "keys": [
+                            {"kty": "oct", "k": "c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0"}
+                        ]
+                    }
+                }
+            },
+            "jwks",
+        ),
+    ],
+)
+def test_invalid_client_key_values(app, client_values, message):
+    with app.app_context():
+        data = export_snapshot()
+    data["clients"] = [
+        {"client_id": "c", "client_metadata": {}, **client_values},
+    ]
+    with pytest.raises(SnapshotError, match=message):
+        check_snapshot(data)
+
+
+def test_registration_access_tokens_are_unique(app):
+    with app.app_context():
+        data = export_snapshot()
+    data["clients"] = [
+        {"client_id": "a", "client_metadata": {}, "registration_access_token": "t"},
+        {"client_id": "b", "client_metadata": {}, "registration_access_token": "t"},
+    ]
+    with pytest.raises(SnapshotError, match="registration_access_token"):
+        check_snapshot(data)

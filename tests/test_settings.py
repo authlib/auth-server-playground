@@ -474,3 +474,28 @@ def test_missing_settings_are_refused():
     document = default_document()
     del document["settings"]["initial_access_token"]
     assert "initial_access_token" in errors_of(document)
+
+
+def test_unsupported_client_algorithms():
+    document = changed(
+        metadata={
+            "token_endpoint_auth_signing_alg_values_supported": ["RS256"],
+            "request_object_signing_alg_values_supported": ["none"],
+        }
+    )
+    values = unsupported_values(
+        {
+            "token_endpoint_auth_signing_alg": "PS256",
+            "request_object_signing_alg": "RS256",
+        },
+        document,
+    )
+    assert values == {
+        "token_endpoint_auth_signing_alg": ["PS256"],
+        "request_object_signing_alg": ["RS256"],
+    }
+
+
+def test_request_object_algorithm_without_openid_is_not_reported():
+    document = changed(metadata={"scopes_supported": ["profile"]})
+    assert unsupported_values({"request_object_signing_alg": "RS256"}, document) == {}
