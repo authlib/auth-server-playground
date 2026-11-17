@@ -20,7 +20,6 @@ from flask import url_for
 from joserfc import jwt
 from joserfc.errors import JoseError
 from joserfc.errors import UnsupportedAlgorithmError
-from joserfc.jwk import KeySet
 from sqlalchemy.exc import IntegrityError
 
 from .client_keys import ClientKeysError
@@ -38,6 +37,7 @@ from .personas import find_by_username
 from .personas import user_info
 from .registration import ConfigurationEndpoint
 from .registration import RegistrationEndpoint
+from .settings import HMAC_ALGORITHMS
 from .settings import JWT_AUTH_METHODS
 from .settings import is_oidc_enabled
 from .snapshot import MAX_TIMESTAMP
@@ -134,20 +134,38 @@ class PlaygroundUserInfoEndpoint(UserInfoEndpoint):
 
 
 class PlaygroundJWTAuthenticationRequest(JWTAuthenticationRequest):
-    """Accept unsigned request objects. The clients have no keys yet."""
+    """Accept signed and unsigned request objects."""
 
-    def __init__(self, issuer, algorithms, require_signed):
+    def __init__(self, issuer, algorithms, require_signed, allow_private_addresses):
         # Per RFC 9101 §10.4, fetching a request_uri exposes the server to SSRF.
         super().__init__(support_request=True, support_request_uri=False)
         self.issuer = issuer
         self.algorithms = algorithms
         self.require_signed = require_signed
+        self.allow_private_addresses = allow_private_addresses
 
     def resolve_client_public_key(self, client):
-        # Authlib imports the client key before it reads the alg of the request
-        # object, even for alg none. An empty key set lets unsigned objects
-        # through.
-        return KeySet([])
+        # Authlib asks for the key before it reads the alg, even for alg none.
+        # joserfc calls resolve with the token.
+        # It does not call it for alg none, so an unsigned object fetches nothing.
+        def resolve(token):
+            if token.headers()["alg"] in HMAC_ALGORITHMS:
+                return secret_key(client)
+            return public_keys(
+                client, allow_private_addresses=self.allow_private_addresses
+            )
+
+        return resolve
+
+    def get_request_object_signing_algorithms(self, client):
+        # Per OIDC Registration §2, a client algorithm applies to all its
+        # request objects.
+        alg = client.client_metadata.get("request_object_signing_alg")
+        wanted = [alg] if alg else self.algorithms
+        return [candidate for candidate in wanted if candidate in self.algorithms]
+
+    def get_client_require_signed_request_object(self, client):
+        return bool(client.client_metadata.get("require_signed_request_object"))
 
     def get_server_metadata(self):
         return {
@@ -419,6 +437,7 @@ def build_server(document):
                 metadata["issuer"],
                 metadata["request_object_signing_alg_values_supported"],
                 metadata["require_signed_request_object"],
+                settings["outbound_private_addresses"],
             )
         )
     registration = settings["registration"]
