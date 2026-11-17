@@ -1,9 +1,17 @@
 {% extends "admin/layout.html" %}
+{% from "_form.html" import render_form %}
 {% block title %}{% trans %}Clients{% endtrans %}{% endblock %}
 {% block content %}
     <div class="page-title">
         <h2>{% trans %}Clients{% endtrans %}</h2>
-        <a href="{{ url_for('admin.new_client') }}" role="button">{% trans %}New client{% endtrans %}</a>
+        <div class="actions">
+            {% if dynamic_count %}
+                {% call render_form(delete_dynamic_form, url_for('admin.remove_dynamic_clients'), id="delete-dynamic") %}
+                    {{ delete_dynamic_form.submit(value=_("Delete the dynamic clients (%(count)s)", count=dynamic_count), class="outline contrast") }}
+                {% endcall %}
+            {% endif %}
+            <a href="{{ url_for('admin.new_client') }}" role="button">{% trans %}New client{% endtrans %}</a>
+        </div>
     </div>
     {% if rows %}
         <div class="table-scroll">
@@ -19,7 +27,7 @@
                 <tbody>
                     {% for client, unsupported in rows %}
                         <tr>
-                            <td><a href="{{ url_for('admin.edit_client', client_id=client.client_id) }}">{{ client.client_name or client.client_id }}</a></td>
+                            <td><a href="{{ url_for('admin.edit_client', client_id=client.client_id) }}">{{ client.client_name or client.client_id }}</a>{% if client.is_dynamic %} <mark>{% trans %}dynamic{% endtrans %}</mark>{% endif %}</td>
                             <td><code>{{ client.client_id }}</code></td>
                             <td><code>{{ client.token_endpoint_auth_method }}</code></td>
                             <td>{{ client.grant_types|join(", ") }}</td>

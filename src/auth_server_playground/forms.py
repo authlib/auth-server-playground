@@ -8,6 +8,7 @@ import uuid
 import zoneinfo
 from urllib.parse import urlsplit
 
+from authlib.oauth2.rfc7591 import ClientMetadataClaims
 from babel import localedata
 from flask import current_app
 from flask_babel import lazy_gettext as _
@@ -15,6 +16,7 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileField
 from flask_wtf.file import FileRequired
 from flask_wtforms_htmx import HtmxFlaskForm
+from joserfc.errors import JoseError
 from markupsafe import Markup
 from wtforms import BooleanField
 from wtforms import ButtonField
@@ -39,6 +41,7 @@ from wtforms.widgets import CheckboxInput
 from wtforms.widgets import HiddenInput
 from wtforms.widgets import ListWidget
 
+from .client_keys import client_key_errors
 from .models import Client
 from .models import Persona
 from .models import db
@@ -368,6 +371,20 @@ def marked_choices(values, supported):
     ]
 
 
+def marked_options(values, supported):
+    """Return select options, writing out the values that the server does not support."""
+    # A select option holds text only, so the mark is written out.
+    return [
+        SelectChoice(
+            value,
+            value
+            if value in supported
+            else _("%(value)s (not supported by the server)", value=value),
+        )
+        for value in values
+    ]
+
+
 class ClientForm(BaseForm):
     client_id = StringField(
         _("Client ID"),
@@ -399,6 +416,18 @@ class ClientForm(BaseForm):
         _("Authentication method"),
         render_kw={"param": "token_endpoint_auth_method"},
     )
+    token_endpoint_auth_signing_alg = SelectField(
+        _("Client assertion signing algorithm"),
+        render_kw={"param": "token_endpoint_auth_signing_alg"},
+    )
+    jwks_uri = URLField(
+        _("Key set URL"), validators=[check_url], render_kw={"param": "jwks_uri"}
+    )
+    jwks = TextAreaField(
+        _("Keys"),
+        description=_("A JSON Web Key Set of public keys."),
+        render_kw={"param": "jwks", "rows": 4},
+    )
     contacts = TextAreaField(
         _("Contacts"),
         description=_("One per line."),
@@ -422,24 +451,48 @@ class ClientForm(BaseForm):
         description=_("In seconds. Leave empty for no limit."),
         render_kw={"param": "default_max_age"},
     )
+    request_object_signing_alg = SelectField(
+        _("Request object signing algorithm"),
+        render_kw={"param": "request_object_signing_alg"},
+    )
+    require_signed_request_object = BooleanField(
+        _("Refuse unsigned request objects"),
+        render_kw={"role": "switch", "param": "require_signed_request_object"},
+    )
     save = SubmitField(_("Save"))
 
-    OIDC_METADATA = ("id_token_signed_response_alg", "default_max_age")
+    OIDC_METADATA = (
+        "id_token_signed_response_alg",
+        "default_max_age",
+        "request_object_signing_alg",
+    )
     TEXT_METADATA = (
         "client_name",
         "client_uri",
         "logo_uri",
         "scope",
         "token_endpoint_auth_method",
+        "token_endpoint_auth_signing_alg",
+        "jwks_uri",
         "tos_uri",
         "policy_uri",
     )
+    #: The messages of the errors that client_key_errors returns.
+    KEY_ERRORS = {
+        "jwks": _("private_key_jwt needs keys: fill the keys or the key set URL."),
+        "token_endpoint_auth_signing_alg": _(
+            "This algorithm does not fit the authentication method."
+        ),
+    }
 
     def __init__(self, document, client=None, **kwargs):
         if client is not None:
             data = dict(client.client_metadata)
             data["redirect_uris"] = "\n".join(data.get("redirect_uris", []))
             data["contacts"] = "\n".join(data.get("contacts", []))
+            data["jwks"] = (
+                json.dumps(data["jwks"], indent=2) if data.get("jwks") else ""
+            )
             kwargs["data"] = data
         super().__init__(**kwargs)
         self.client = client
@@ -462,21 +515,24 @@ class ClientForm(BaseForm):
         methods = with_stored(
             AUTH_METHODS, [client.token_endpoint_auth_method] if client else []
         )
-        # A select option holds text only, so the mark is written out.
-        self.token_endpoint_auth_method.choices = [
-            SelectChoice(
-                method,
-                method
-                if method in metadata["token_endpoint_auth_methods_supported"]
-                else _("%(value)s (not supported by the server)", value=method),
-            )
-            for method in methods
+        self.token_endpoint_auth_method.choices = marked_options(
+            methods, metadata["token_endpoint_auth_methods_supported"]
+        )
+        auth_alg = stored.get("token_endpoint_auth_signing_alg")
+        self.token_endpoint_auth_signing_alg.choices = [
+            SelectChoice("", _("Any algorithm of the server")),
+            *marked_options(
+                with_stored(CLIENT_JWT_ALGORITHMS, [auth_alg] if auth_alg else []),
+                metadata["token_endpoint_auth_signing_alg_values_supported"],
+            ),
         ]
 
         self.oidc = is_oidc_enabled(document)
         if not self.oidc:
             del self.id_token_signed_response_alg
             del self.default_max_age
+            del self.request_object_signing_alg
+            del self.require_signed_request_object
             return
 
         supported = metadata["id_token_signing_alg_values_supported"]
@@ -484,14 +540,16 @@ class ClientForm(BaseForm):
         algorithms = with_stored(supported, [stored_alg] if stored_alg else [])
         self.id_token_signed_response_alg.choices = [
             SelectChoice("", _("Default (RS256)")),
-            *(
-                SelectChoice(
-                    alg,
-                    alg
-                    if alg in supported
-                    else _("%(value)s (not supported by the server)", value=alg),
-                )
-                for alg in algorithms
+            *marked_options(algorithms, supported),
+        ]
+        request_alg = stored.get("request_object_signing_alg")
+        self.request_object_signing_alg.choices = [
+            SelectChoice("", _("Any algorithm of the server")),
+            *marked_options(
+                with_stored(
+                    REQUEST_OBJECT_ALGORITHMS, [request_alg] if request_alg else []
+                ),
+                metadata["request_object_signing_alg_values_supported"],
             ),
         ]
 
@@ -505,6 +563,28 @@ class ClientForm(BaseForm):
         if Client.query.filter_by(client_id=field.data).count():
             raise ValidationError(_("A client already uses this ID."))
 
+    def validate_jwks(self, field):
+        if not (field.data or "").strip():
+            return
+        try:
+            value = json.loads(field.data)
+        except json.JSONDecodeError as error:
+            raise ValidationError(str(error)) from None
+        if self.jwks_uri.data:
+            raise ValidationError(_("Fill the keys or the key set URL, not both."))
+        try:
+            ClientMetadataClaims({"jwks": value}, {}).validate_jwks()
+        except JoseError:
+            raise ValidationError(_("Use a JSON Web Key Set of public keys.")) from None
+
+    def validate(self, extra_validators=None):
+        if not super().validate(extra_validators):
+            return False
+        errors = client_key_errors(self.client_metadata())
+        for key in errors:
+            self[key].errors.append(self.KEY_ERRORS[key])
+        return not errors
+
     def client_metadata(self):
         """Return the metadata of the client, updated with the form.
 
@@ -515,6 +595,9 @@ class ClientForm(BaseForm):
             metadata.pop(name, None)
             if self[name].data:
                 metadata[name] = self[name].data
+        metadata.pop("jwks", None)
+        if (self.jwks.data or "").strip():
+            metadata["jwks"] = json.loads(self.jwks.data)
         metadata["redirect_uris"] = lines(self.redirect_uris.data)
         metadata["contacts"] = lines(self.contacts.data)
         metadata["grant_types"] = self.grant_types.data
@@ -524,6 +607,9 @@ class ClientForm(BaseForm):
                 metadata.pop(name, None)
                 if self[name].data not in (None, ""):
                     metadata[name] = self[name].data
+            metadata.pop("require_signed_request_object", None)
+            if self.require_signed_request_object.data:
+                metadata["require_signed_request_object"] = True
         return metadata
 
     def save_client(self):

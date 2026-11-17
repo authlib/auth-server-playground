@@ -208,7 +208,8 @@ fieldset ul li {
 }
 
 .actions form,
-.actions [role="group"] {
+.actions [role="group"],
+.actions [type="submit"] {
     margin: 0;
 }
 

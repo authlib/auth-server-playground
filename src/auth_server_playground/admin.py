@@ -12,6 +12,7 @@ from flask import request
 from flask import url_for
 from flask_babel import get_locale
 from flask_babel import gettext as _
+from flask_babel import ngettext
 
 from .forms import ActionForm
 from .forms import ClientForm
@@ -46,6 +47,7 @@ from .snapshot import export_snapshot
 from .snapshot import import_snapshot
 from .store import current_document
 from .store import delete_client
+from .store import delete_dynamic_clients
 from .store import save_document
 
 bp = Blueprint("admin", __name__, url_prefix="/<lang:lang_code>")
@@ -216,7 +218,28 @@ def remove_key(kid):
 
 @bp.route("/clients")
 def clients():
-    return render_template("admin/clients.html", rows=client_rows(current_document()))
+    rows = client_rows(current_document())
+    return render_template(
+        "admin/clients.html",
+        rows=rows,
+        dynamic_count=sum(client.is_dynamic for client, unused in rows),
+        delete_dynamic_form=ActionForm(prefix="delete-dynamic"),
+    )
+
+
+@bp.route("/dynamic-clients/delete", methods=["POST"])
+def remove_dynamic_clients():
+    if ActionForm(prefix="delete-dynamic").validate_on_submit():
+        count = delete_dynamic_clients()
+        flash(
+            ngettext(
+                "%(num)d dynamic client is deleted.",
+                "%(num)d dynamic clients are deleted.",
+                count,
+            ),
+            "success",
+        )
+    return redirect(url_for("admin.clients"))
 
 
 @bp.route("/clients/new", methods=["GET", "POST"])
@@ -245,6 +268,13 @@ def edit_client(client_id):
             client=client,
             regenerate_form=ActionForm(prefix="regenerate"),
             delete_form=ActionForm(prefix="delete"),
+            registration_client_uri=url_for(
+                "oauth.client_configuration",
+                client_id=client.client_id,
+                _external=True,
+            )
+            if client.is_dynamic
+            else None,
         )
 
     form.save_client()

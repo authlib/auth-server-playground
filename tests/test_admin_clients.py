@@ -1,4 +1,7 @@
+import json
+
 import pytest
+from joserfc.jwk import RSAKey
 
 from auth_server_playground.models import Client
 from auth_server_playground.models import ClientAssertion
@@ -7,6 +10,8 @@ from auth_server_playground.models import db
 from auth_server_playground.store import delete_dynamic_clients
 from tests.conftest import make_client
 from tests.utils import client_credentials_token
+
+JWKS_URI = "https://client.test/jwks.json"
 
 
 def text(res, selector):
@@ -360,9 +365,155 @@ def test_is_dynamic(app, client, dynamic_client):
 def test_private_key_jwt_client_has_no_secret(app, testapp, client):
     form = testapp.get(f"/en/clients/{client['client_id']}").forms["client"]
     form["token_endpoint_auth_method"] = "private_key_jwt"
+    form["jwks_uri"] = JWKS_URI
     form.submit()
     with app.app_context():
         assert (
             Client.query.filter_by(client_id=client["client_id"]).one().client_secret
             == ""
         )
+
+
+def public_jwks(rsa_pool):
+    return {"keys": [RSAKey.import_key(rsa_pool[0]).as_dict(private=False)]}
+
+
+def metadata_of(app, client_id):
+    with app.app_context():
+        return Client.query.filter_by(client_id=client_id).one().client_metadata
+
+
+def test_private_key_jwt_client_with_jwks_uri(app, testapp):
+    res = new_client_form(
+        testapp,
+        client_id="pkjwt",
+        token_endpoint_auth_method="private_key_jwt",
+        jwks_uri=JWKS_URI,
+    ).submit()
+    assert res.status_int == 302
+    assert metadata_of(app, "pkjwt")["jwks_uri"] == JWKS_URI
+
+
+def test_private_key_jwt_client_with_jwks(app, testapp, rsa_pool):
+    jwks = public_jwks(rsa_pool)
+    new_client_form(
+        testapp,
+        client_id="pkjwt",
+        token_endpoint_auth_method="private_key_jwt",
+        jwks=json.dumps(jwks),
+    ).submit()
+    assert metadata_of(app, "pkjwt")["jwks"] == jwks
+
+
+def test_private_key_jwt_needs_keys(testapp):
+    res = new_client_form(
+        testapp, token_endpoint_auth_method="private_key_jwt"
+    ).submit()
+    assert res.html.select_one("#jwks-error")
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        {"jwks": "{not json"},
+        {
+            "jwks": json.dumps(
+                {
+                    "keys": [
+                        {
+                            "kty": "oct",
+                            "k": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY",
+                        }
+                    ]
+                }
+            )
+        },
+        {"jwks": json.dumps({"keys": []}), "jwks_uri": JWKS_URI},
+        {"jwks": json.dumps({"keys": "x"})},
+        {"jwks": json.dumps([])},
+    ],
+)
+def test_invalid_jwks(testapp, values):
+    res = new_client_form(testapp, **values).submit()
+    assert res.html.select_one("#jwks-error")
+
+
+def test_algorithm_must_fit_the_method(testapp):
+    res = new_client_form(
+        testapp,
+        token_endpoint_auth_method="client_secret_jwt",
+        token_endpoint_auth_signing_alg="RS256",
+    ).submit()
+    assert res.html.select_one("#token_endpoint_auth_signing_alg-error")
+
+
+def test_request_object_settings(app, testapp, client):
+    form = testapp.get(f"/en/clients/{client['client_id']}").forms["client"]
+    form["request_object_signing_alg"] = "RS256"
+    form["require_signed_request_object"] = True
+    form.submit()
+    metadata = metadata_of(app, client["client_id"])
+    assert metadata["request_object_signing_alg"] == "RS256"
+    assert metadata["require_signed_request_object"] is True
+
+
+def test_unsigned_request_objects_by_default(app, testapp, client):
+    testapp.get(f"/en/clients/{client['client_id']}").forms["client"].submit()
+    assert "require_signed_request_object" not in metadata_of(app, client["client_id"])
+
+
+def test_unsupported_algorithm_is_marked(app, testapp, configure):
+    configure(metadata={"token_endpoint_auth_signing_alg_values_supported": ["RS256"]})
+    make_client(
+        app,
+        client_id="ps256-client",
+        client_secret="s",
+        metadata={"token_endpoint_auth_signing_alg": "PS256"},
+    )
+    res = testapp.get("/en/clients/ps256-client")
+    option = res.html.select_one(
+        '#token_endpoint_auth_signing_alg option[value="PS256"]'
+    )
+    assert "not supported by the server" in option.text
+
+
+def test_no_request_object_fields_without_openid(testapp, configure):
+    configure(metadata={"scopes_supported": ["profile"]})
+    form = testapp.get("/en/clients/new").forms["client"]
+    assert "request_object_signing_alg" not in form.fields
+
+
+def test_dynamic_client_page(testapp, dynamic_client):
+    res = testapp.get("/en/clients/dynamic-client")
+    values = {field["value"] for field in res.html.select("input.copy-value")}
+    assert "dynamic-registration-token" in values
+    assert "http://localhost/oauth/register/dynamic-client" in values
+
+
+def test_static_client_page_has_no_registration(testapp, client):
+    res = testapp.get(f"/en/clients/{client['client_id']}")
+    assert "/oauth/register/" not in res.text
+
+
+def test_clients_list_marks_dynamic_clients(testapp, client, dynamic_client):
+    rows = testapp.get("/en/clients").html.select("tbody tr")
+    marked = {row.select_one("code").text for row in rows if row.select_one("mark")}
+    assert marked == {"dynamic-client"}
+
+
+def test_delete_the_dynamic_clients(app, testapp, client, dynamic_client):
+    res = testapp.get("/en/clients").forms["delete-dynamic"].submit().follow()
+    assert 'data-type="success"' in res
+    with app.app_context():
+        assert [c.client_id for c in Client.query] == [client["client_id"]]
+
+
+def test_no_delete_button_without_dynamic_clients(testapp, client):
+    assert "delete-dynamic" not in testapp.get("/en/clients").forms
+
+
+def test_delete_the_dynamic_clients_needs_a_csrf_token(app, testapp, dynamic_client):
+    res = testapp.post("/en/dynamic-clients/delete").follow()
+    assert 'data-type="success"' not in res
+    with app.app_context():
+        assert Client.query.filter_by(client_id="dynamic-client").count() == 1

@@ -21,10 +21,19 @@
                 {{ form.scope() }}
                 {{ form.token_endpoint_auth_method() }}
             </div>
+            <div class="grid">
+                {{ form.token_endpoint_auth_signing_alg() }}
+                {{ form.jwks_uri() }}
+            </div>
+            {{ form.jwks() }}
             {% if form.id_token_signed_response_alg %}
                 <div class="grid">
                     {{ form.id_token_signed_response_alg() }}
                     {{ form.default_max_age() }}
+                </div>
+                <div class="grid">
+                    {{ form.request_object_signing_alg() }}
+                    {{ form.require_signed_request_object() }}
                 </div>
             {% endif %}
             {{ form.contacts() }}
@@ -51,6 +60,14 @@
                         <p><small>{% trans %}A public client has no secret.{% endtrans %}</small></p>
                     {% endif %}
                 </article>
+                {% if registration_client_uri %}
+                    <article>
+                        <header><h3>{% trans %}Dynamic registration{% endtrans %}</h3></header>
+                        <p><small>{% trans %}This client registered itself. It reads, changes and deletes its registration with this token (RFC 7592).{% endtrans %}</small></p>
+                        {% call copy_field("registration-uri-value", registration_client_uri, _("Copy the registration URL")) %}{% trans %}Registration URL{% endtrans %}{% endcall %}
+                        {% call copy_field("registration-token-value", client.registration_access_token, _("Copy the registration access token")) %}{% trans %}Registration access token{% endtrans %}{% endcall %}
+                    </article>
+                {% endif %}
                 <article>
                     <header><h3>{% trans %}Delete{% endtrans %}</h3></header>
                     <p><small>{% trans %}Deletes the client, its codes, its tokens and its consents.{% endtrans %}</small></p>
