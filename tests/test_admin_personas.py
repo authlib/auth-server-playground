@@ -100,6 +100,7 @@ def test_edit_keeps_the_extra_claims(app, testapp, persona):
         row = db.session.get(Persona, persona["id"])
         row.claims = {**row.claims, "department": "R&D"}
         db.session.commit()
+
     form = testapp.get(f"/en/personas/{persona['id']}").forms["persona"]
     assert "department" in form["extra_claims"].value
     form.submit()
@@ -113,6 +114,7 @@ def test_random_persona_from_admin(app, testapp):
     with app.app_context():
         persona = Persona.query.order_by(Persona.id.desc()).first()
         assert persona.claims["locale"] == "fr-FR"
+
     assert res.location.endswith(f"/en/personas/{persona.id}")
 
 
@@ -164,6 +166,7 @@ def test_random_persona_from_the_selector(app, testapp):
     assert res.location == "/en/"
     with app.app_context():
         assert Persona.query.count() == 3
+
     assert "Forget persona" in testapp.get("/en/")
 
 
@@ -260,6 +263,7 @@ def test_edit_keeps_unknown_address_keys(app, testapp, persona):
         row = db.session.get(Persona, persona["id"])
         row.claims = {**row.claims, "address": {"locality": "Paris", "floor": "3"}}
         db.session.commit()
+
     testapp.get(f"/en/personas/{persona['id']}").forms["persona"].submit()
     address = stored(app, persona["sub"])["claims"]["address"]
     assert address == {"locality": "Paris", "floor": "3"}
@@ -277,6 +281,7 @@ def test_redraw_updates_updated_at(app, testapp, persona):
         row = db.session.get(Persona, persona["id"])
         row.claims = {**row.claims, "updated_at": 1}
         db.session.commit()
+
     testapp.get(f"/en/personas/{persona['id']}").forms["avatar"].submit()
     assert stored(app, persona["sub"])["claims"]["updated_at"] > 1
 
@@ -297,6 +302,7 @@ def test_edit_keeps_unknown_zoneinfo_and_locale(app, testapp, persona):
         row = db.session.get(Persona, persona["id"])
         row.claims = {**row.claims, "zoneinfo": "Etc/Unknown", "locale": "en-us"}
         db.session.commit()
+
     testapp.get(f"/en/personas/{persona['id']}").forms["persona"].submit()
     claims = stored(app, persona["sub"])["claims"]
     assert claims["zoneinfo"] == "Etc/Unknown"

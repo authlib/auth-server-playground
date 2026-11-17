@@ -25,6 +25,7 @@ def authorization_code_token(testapp, client, *, verifier=None, method="S256"):
         challenge = create_s256_code_challenge(verifier)
     elif verifier:
         challenge = verifier
+
     url = authorize_url(
         response_type="code",
         client_id=client["client_id"],
@@ -217,6 +218,7 @@ def test_public_client_revokes_with_its_id(app, testapp, public_client):
             )
         )
         db.session.commit()
+
     testapp.get("/api/resource", headers=bearer("public-access-token"))
     testapp.post(
         "/oauth/revoke",
@@ -275,6 +277,7 @@ def test_resource_without_persona(testapp, client):
 def test_revision_goes_up_on_each_save(app, configure):
     with app.app_context():
         before = settings_row().revision
+
     configure(settings={"access_token_lifetime": 60})
     configure(settings={"access_token_lifetime": 120})
     with app.app_context():
@@ -289,6 +292,7 @@ def test_refresh_token_lifetime(app, logged_in, client, configure):
         assert row.refresh_token_expires_at == row.issued_at + 600
         row.refresh_token_expires_at = int(time.time()) - 1
         db.session.commit()
+
     res = refresh(logged_in, client, token["refresh_token"], status=400)
     assert res.json["error"] == "invalid_grant"
 
@@ -302,6 +306,7 @@ def test_refresh_token_lifetime_does_not_follow_the_access_token(
         row = Token.query.filter_by(refresh_token=token["refresh_token"]).one()
         row.issued_at -= 10
         db.session.commit()
+
     assert refresh(logged_in, client, token["refresh_token"]).json["access_token"]
 
 

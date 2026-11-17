@@ -52,10 +52,12 @@ def is_valid_key(jwk, alg, kid):
     """Tell if the JWK is a private signing key of the algorithm, with its thumbprint as kid."""
     if not isinstance(jwk, dict) or (jwk.get("kty"), jwk.get("crv")) != KEY_TYPES[alg]:
         return False
+
     try:
         # joserfc only warns about a short RSA key, and signs with it.
         if jwk["kty"] == "RSA" and not is_long_rsa_modulus(jwk.get("n")):
             return False
+
         # joserfc raises ValueError, KeyError or TypeError, not only JoseError,
         # for some malformed keys. The pre-check above covers kty and crv.
         key = import_key(jwk)
@@ -66,6 +68,7 @@ def is_valid_key(jwk, alg, kid):
         public = import_key(key.as_pem(private=False), key.key_type)
     except (JoseError, ValueError):
         return False
+
     return (
         key.is_private
         and key.alg == alg
@@ -109,6 +112,7 @@ def rotate_key(alg):
 def delete_key(key, enabled_algorithms):
     if key.active and key.alg in enabled_algorithms:
         raise KeyInUse(key.kid)
+
     db.session.delete(key)
     db.session.commit()
 

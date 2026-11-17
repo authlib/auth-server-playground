@@ -119,6 +119,7 @@ class PlaygroundOpenIDCode(OpenIDCode):
         header = {"alg": alg}
         if kid := active_kid(alg):
             header["kid"] = kid
+
         return header
 
     def generate_user_info(self, user, scope, claims):
@@ -151,6 +152,7 @@ class PlaygroundJWTAuthenticationRequest(JWTAuthenticationRequest):
         def resolve(token):
             if token.headers()["alg"] in HMAC_ALGORITHMS:
                 return secret_key(client)
+
             return public_keys(
                 client, allow_private_addresses=self.allow_private_addresses
             )
@@ -196,6 +198,7 @@ class RefreshTokenGrant(grants.RefreshTokenGrant):
         # Without rotation, no new refresh token is issued: the old one stays valid.
         if self.INCLUDE_NEW_REFRESH_TOKEN:
             credential.refresh_token_revoked_at = now
+
         db.session.commit()
 
 
@@ -210,6 +213,7 @@ class PlaygroundCodeChallenge(CodeChallenge):
     def is_code_challenge_required(self, request):
         if self.required_for == "all":
             return True
+
         return super().is_code_challenge_required(request)
 
 
@@ -231,6 +235,7 @@ class PlaygroundClientAssertion(JWTBearerClientAssertion):
         method = self.claimed_method(query_client, request)
         if method is not None and method != self.CLIENT_AUTH_METHOD:
             return None
+
         return super().__call__(query_client, request)
 
     def claimed_method(self, query_client, request):
@@ -241,10 +246,12 @@ class PlaygroundClientAssertion(JWTBearerClientAssertion):
             or not assertion
         ):
             return None
+
         try:
             _, claims = self.extract_assertion(assertion)
         except InvalidClientError:
             return None
+
         client_id = claims.get("sub")
         client = query_client(client_id) if isinstance(client_id, str) else None
         return client.token_endpoint_auth_method if client else None
@@ -262,6 +269,7 @@ class PlaygroundClientAssertion(JWTBearerClientAssertion):
             raise InvalidClientError(
                 description=f"The server has no algorithm for {self.CLIENT_AUTH_METHOD}."
             )
+
         try:
             if self.CLIENT_AUTH_METHOD == "client_secret_jwt":
                 key = secret_key(client)
@@ -271,12 +279,14 @@ class PlaygroundClientAssertion(JWTBearerClientAssertion):
                 )
         except ClientKeysError as error:
             raise InvalidClientError(description=error.description) from error
+
         required = client.client_metadata.get("token_endpoint_auth_signing_alg")
 
         # Authlib ignores token_endpoint_auth_signing_alg of the client.
         def resolve(token):
             if required and token.headers()["alg"] != required:
                 raise UnsupportedAlgorithmError(f"The client signs with {required}.")
+
             return key
 
         return resolve
@@ -286,6 +296,7 @@ class PlaygroundClientAssertion(JWTBearerClientAssertion):
             token = jwt.decode(assertion, resolve_key, algorithms=self.algorithms)
         except JoseError as error:
             raise InvalidClientError(description=error.description) from error
+
         self.verify_claims(token.claims)
         return token.claims
 
@@ -293,6 +304,7 @@ class PlaygroundClientAssertion(JWTBearerClientAssertion):
         # A huge exp would overflow the integer column.
         if not 0 <= claims["exp"] <= MAX_TIMESTAMP:
             raise InvalidClientError(description="Invalid claim: 'exp'")
+
         db.session.add(
             ClientAssertion(
                 client_id=claims["sub"], jti=str(jti), expires_at=int(claims["exp"])
@@ -303,6 +315,7 @@ class PlaygroundClientAssertion(JWTBearerClientAssertion):
         except IntegrityError:
             db.session.rollback()
             return False
+
         return True
 
 
@@ -319,9 +332,11 @@ def code_of(request):
     """Return the authorization code that the new token comes from, if any."""
     if authorization_code := getattr(request, "authorization_code", None):
         return authorization_code.code
+
     # A refreshed token keeps the code of the token it replaces.
     if refresh_token := getattr(request, "refresh_token", None):
         return refresh_token.authorization_code
+
     return None
 
 
@@ -329,9 +344,11 @@ def claims_request_of(request):
     """Return the claims parameter of the request behind the new token, if any."""
     if authorization_code := getattr(request, "authorization_code", None):
         return authorization_code.claims_request
+
     # A refreshed token keeps the claims request of the token it replaces.
     if refresh_token := getattr(request, "refresh_token", None):
         return refresh_token.claims_request
+
     return None
 
 
@@ -349,6 +366,7 @@ def token_saver(refresh_token_lifetime):
         )
         if item.refresh_token:
             item.refresh_token_expires_at = now + refresh_token_lifetime
+
         db.session.add(item)
         db.session.commit()
 
@@ -397,36 +415,43 @@ def build_server(document):
                 # Only confidential clients use this grant (RFC 6749 §4.4).
                 if grant_type != "client_credentials" or method != "none"
             ]
+
         if grant_type == "refresh_token":
             attributes["INCLUDE_NEW_REFRESH_TOKEN"] = settings["refresh_token_rotation"]
+
         extensions = []
         if grant_type == "authorization_code" and pkce_methods:
             extensions.append(
                 PlaygroundCodeChallenge(pkce_methods, settings["pkce_required"])
             )
+
         if grant_type == "authorization_code" and is_oidc_enabled(document):
             extensions.append(
                 PlaygroundOpenIDCode(metadata["issuer"], settings["id_token_lifetime"])
             )
+
         server.register_grant(configured(GRANTS[grant_type], **attributes), extensions)
 
     for method in JWT_AUTH_METHODS:
-        if method in auth_methods:
-            server.register_client_auth_method(
+        if method not in auth_methods:
+            continue
+
+        server.register_client_auth_method(
+            method,
+            PlaygroundClientAssertion(
                 method,
-                PlaygroundClientAssertion(
-                    method,
-                    metadata["token_endpoint_auth_signing_alg_values_supported"],
-                    metadata["issuer"],
-                    settings["outbound_private_addresses"],
-                ),
-            )
+                metadata["token_endpoint_auth_signing_alg_values_supported"],
+                metadata["issuer"],
+                settings["outbound_private_addresses"],
+            ),
+        )
 
     if settings["revocation_enabled"]:
         endpoint = create_revocation_endpoint(db.session, Token)
         server.register_endpoint(
             configured(endpoint, CLIENT_AUTH_METHODS=list(auth_methods))
         )
+
     if is_oidc_enabled(document):
         server.register_endpoint(
             PlaygroundUserInfoEndpoint(resource_protector=require_oauth)
@@ -440,6 +465,7 @@ def build_server(document):
                 settings["outbound_private_addresses"],
             )
         )
+
     registration = settings["registration"]
     if registration != "disabled":
         oidc = is_oidc_enabled(document)
@@ -447,6 +473,7 @@ def build_server(document):
             RegistrationEndpoint(registration, settings["initial_access_token"], oidc)
         )
         server.register_endpoint(ConfigurationEndpoint(oidc))
+
     return server
 
 
@@ -462,6 +489,7 @@ def get_server():
     if cached is None or cached[0] != row.revision:
         cached = (row.revision, build_server(row.document))
         current_app.extensions[CACHE_KEY] = cached
+
     return cached[1]
 
 

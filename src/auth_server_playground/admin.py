@@ -100,11 +100,13 @@ def preview_of(form):
     """Return the metadata the form would publish, and the errors."""
     if not form.validate():
         return None, form.errors
+
     document = form.to_document(stored_token())
     try:
         validate_document(document)
     except InvalidDocument as error:
         return None, error.errors
+
     return current_metadata(document), {}
 
 
@@ -145,11 +147,13 @@ def server():
 
 @bp.route("/server/initial-access-token", methods=["POST"])
 def renew_initial_access_token():
-    if ActionForm(prefix="renew").validate_on_submit():
-        document = current_document()
-        document["settings"]["initial_access_token"] = secrets.token_urlsafe(32)
-        save_document(document)
-        flash(_("A new initial access token replaces the old one."), "success")
+    if not ActionForm(prefix="renew").validate_on_submit():
+        return redirect(url_for("admin.server"))
+
+    document = current_document()
+    document["settings"]["initial_access_token"] = secrets.token_urlsafe(32)
+    save_document(document)
+    flash(_("A new initial access token replaces the old one."), "success")
     return redirect(url_for("admin.server"))
 
 
@@ -163,9 +167,11 @@ def server_preview():
 
 @bp.route("/server/defaults", methods=["POST"])
 def server_defaults():
-    if ActionForm().validate_on_submit():
-        save_document(default_document())
-        flash(_("The default configuration is restored."), "success")
+    if not ActionForm().validate_on_submit():
+        return redirect(url_for("admin.server"))
+
+    save_document(default_document())
+    flash(_("The default configuration is restored."), "success")
     return redirect(url_for("admin.server"))
 
 
@@ -196,9 +202,12 @@ def keys():
 def rotate_key(alg):
     if alg not in enabled_algorithms():
         abort(404)
-    if ActionForm(prefix=f"rotate-{alg}").validate_on_submit():
-        rotate_signing_key(alg)
-        flash(_("A new %(alg)s key signs the ID tokens.", alg=alg), "success")
+
+    if not ActionForm(prefix=f"rotate-{alg}").validate_on_submit():
+        return redirect(url_for("admin.keys"))
+
+    rotate_signing_key(alg)
+    flash(_("A new %(alg)s key signs the ID tokens.", alg=alg), "success")
     return redirect(url_for("admin.keys"))
 
 
@@ -207,12 +216,14 @@ def remove_key(kid):
     key = db.get_or_404(SigningKey, kid)
     if not ActionForm(prefix=f"delete-{kid}").validate_on_submit():
         return redirect(url_for("admin.keys"))
+
     try:
         delete_key(key, enabled_algorithms())
     except KeyInUse:
         flash(_("This key signs the ID tokens. Rotate it first."), "error")
     else:
         flash(_("The key is deleted."), "success")
+
     return redirect(url_for("admin.keys"))
 
 
@@ -229,16 +240,18 @@ def clients():
 
 @bp.route("/dynamic-clients/delete", methods=["POST"])
 def remove_dynamic_clients():
-    if ActionForm(prefix="delete-dynamic").validate_on_submit():
-        count = delete_dynamic_clients()
-        flash(
-            ngettext(
-                "%(num)d dynamic client is deleted.",
-                "%(num)d dynamic clients are deleted.",
-                count,
-            ),
-            "success",
-        )
+    if not ActionForm(prefix="delete-dynamic").validate_on_submit():
+        return redirect(url_for("admin.clients"))
+
+    count = delete_dynamic_clients()
+    flash(
+        ngettext(
+            "%(num)d dynamic client is deleted.",
+            "%(num)d dynamic clients are deleted.",
+            count,
+        ),
+        "success",
+    )
     return redirect(url_for("admin.clients"))
 
 
@@ -285,10 +298,15 @@ def edit_client(client_id):
 @bp.route("/clients/<client_id>/secret", methods=["POST"])
 def regenerate_secret(client_id):
     client = get_client(client_id)
-    if ActionForm(prefix="regenerate").validate_on_submit() and client.client_secret:
-        client.client_secret = secrets.token_urlsafe(36)
-        db.session.commit()
-        flash(_("The client secret is regenerated."), "success")
+    if (
+        not ActionForm(prefix="regenerate").validate_on_submit()
+        or not client.client_secret
+    ):
+        return redirect(url_for("admin.edit_client", client_id=client_id))
+
+    client.client_secret = secrets.token_urlsafe(36)
+    db.session.commit()
+    flash(_("The client secret is regenerated."), "success")
     return redirect(url_for("admin.edit_client", client_id=client_id))
 
 
@@ -366,11 +384,13 @@ def edit_persona(persona_id):
 @bp.route("/personas/<int:persona_id>/avatar", methods=["POST"])
 def redraw_avatar(persona_id):
     persona = get_persona(persona_id)
-    if ActionForm(prefix="avatar").validate_on_submit():
-        persona.picture_svg = render_avatar()
-        # The picture claim changes with the avatar.
-        persona.claims = {**persona.claims, "updated_at": int(time.time())}
-        db.session.commit()
+    if not ActionForm(prefix="avatar").validate_on_submit():
+        return redirect(url_for("admin.edit_persona", persona_id=persona_id))
+
+    persona.picture_svg = render_avatar()
+    # The picture claim changes with the avatar.
+    persona.claims = {**persona.claims, "updated_at": int(time.time())}
+    db.session.commit()
     return redirect(url_for("admin.edit_persona", persona_id=persona_id))
 
 
@@ -381,10 +401,12 @@ def revoke_consent(persona_id, consent_id):
     consent = db.first_or_404(
         db.select(Consent).filter_by(id=consent_id, persona_id=persona_id)
     )
-    if revoke_form(consent).validate_on_submit():
-        db.session.delete(consent)
-        db.session.commit()
-        flash(_("The consent is revoked."), "success")
+    if not revoke_form(consent).validate_on_submit():
+        return redirect(url_for("admin.edit_persona", persona_id=persona_id))
+
+    db.session.delete(consent)
+    db.session.commit()
+    flash(_("The consent is revoked."), "success")
     return redirect(url_for("admin.edit_persona", persona_id=persona_id))
 
 
@@ -431,6 +453,7 @@ def confirm_import():
         flash(_("This snapshot cannot be imported: %(error)s", error=error), "error")
     else:
         flash(_("The snapshot is imported."), "success")
+
     return redirect(url_for("admin.snapshot"))
 
 

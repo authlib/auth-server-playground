@@ -45,6 +45,7 @@ def test_no_userinfo_endpoint_without_openid():
 def errors_of(document):
     with pytest.raises(InvalidDocument) as excinfo:
         validate_document(document)
+
     return excinfo.value.errors
 
 
@@ -247,6 +248,7 @@ def test_token_endpoint_needs_a_method():
     )
     with pytest.raises(InvalidDocument) as excinfo:
         validate_document(document)
+
     assert "token_endpoint_auth_methods_supported" in excinfo.value.errors
 
 

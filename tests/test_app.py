@@ -40,6 +40,7 @@ def test_tables_created_by_another_worker(monkeypatch, make_app):
         calls.append(1)
         if len(calls) == 1:
             raise OperationalError("CREATE TABLE", {}, Exception("table exists"))
+
         return create_all(*args, **kwargs)
 
     monkeypatch.setattr(db, "create_all", flaky_create_all)
@@ -53,6 +54,7 @@ def test_missing_settings_with_existing_personas(tmp_path, make_app):
     with app.app_context():
         Settings.query.delete()
         db.session.commit()
+
     with pytest.raises(IntegrityError):
         init_database(app)
 
@@ -69,6 +71,7 @@ def test_another_worker_creates_the_settings(app, monkeypatch):
     monkeypatch.setattr(store, "settings_row", settings_row)
     with app.app_context():
         key = Settings.query.one().secret_key
+
     assert init_database(app) == key
     with app.app_context():
         assert Persona.query.count() == 2

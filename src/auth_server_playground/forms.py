@@ -97,6 +97,7 @@ class BaseForm(HtmxFlaskForm):
                     for key, value in field.render_kw.items()
                     if key not in WRAPPER_DEFAULTS
                 }
+
             return super().render_field(field, render_kw)
 
         def field_wrapper(self, field, render_kw):
@@ -274,6 +275,7 @@ class ServerForm(BaseForm):
         settings = {name: self[name].data for name in self.SETTINGS}
         if settings["registration"] == "token" and not initial_access_token:
             initial_access_token = secrets.token_urlsafe(32)
+
         settings["initial_access_token"] = initial_access_token
         return {
             "metadata": {
@@ -309,6 +311,7 @@ class ServerForm(BaseForm):
             # The endpoint URLs are built from the issuer: its own error is enough.
             if key in ENDPOINTS and "issuer" in errors:
                 continue
+
             name = "issuer" if key in ENDPOINTS else key
             if name in self._fields:
                 self[name].errors = [*self[name].errors, message]
@@ -331,6 +334,7 @@ def is_web_url(url):
         parts = urlsplit(url)
     except ValueError:
         return False
+
     return parts.scheme in ("http", "https") and bool(parts.hostname)
 
 
@@ -494,6 +498,7 @@ class ClientForm(BaseForm):
                 json.dumps(data["jwks"], indent=2) if data.get("jwks") else ""
             )
             kwargs["data"] = data
+
         super().__init__(**kwargs)
         self.client = client
         if client is not None:
@@ -556,22 +561,27 @@ class ClientForm(BaseForm):
     def validate_client_id(self, field):
         if not field.data:
             return
+
         if not is_valid_client_id(field.data):
             raise ValidationError(
                 _("Use 1 to 48 letters, digits, and . _ ~ - characters.")
             )
+
         if Client.query.filter_by(client_id=field.data).count():
             raise ValidationError(_("A client already uses this ID."))
 
     def validate_jwks(self, field):
         if not (field.data or "").strip():
             return
+
         try:
             value = json.loads(field.data)
         except json.JSONDecodeError as error:
             raise ValidationError(str(error)) from None
+
         if self.jwks_uri.data:
             raise ValidationError(_("Fill the keys or the key set URL, not both."))
+
         try:
             ClientMetadataClaims({"jwks": value}, {}).validate_jwks()
         except JoseError:
@@ -580,9 +590,11 @@ class ClientForm(BaseForm):
     def validate(self, extra_validators=None):
         if not super().validate(extra_validators):
             return False
+
         errors = client_key_errors(self.client_metadata())
         for key in errors:
             self[key].errors.append(self.KEY_ERRORS[key])
+
         return not errors
 
     def client_metadata(self):
@@ -595,21 +607,27 @@ class ClientForm(BaseForm):
             metadata.pop(name, None)
             if self[name].data:
                 metadata[name] = self[name].data
+
         metadata.pop("jwks", None)
         if (self.jwks.data or "").strip():
             metadata["jwks"] = json.loads(self.jwks.data)
+
         metadata["redirect_uris"] = lines(self.redirect_uris.data)
         metadata["contacts"] = lines(self.contacts.data)
         metadata["grant_types"] = self.grant_types.data
         metadata["response_types"] = self.response_types.data
-        if self.oidc:
-            for name in self.OIDC_METADATA:
-                metadata.pop(name, None)
-                if self[name].data not in (None, ""):
-                    metadata[name] = self[name].data
-            metadata.pop("require_signed_request_object", None)
-            if self.require_signed_request_object.data:
-                metadata["require_signed_request_object"] = True
+        if not self.oidc:
+            return metadata
+
+        for name in self.OIDC_METADATA:
+            metadata.pop(name, None)
+            if self[name].data not in (None, ""):
+                metadata[name] = self[name].data
+
+        metadata.pop("require_signed_request_object", None)
+        if self.require_signed_request_object.data:
+            metadata["require_signed_request_object"] = True
+
         return metadata
 
     def save_client(self):
@@ -621,6 +639,7 @@ class ClientForm(BaseForm):
                 client_id_issued_at=int(time.time()),
             )
             db.session.add(client)
+
         client.set_client_metadata(self.client_metadata())
         client.update_secret()
         db.session.commit()
@@ -648,10 +667,13 @@ def locales():
 def check_birthdate(form, field):
     if not field.data:
         return
+
     if not BIRTHDATE_PATTERN.fullmatch(field.data):
         raise ValidationError(_("Use YYYY-MM-DD, YYYY or 0000-MM-DD."))
+
     if len(field.data) == 4:
         return
+
     # 0000 is the year of a birthdate without year. 2000 accepts 29 February.
     year = "2000" if field.data.startswith("0000") else field.data[:4]
     try:
@@ -729,6 +751,7 @@ class PersonaForm(BaseForm):
     def __init__(self, persona=None, **kwargs):
         if persona is not None and "data" not in kwargs:
             kwargs["data"] = self.persona_data(persona)
+
         super().__init__(**kwargs)
         self.persona = persona
         # A stored value outside the lists stays selected.
@@ -749,6 +772,7 @@ class PersonaForm(BaseForm):
         data["sub"] = persona.sub
         for key in ADDRESS_FIELDS:
             data[f"address_{key}"] = (data.get("address") or {}).get(key)
+
         data.pop("address")
         data["extra_claims"] = json.dumps(claims, indent=2) if claims else ""
         return data
@@ -756,8 +780,10 @@ class PersonaForm(BaseForm):
     def validate_sub(self, field):
         if not field.data:
             return
+
         if not is_valid_sub(field.data):
             raise ValidationError(_("Use at most 255 printable ASCII characters."))
+
         existing = Persona.query.filter_by(sub=field.data).first()
         if existing is not None and existing is not self.persona:
             raise ValidationError(_("A persona already uses this subject."))
@@ -772,8 +798,10 @@ class PersonaForm(BaseForm):
             claims = json.loads(field.data.strip() or "{}")
         except json.JSONDecodeError as error:
             raise ValidationError(str(error)) from None
+
         if not isinstance(claims, dict):
             raise ValidationError(_("The claims must be a JSON object."))
+
         standard = sorted(set(claims) & set(STANDARD_CLAIMS))
         if standard:
             raise ValidationError(
@@ -789,12 +817,16 @@ class PersonaForm(BaseForm):
         for name in self.TEXT_CLAIMS:
             if self[name].data:
                 claims[name] = self[name].data
+
         if self.birthdate.data:
             claims["birthdate"] = self.birthdate.data
+
         if self.email.data:
             claims["email_verified"] = self.email_verified.data
+
         if self.phone_number.data:
             claims["phone_number_verified"] = self.phone_number_verified.data
+
         # Keep the address members that the form has no field for.
         stored = self.persona.claims.get("address", {}) if self.persona else {}
         address = {
@@ -809,6 +841,7 @@ class PersonaForm(BaseForm):
         )
         if address:
             claims["address"] = address
+
         claims["updated_at"] = int(time.time())
         return claims
 
@@ -818,6 +851,7 @@ class PersonaForm(BaseForm):
         if persona is None:
             persona = Persona(picture_svg=render_avatar())
             db.session.add(persona)
+
         persona.sub = self.sub.data or str(uuid.uuid4())
         persona.claims = self.to_claims()
         db.session.commit()

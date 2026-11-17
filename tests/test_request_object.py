@@ -40,6 +40,7 @@ def error_of(res):
     """Return the error code, from a redirection to the client or a JSON body."""
     if res.status_int == 303:
         return callback_params(res)["error"]
+
     return res.json["error"]
 
 

@@ -30,5 +30,6 @@ def current_metadata(document=None):
     """
     if document is None:
         document = current_document()
+
     issuer = issuer_for(document["metadata"]["issuer"])
     return published_metadata(document, issuer, endpoint_urls())

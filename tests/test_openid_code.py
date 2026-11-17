@@ -79,6 +79,7 @@ def test_id_token_lifetime_follows_the_setting(logged_in, client, configure):
 def test_rotation_changes_the_kid(app, logged_in, client):
     with app.app_context():
         kid = keys.rotate_key("RS256").kid
+
     assert id_token_for(logged_in, client).header["kid"] == kid
 
 
@@ -109,6 +110,7 @@ def test_header_has_no_kid_without_an_active_key(app, client):
         db.session.commit()
         stored = Client.query.filter_by(client_id=client["client_id"]).one()
         header = PlaygroundOpenIDCode("", 3600).get_encode_header(stored)
+
     assert header == {"alg": "RS256"}
 
 
@@ -177,6 +179,7 @@ def test_prompt_consent_asks_again(logged_in, client, monkeypatch):
     with monkeypatch.context() as patch:
         patch.setattr(time, "time", lambda: now - 60)
         consent(logged_in, oidc_url(client))
+
     res = logged_in.get(oidc_url(client, prompt="consent", state="again"))
     assert "consent" in res.forms
 
@@ -253,6 +256,7 @@ def test_id_token_hint_signed_by_a_retired_key(app, logged_in, client):
     ).json["id_token"]
     with app.app_context():
         keys.rotate_key("RS256")
+
     res = logged_in.get(oidc_url(client, prompt="none", id_token_hint=hint, state="b"))
     assert "code" in callback_params(res)
 
@@ -391,6 +395,7 @@ def test_deleted_client_algorithm_key(app, logged_in, configure):
         for key in keys.all_keys():
             if key.alg == "ES256":
                 keys.delete_key(key, ["RS256"])
+
     code = callback_params(consent(logged_in, oidc_url(signed, scope="openid")))["code"]
     assert exchange_code(logged_in, signed, code, status="*").status_int == 400
 

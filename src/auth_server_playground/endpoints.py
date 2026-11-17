@@ -69,18 +69,28 @@ def authorize():
         )
 
     form = ConsentForm(persona_id=persona.id)
-    if request.method == "POST":
-        if not form.validate():
-            abort(400)
-        if form.persona_id.data == persona.id:
-            if not form.accept.data:
-                return server.create_authorization_response(grant=grant)
-            grant_consent(persona, grant.client.client_id, grant.request.scope)
+    if request.method != "POST":
+        if "consent" not in grant.interactions:
             return server.create_authorization_response(grant=grant, grant_user=persona)
+
+        return consent_page(form, grant, persona, params)
+
+    if not form.validate():
+        abort(400)
+
+    if form.persona_id.data != persona.id:
         flash(_("The persona changed since this page was shown."), "warning")
         form.persona_id.data = persona.id
-    elif "consent" not in grant.interactions:
-        return server.create_authorization_response(grant=grant, grant_user=persona)
+        return consent_page(form, grant, persona, params)
+
+    if not form.accept.data:
+        return server.create_authorization_response(grant=grant)
+
+    grant_consent(persona, grant.client.client_id, grant.request.scope)
+    return server.create_authorization_response(grant=grant, grant_user=persona)
+
+
+def consent_page(form, grant, persona, params):
     return render_template(
         "interaction/consent.html",
         form=form,
@@ -105,6 +115,7 @@ def issue_token():
 def revoke_token():
     if not current_document()["settings"]["revocation_enabled"]:
         abort(404)
+
     return get_server().create_endpoint_response("revocation")
 
 
@@ -116,6 +127,7 @@ def registration_enabled():
 def register_client():
     if not registration_enabled():
         abort(404)
+
     return get_server().create_endpoint_response("client_registration")
 
 
@@ -124,6 +136,7 @@ def client_configuration(client_id):
     # ConfigurationEndpoint reads the client_id from the URL.
     if not registration_enabled():
         abort(404)
+
     return get_server().create_endpoint_response("client_configuration")
 
 
@@ -131,6 +144,7 @@ def client_configuration(client_id):
 def userinfo():
     if not is_oidc_enabled(current_document()):
         abort(404)
+
     return get_server().create_endpoint_response("userinfo")
 
 
@@ -144,6 +158,7 @@ def openid_configuration():
     document = current_document()
     if not is_oidc_enabled(document):
         abort(404)
+
     return jsonify(current_metadata(document))
 
 
@@ -155,6 +170,7 @@ def resource():
     data = {"scope": token.scope, "client_id": token.client_id}
     if token.persona is not None:
         data["sub"] = token.persona.sub
+
     return jsonify(data)
 
 
@@ -164,6 +180,7 @@ def persona_picture(persona_id):
     persona = db.get_or_404(Persona, persona_id)
     if not persona.picture_svg:
         abort(404)
+
     response = Response(persona.picture_svg, mimetype="image/svg+xml")
     # The SVG comes from this origin: it must not run scripts.
     response.headers["Content-Security-Policy"] = (

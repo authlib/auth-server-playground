@@ -63,6 +63,7 @@ def test_persona_page_lists_and_revokes_consents(app, logged_in, client, persona
     assert len(ids) == len(set(ids))
     with app.app_context():
         consent_id = Consent.query.one().id
+
     button = page.html.select_one(f"#revoke-{consent_id} [type=submit]")
     assert button["aria-label"] == "Revoke the consent of confidential-client"
     page.forms[f"revoke-{consent_id}"].submit().follow()
@@ -74,6 +75,7 @@ def test_revoke_needs_a_csrf_token(app, logged_in, client, persona):
     consent(logged_in, code_url(client))
     with app.app_context():
         consent_id = Consent.query.one().id
+
     logged_in.post(f"/en/personas/{persona['id']}/consents/{consent_id}/revoke")
     assert consents_of(app, persona) != []
 
@@ -84,6 +86,7 @@ def test_revoke_through_another_persona_is_refused(
     consent(logged_in, code_url(client))
     with app.app_context():
         consent_id = Consent.query.one().id
+
     logged_in.post(
         f"/en/personas/{other_persona['id']}/consents/{consent_id}/revoke", status=404
     )
@@ -132,6 +135,7 @@ def test_login_time_is_the_time_of_the_selection(app, logged_in, persona):
     with logged_in.session_transaction() as session:
         login_time = session[SESSION_AUTH_TIME]
         stored = dict(session)
+
     assert login_time < time.time() - 30
     assert interaction_time(app, persona, stored, "login") == login_time
 
@@ -142,6 +146,7 @@ def test_consent_time_is_the_time_of_the_covering_consent(
     consent(logged_in, code_url(client))
     with app.app_context():
         granted_at = Consent.query.one().granted_at
+
     assert interaction_time(app, persona, {}, "consent") == granted_at
     assert interaction_time(app, persona, {}, "consent", "profile email") is None
 

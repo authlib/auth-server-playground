@@ -28,6 +28,7 @@ def new_client_form(testapp, **values):
     form["token_endpoint_auth_method"] = "client_secret_basic"
     for key, value in values.items():
         form[key] = value
+
     return form
 
 
@@ -57,6 +58,7 @@ def test_create_client_with_a_random_id(app, testapp):
     res = new_client_form(testapp).submit().follow()
     with app.app_context():
         client = Client.query.one()
+
     assert client.client_id
     assert client.client_id in res
 
@@ -309,6 +311,7 @@ def test_openid_values_are_kept_without_openid(app, testapp, configure, client):
             }
         )
         db.session.commit()
+
     configure(metadata={"scopes_supported": ["profile"]})
     testapp.get("/en/clients/confidential-client").forms["client"].submit()
     with app.app_context():
@@ -342,6 +345,7 @@ def test_delete_client_deletes_its_assertions(app, testapp, client):
             ClientAssertion(client_id=client["client_id"], jti="j", expires_at=0)
         )
         db.session.commit()
+
     form = testapp.get(f"/en/clients/{client['client_id']}").forms["delete"]
     form.submit()
     with app.app_context():

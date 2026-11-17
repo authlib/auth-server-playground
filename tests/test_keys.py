@@ -117,6 +117,7 @@ def test_empty_jwks(app, testapp):
     with app.app_context():
         SigningKey.query.delete()
         db.session.commit()
+
     assert testapp.get("/oauth/jwks").json == {"keys": []}
 
 
@@ -135,6 +136,7 @@ def valid_jwk(alg):
     """Return a new JWK that is_valid_key accepts. The RSA keys are shared."""
     if alg in ("RS256", "PS256"):
         return copy.deepcopy(rsa_jwk(alg))
+
     jwk = REAL_GENERATORS[alg]({"alg": alg, "use": "sig"})
     jwk.ensure_kid()
     return jwk.as_dict(private=True)
@@ -161,6 +163,7 @@ def mixed_okp(kid_of):
     other = valid_jwk("Ed25519")
     if kid_of == "x":
         jwk["kid"] = other["kid"]
+
     jwk["x"] = other["x"]
     return jwk
 
@@ -169,6 +172,7 @@ def small_rsa():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         key = RSAKey.generate_key(1024, {"alg": "RS256", "use": "sig"})
+
     key.ensure_kid()
     return key.as_dict(private=True)
 

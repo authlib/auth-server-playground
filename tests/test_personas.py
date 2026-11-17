@@ -15,6 +15,7 @@ from auth_server_playground.personas import username_from
 def test_random_persona(app, locale):
     with app.app_context():
         persona = random_persona(locale)
+
     claims = persona.claims
     assert persona.sub
     assert claims["locale"] == locale.replace("_", "-")
@@ -37,6 +38,7 @@ def test_random_username_is_unique(app, monkeypatch):
 def test_random_username_follows_the_name(app):
     with app.app_context():
         claims = random_persona("fr_FR").claims
+
     expected = username_from(claims["given_name"], claims["family_name"])
     assert claims["preferred_username"] == expected
 

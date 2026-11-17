@@ -29,6 +29,7 @@ DEFAULT_METADATA = {"grant_types": ["authorization_code"], "response_types": ["c
 def claims_classes(oidc):
     if oidc:
         return [ClientMetadataClaims, OIDCClientMetadataClaims, RequestObjectClaims]
+
     return [ClientMetadataClaims]
 
 
@@ -37,6 +38,7 @@ def bearer_token(request):
     scheme, _, token = request.headers.get("Authorization", "").partition(" ")
     if scheme.lower() != "bearer" or not token:
         return None
+
     return token
 
 
@@ -47,8 +49,10 @@ def checked_metadata(metadata):
         raise InvalidClientMetadataError(
             f"The server does not support {', '.join(unsupported)}."
         )
+
     if errors := client_key_errors(metadata):
         raise InvalidClientMetadataError(" ".join(errors.values()))
+
     return metadata
 
 
@@ -70,11 +74,13 @@ class RegistrationEndpoint(ClientRegistrationEndpoint):
     def authenticate_token(self, request):
         if self.mode == "open":
             return True
+
         token = bearer_token(request)
         if token and hmac.compare_digest(
             token.encode(), self.initial_access_token.encode()
         ):
             return True
+
         return None
 
     def extract_client_metadata(self, request):
@@ -90,6 +96,7 @@ class RegistrationEndpoint(ClientRegistrationEndpoint):
         method = request.client_metadata["token_endpoint_auth_method"]
         if method not in SECRET_AUTH_METHODS:
             return None
+
         return secrets.token_urlsafe(36)
 
     def generate_client_info(self, request):
@@ -97,6 +104,7 @@ class RegistrationEndpoint(ClientRegistrationEndpoint):
         # Authlib puts "client_secret": null in the response for a public client.
         if info["client_secret"] is None:
             del info["client_secret"]
+
         return info
 
     def get_server_metadata(self):
@@ -137,6 +145,7 @@ class ConfigurationEndpoint(ClientConfigurationEndpoint):
         token = bearer_token(request)
         if token is None:
             return None
+
         client = Client.query.filter_by(registration_access_token=token).first()
         return RegistrationToken(client) if client else None
 
@@ -163,6 +172,7 @@ class ConfigurationEndpoint(ClientConfigurationEndpoint):
         # The client mixin returns an empty secret for a public client.
         if not client.client_secret:
             info.pop("client_secret", None)
+
         return info
 
     def update_client(self, client, client_metadata, request):

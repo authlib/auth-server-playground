@@ -58,6 +58,7 @@ def test_jwks_uri_errors(outbound_urls, response, reason):
     outbound_urls.responses[JWKS_URI] = response
     with pytest.raises(ClientKeysError) as error:
         public_keys(client_with({"jwks_uri": JWKS_URI}), allow_private_addresses=True)
+
     assert reason in error.value.description
     assert "jwks_uri" in error.value.description
 

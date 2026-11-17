@@ -38,6 +38,7 @@ def test_snapshot_content(app, client):
     with app.app_context():
         snapshot = export_snapshot()
         secret_key = db.session.get(Settings, SETTINGS_ID).secret_key
+
     assert snapshot["version"] == 1
     assert snapshot["configuration"]["settings"]["access_token_lifetime"] == 3600
     assert COMPLETE_SUB in {persona["sub"] for persona in snapshot["personas"]}
@@ -114,6 +115,7 @@ def test_invalid_import_changes_nothing(app, client, change):
         change(snapshot)
         with pytest.raises(SnapshotError):
             import_snapshot(snapshot)
+
         assert json.dumps(export_snapshot(), sort_keys=True) == before
 
 
@@ -134,6 +136,7 @@ def test_database_error_rolls_back(app, client, monkeypatch):
         monkeypatch.setattr(db.session, "commit", fail)
         with pytest.raises(RuntimeError):
             import_snapshot(snapshot)
+
         monkeypatch.undo()
         assert json.dumps(export_snapshot(), sort_keys=True) == before
 
@@ -141,6 +144,7 @@ def test_database_error_rolls_back(app, client, monkeypatch):
 def test_import_from_the_interface(app, testapp, client):
     with app.app_context():
         snapshot = export_snapshot()
+
     snapshot["clients"] = []
     form = testapp.get("/en/snapshot").forms["import"]
     form["file"] = Upload(
@@ -159,12 +163,14 @@ def test_persona_ids_are_not_reused(app, persona):
         snapshot = export_snapshot()
         import_snapshot(snapshot)
         ids = {row.id for row in Persona.query}
+
     assert persona["id"] not in ids
 
 
 def test_import_forgets_the_persona(app, logged_in):
     with app.app_context():
         snapshot = export_snapshot()
+
     form = logged_in.get("/en/snapshot").forms["import"]
     form["file"] = Upload(
         "snapshot.json", json.dumps(snapshot).encode(), "application/json"
@@ -176,6 +182,7 @@ def test_import_forgets_the_persona(app, logged_in):
 def test_import_a_large_snapshot(app, testapp):
     with app.app_context():
         snapshot = export_snapshot()
+
     template = snapshot["personas"][0]
     snapshot["personas"] = [
         {
@@ -225,6 +232,7 @@ def test_import_needs_a_file(testapp):
 def test_confirm_an_invalid_snapshot(app, testapp, client):
     with app.app_context():
         snapshot = export_snapshot()
+
     form = testapp.get("/en/snapshot").forms["import"]
     form["file"] = Upload(
         "snapshot.json", json.dumps(snapshot).encode(), "application/json"
@@ -240,6 +248,7 @@ def test_confirm_an_invalid_snapshot(app, testapp, client):
 def test_confirm_needs_a_csrf_token(app, testapp, client):
     with app.app_context():
         snapshot = export_snapshot()
+
     snapshot["clients"] = []
     testapp.post("/en/snapshot/confirm", {"snapshot": json.dumps(snapshot)})
     with app.app_context():
@@ -256,6 +265,7 @@ def test_export_download(testapp):
 def write_snapshot(app, tmp_path, lifetime):
     with app.app_context():
         snapshot = export_snapshot()
+
     snapshot["configuration"]["settings"]["access_token_lifetime"] = lifetime
     path = tmp_path / "snapshot.json"
     path.write_text(json.dumps(snapshot))
@@ -270,6 +280,7 @@ def lifetime(app):
 def test_initial_snapshot_on_empty_database(app, tmp_path, make_app, monkeypatch):
     with app.app_context():
         keys.rotate_key("RS256")
+
     path = write_snapshot(app, tmp_path, 42)
     snapshot_keys = json.loads(path.read_text())["keys"]
     monkeypatch.setenv("INITIAL_SNAPSHOT", str(path))
@@ -308,6 +319,7 @@ def test_invalid_initial_snapshot(tmp_path, make_app, monkeypatch):
 def test_unsupported_client_metadata_is_refused(app, client, key):
     with app.app_context():
         snapshot = export_snapshot()
+
     snapshot["clients"][0]["client_metadata"][key] = "RS256"
     with pytest.raises(SnapshotError, match=key):
         check_snapshot(snapshot)
@@ -320,6 +332,7 @@ def test_unsupported_client_metadata_is_refused(app, client, key):
 def test_invalid_default_max_age_is_refused(app, client, value):
     with app.app_context():
         snapshot = export_snapshot()
+
     snapshot["clients"][0]["client_metadata"]["default_max_age"] = value
     with pytest.raises(SnapshotError, match="default_max_age"):
         check_snapshot(snapshot)
@@ -329,6 +342,7 @@ def test_invalid_default_max_age_is_refused(app, client, value):
 def test_valid_default_max_age_is_accepted(app, client, value):
     with app.app_context():
         snapshot = export_snapshot()
+
     snapshot["clients"][0]["client_metadata"]["default_max_age"] = value
     check_snapshot(snapshot)
 
@@ -337,6 +351,7 @@ def test_valid_default_max_age_is_accepted(app, client, value):
 def test_unsignable_client_algorithm_is_refused(app, client, alg):
     with app.app_context():
         snapshot = export_snapshot()
+
     snapshot["clients"][0]["client_metadata"]["id_token_signed_response_alg"] = alg
     with pytest.raises(SnapshotError, match="id_token_signed_response_alg"):
         check_snapshot(snapshot)
@@ -345,6 +360,7 @@ def test_unsignable_client_algorithm_is_refused(app, client, alg):
 def test_null_unsupported_client_metadata_is_accepted(app, client):
     with app.app_context():
         snapshot = export_snapshot()
+
     snapshot["clients"][0]["client_metadata"]["userinfo_signed_response_alg"] = None
     check_snapshot(snapshot)
 
@@ -352,6 +368,7 @@ def test_null_unsupported_client_metadata_is_accepted(app, client):
 def test_client_algorithm_unknown_to_the_server_is_accepted(app, client):
     with app.app_context():
         snapshot = export_snapshot()
+
     snapshot["clients"][0]["client_metadata"]["id_token_signed_response_alg"] = "ES256"
     check_snapshot(snapshot)
 
@@ -424,6 +441,7 @@ def with_key(snapshot, **changes):
 def test_invalid_keys_are_refused(app, change, message):
     with app.app_context():
         snapshot = export_snapshot()
+
     change(snapshot)
     with pytest.raises(SnapshotError, match=message):
         check_snapshot(snapshot)
@@ -432,6 +450,7 @@ def test_invalid_keys_are_refused(app, change, message):
 def test_key_with_the_maximum_created_at_is_accepted(app):
     with app.app_context():
         snapshot = export_snapshot()
+
     with_key(snapshot, created_at=MAX_TIMESTAMP)
     check_snapshot(snapshot)
 
@@ -440,8 +459,10 @@ def test_two_active_keys_for_one_algorithm_are_refused(app):
     with app.app_context():
         keys.rotate_key("RS256")
         snapshot = export_snapshot()
+
     for key in snapshot["keys"]:
         key["active"] = True
+
     with pytest.raises(SnapshotError, match="active"):
         check_snapshot(snapshot)
 
@@ -449,6 +470,7 @@ def test_two_active_keys_for_one_algorithm_are_refused(app):
 def test_confirm_page_counts_the_keys(app, testapp):
     with app.app_context():
         snapshot = export_snapshot()
+
     form = testapp.get("/en/snapshot").forms["import"]
     form["file"] = Upload(
         "snapshot.json", json.dumps(snapshot).encode(), "application/json"
@@ -506,6 +528,7 @@ def test_dynamic_client_survives_export_and_import(app, dynamic_client):
 def test_invalid_client_key_values(app, client_values, message):
     with app.app_context():
         data = export_snapshot()
+
     data["clients"] = [
         {"client_id": "c", "client_metadata": {}, **client_values},
     ]
@@ -516,6 +539,7 @@ def test_invalid_client_key_values(app, client_values, message):
 def test_registration_access_tokens_are_unique(app):
     with app.app_context():
         data = export_snapshot()
+
     data["clients"] = [
         {"client_id": "a", "client_metadata": {}, "registration_access_token": "t"},
         {"client_id": "b", "client_metadata": {}, "registration_access_token": "t"},

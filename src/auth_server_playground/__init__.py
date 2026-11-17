@@ -25,8 +25,10 @@ def env_flag(name):
     value = os.environ.get(name, "").strip().lower()
     if value in ("", "0", "false"):
         return False
+
     if value in ("1", "true"):
         return True
+
     raise ValueError(f"{name} must be true or false, got {value!r}")
 
 

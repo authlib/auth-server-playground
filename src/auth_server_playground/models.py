@@ -76,8 +76,10 @@ class Persona(db.Model):
         """Return the picture claim: the stored URL, else the generated avatar, if any."""
         if self.claims.get("picture"):
             return self.claims["picture"]
+
         if self.picture_svg:
             return url_for("oauth.persona_picture", persona_id=self.id, _external=True)
+
         return None
 
 
@@ -165,6 +167,7 @@ class Token(db.Model, OAuth2TokenMixin):
     def is_refresh_token_active(self):
         if self.refresh_token_revoked_at:
             return False
+
         return self.refresh_token_expires_at >= time.time()
 
 

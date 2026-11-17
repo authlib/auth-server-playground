@@ -106,6 +106,7 @@ def test_deleted_persona_counts_as_no_persona(app, logged_in, client, persona):
     with app.app_context():
         db.session.delete(db.session.get(Persona, persona["id"]))
         db.session.commit()
+
     res = logged_in.get(code_url(client))
     assert urlparse(res.location).path == "/interaction/persona"
 

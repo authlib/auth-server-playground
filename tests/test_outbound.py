@@ -40,6 +40,7 @@ def test_fetch_headers(monkeypatch):
 def test_fetch_refuses_other_schemes(outbound_urls, url):
     with pytest.raises(OutboundError, match="http and https"):
         fetch(url)
+
     assert outbound_urls.requested == []
 
 
@@ -49,6 +50,7 @@ def test_fetch_refuses_redirects(outbound_urls):
     )
     with pytest.raises(OutboundError, match="redirect"):
         fetch(URL)
+
     assert outbound_urls.requested == [URL]
 
 
@@ -137,6 +139,7 @@ def test_backend_refuses_non_global_addresses(monkeypatch, connections, values):
     resolve_to(monkeypatch, *values)
     with pytest.raises(OutboundError, match="is not public"):
         PublicAddressBackend().connect_tcp("client.test", 443)
+
     assert connections == []
 
 
@@ -159,4 +162,5 @@ def test_private_addresses_allowed_end_to_end():
     # Nothing listens on port 9 (discard). The error comes from the connection.
     with pytest.raises(OutboundError) as error:
         fetch("http://127.0.0.1:9/", allow_private_addresses=True)
+
     assert "not public" not in str(error.value)

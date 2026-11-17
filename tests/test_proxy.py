@@ -74,6 +74,7 @@ def test_proxy_fix_values(monkeypatch, value, enabled):
         monkeypatch.delenv("PROXY_FIX", raising=False)
     else:
         monkeypatch.setenv("PROXY_FIX", value)
+
     assert is_proxy_fix_enabled() is enabled
 
 

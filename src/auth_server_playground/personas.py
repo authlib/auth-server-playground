@@ -94,12 +94,14 @@ def invalid_claims(claims):
         not isinstance(updated_at, int) or isinstance(updated_at, bool)
     ):
         invalid.append("updated_at")
+
     address = claims.get("address")
     if "address" in claims and not (
         isinstance(address, dict)
         and all(isinstance(value, str) for value in address.values())
     ):
         invalid.append("address")
+
     return invalid
 
 
@@ -165,6 +167,7 @@ def user_info(persona, scope, claims=None):
     info = UserInfo(persona.claims, sub=persona.sub)
     if persona.picture_url:
         info["picture"] = persona.picture_url
+
     return info.filter(scope, claims)
 
 
@@ -183,6 +186,7 @@ def random_locale_for(language):
     for locale in RANDOM_LOCALES:
         if locale.startswith(f"{language}_"):
             return locale
+
     return "en_US"
 
 
@@ -204,6 +208,7 @@ def unique_username(username):
     candidate = username
     while find_by_username(candidate) is not None:
         candidate = f"{username}{secrets.randbelow(10000)}"
+
     return candidate
 
 

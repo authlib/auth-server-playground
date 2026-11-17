@@ -148,6 +148,7 @@ def claims_supported(scopes):
             for claim in UserInfo.SCOPES_CLAIMS_MAPPING.get(scope, [])
             if claim not in claims
         )
+
     return claims
 
 
@@ -161,12 +162,16 @@ def published_metadata(document, issuer, endpoint_urls):
     metadata = {"issuer": stored["issuer"] or issuer}
     if grant_types & {"authorization_code", "implicit"}:
         metadata["authorization_endpoint"] = endpoint_urls["authorization_endpoint"]
+
     if grant_types - {"implicit"}:
         metadata["token_endpoint"] = endpoint_urls["token_endpoint"]
+
     if settings["revocation_enabled"]:
         metadata["revocation_endpoint"] = endpoint_urls["revocation_endpoint"]
+
     if settings["registration"] != "disabled":
         metadata["registration_endpoint"] = endpoint_urls["registration_endpoint"]
+
     if oidc:
         metadata["userinfo_endpoint"] = endpoint_urls["userinfo_endpoint"]
         metadata["jwks_uri"] = endpoint_urls["jwks_uri"]
@@ -176,6 +181,7 @@ def published_metadata(document, issuer, endpoint_urls):
     hidden = set() if oidc else set(OIDC_METADATA)
     if not jwt_methods:
         hidden.add("token_endpoint_auth_signing_alg_values_supported")
+
     # RFC 8414 §2 marks response_types_supported as REQUIRED, even when empty.
     metadata.update(
         {
@@ -193,6 +199,7 @@ def published_metadata(document, issuer, endpoint_urls):
             metadata["revocation_endpoint_auth_signing_alg_values_supported"] = stored[
                 "token_endpoint_auth_signing_alg_values_supported"
             ]
+
     if oidc:
         metadata.update(
             {
@@ -206,6 +213,7 @@ def published_metadata(document, issuer, endpoint_urls):
                 "request_uri_parameter_supported": False,
             }
         )
+
     return metadata
 
 
@@ -216,6 +224,7 @@ def validate_document(document):
         settings = document["settings"]
     except (KeyError, TypeError):
         metadata = settings = None
+
     if not isinstance(metadata, dict) or not isinstance(settings, dict):
         raise InvalidDocument(
             {"document": "The document needs metadata and settings objects."}
@@ -301,8 +310,10 @@ def _metadata_errors(metadata):
     issuer = metadata.get("issuer")
     if issuer is not None and not isinstance(issuer, str):
         errors["issuer"] = "A URL, or null."
+
     if not isinstance(metadata.get("require_signed_request_object"), bool):
         errors["require_signed_request_object"] = "true or false."
+
     return errors
 
 
@@ -342,11 +353,13 @@ def _settings_errors(settings):
 
     if settings.get("registration") not in REGISTRATION_MODES:
         errors["registration"] = f"One of {REGISTRATION_MODES}."
+
     token = settings.get("initial_access_token")
     if token is not None and not isinstance(token, str):
         errors["initial_access_token"] = "A string, or null."
     elif settings.get("registration") == "token" and not token:
         errors["initial_access_token"] = "The token mode needs a token."
+
     return errors
 
 
@@ -374,6 +387,7 @@ def _metadata_model_errors(document):
             getattr(metadata, f"validate_{key}")()
         except ValueError as error:
             errors[key] = str(error)
+
     return errors
 
 

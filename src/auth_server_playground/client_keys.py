@@ -34,8 +34,10 @@ def public_keys(client, *, allow_private_addresses):
             raise ClientKeysError("jwks_uri: the response is not JSON") from error
     else:
         data = client.client_metadata.get("jwks")
+
     if not data:
         raise ClientKeysError("The client has no keys.")
+
     try:
         return KeySet.import_key_set(data)
     except (JoseError, ValueError, KeyError, TypeError) as error:
@@ -47,6 +49,7 @@ def secret_key(client):
     """Return the client secret as an HMAC key."""
     if not client.client_secret:
         raise ClientKeysError("The client has no secret.")
+
     return OctKey.import_key(client.client_secret)
 
 
@@ -62,10 +65,12 @@ def client_key_errors(metadata):
         metadata.get("jwks") or metadata.get("jwks_uri")
     ):
         errors["jwks"] = "private_key_jwt needs jwks or jwks_uri."
+
     alg = metadata.get("token_endpoint_auth_signing_alg")
     algorithms = JWT_AUTH_METHODS.get(method)
     if alg and algorithms and alg not in algorithms:
         errors["token_endpoint_auth_signing_alg"] = (
             f"{method} uses {', '.join(algorithms)}."
         )
+
     return errors

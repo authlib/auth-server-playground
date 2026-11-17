@@ -196,6 +196,7 @@ def test_unknown_client(logged_in, configure, client_id, scopes, status):
     # client first. It answers 404, where the grant answers 400.
     if scopes:
         configure(metadata={"scopes_supported": scopes})
+
     url = code_url({"client_id": "unknown"}, client_id=client_id)
     res = logged_in.get(url, status=status)
     assert res.json["error"] == "invalid_client"

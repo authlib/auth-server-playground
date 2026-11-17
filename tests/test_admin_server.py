@@ -259,6 +259,7 @@ def test_save_registration_settings(app, testapp):
     form.submit().follow()
     with app.app_context():
         document = current_document()
+
     assert document["settings"]["registration"] == "disabled"
     assert document["settings"]["outbound_private_addresses"] is False
     assert document["metadata"]["require_signed_request_object"] is True

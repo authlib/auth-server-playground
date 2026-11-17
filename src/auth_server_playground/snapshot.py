@@ -86,15 +86,19 @@ def check_snapshot(data):
     """Raise SnapshotError if the snapshot cannot be imported."""
     if not isinstance(data, dict):
         raise SnapshotError("A snapshot is a JSON object.")
+
     if data.get("version") != SNAPSHOT_VERSION:
         raise SnapshotError(f"Unknown snapshot version: {data.get('version')!r}.")
+
     for key in ("configuration", "personas", "clients", "keys"):
         if key not in data:
             raise SnapshotError(f"The snapshot has no {key!r}.")
+
     try:
         validate_document(data["configuration"])
     except InvalidDocument as error:
         raise SnapshotError(str(error)) from error
+
     check_personas(data["personas"])
     check_clients(data["clients"])
     check_keys(data["keys"])
@@ -105,22 +109,27 @@ def check_personas(personas):
         isinstance(persona, dict) for persona in personas
     ):
         raise SnapshotError("The personas are a list of JSON objects.")
+
     subs = [persona.get("sub") for persona in personas]
     if not all(is_valid_sub(sub) for sub in subs) or not all_unique(subs):
         raise SnapshotError(
             "Each persona needs its own sub, of at most 255 printable ASCII characters."
         )
+
     if not all(isinstance(persona.get("claims"), dict) for persona in personas):
         raise SnapshotError("The claims of a persona are a JSON object.")
+
     for persona in personas:
         if invalid := invalid_claims(persona["claims"]):
             raise SnapshotError(
                 f"Persona {persona['sub']!r}: wrong type for {', '.join(invalid)}."
             )
+
     if not all(
         isinstance(persona.get("picture_svg"), str | None) for persona in personas
     ):
         raise SnapshotError("The picture_svg of a persona is a string.")
+
     usernames = [
         persona["claims"]["preferred_username"]
         for persona in personas
@@ -135,16 +144,19 @@ def check_clients(clients):
         isinstance(client, dict) for client in clients
     ):
         raise SnapshotError("The clients are a list of JSON objects.")
+
     client_ids = [client.get("client_id") for client in clients]
     if not all(is_valid_client_id(i) for i in client_ids) or not all_unique(client_ids):
         raise SnapshotError(
             "Each client needs its own client_id, "
             "of 1 to 48 letters, digits, and . _ ~ - characters."
         )
+
     if not all(
         isinstance(client.get("client_secret"), str | None) for client in clients
     ):
         raise SnapshotError("The client_secret of a client is a string.")
+
     tokens = [client.get("registration_access_token") for client in clients]
     if not all(
         token is None or (isinstance(token, str) and 0 < len(token) <= 255)
@@ -154,8 +166,10 @@ def check_clients(clients):
             "The registration_access_token of a client is a string "
             "of 1 to 255 characters, or null."
         )
+
     if not all_unique([token for token in tokens if token is not None]):
         raise SnapshotError("Each client needs its own registration_access_token.")
+
     if not all(
         client.get(key) is None or is_timestamp(client[key])
         for client in clients
@@ -164,6 +178,7 @@ def check_clients(clients):
         raise SnapshotError(
             f"The timestamps of a client are numbers of seconds, from 0 to {MAX_TIMESTAMP}."
         )
+
     for client in clients:
         check_client_metadata(client)
 
@@ -202,6 +217,7 @@ def check_openid_values(client_id, metadata):
             f"Client {client_id!r}: default_max_age is a number of seconds, "
             f"from 0 to {MAX_LIFETIME}."
         )
+
     alg = metadata.get("id_token_signed_response_alg")
     if alg is not None and alg not in ID_TOKEN_ALGORITHMS:
         raise SnapshotError(
@@ -221,6 +237,7 @@ def check_key_values(client_id, metadata):
             raise SnapshotError(
                 f"Client {client_id!r}: {key} is one of {', '.join(algorithms)}."
             )
+
     if errors := client_key_errors(metadata):
         raise SnapshotError(f"Client {client_id!r}: {' '.join(errors.values())}")
 
@@ -229,6 +246,7 @@ def check_client_metadata(client):
     metadata = client.get("client_metadata")
     if not isinstance(metadata, dict):
         raise SnapshotError("The metadata of a client is a JSON object.")
+
     if unsupported := [
         key for key in UNSUPPORTED_CLIENT_METADATA if metadata.get(key) is not None
     ]:
@@ -236,6 +254,7 @@ def check_client_metadata(client):
             f"Client {client['client_id']!r}: the server does not support "
             f"{', '.join(unsupported)}."
         )
+
     check_openid_values(client["client_id"], metadata)
     # Without server options: a client may disagree with the server.
     try:
@@ -244,6 +263,7 @@ def check_client_metadata(client):
         RequestObjectClaims(metadata, {}).validate()
     except JoseError as error:
         raise SnapshotError(f"Client {client['client_id']!r}: {error}") from error
+
     # After the claims: Authlib refuses the values of the wrong type.
     check_key_values(client["client_id"], metadata)
 
@@ -251,22 +271,28 @@ def check_client_metadata(client):
 def check_keys(items):
     if not isinstance(items, list) or not all(isinstance(item, dict) for item in items):
         raise SnapshotError("The keys are a list of JSON objects.")
+
     for item in items:
         if not isinstance(item.get("alg"), str) or item["alg"] not in KEY_TYPES:
             raise SnapshotError(f"Unknown key algorithm: {item.get('alg')!r}.")
+
         if not is_valid_key(item.get("jwk"), item["alg"], item.get("kid")):
             raise SnapshotError(
                 f"Key {item.get('kid')!r} is not a private {item['alg']} key "
                 "whose kid is its thumbprint."
             )
+
         if not is_timestamp(item.get("created_at")):
             raise SnapshotError(
                 f"The created_at of a key is a number of seconds, from 0 to {MAX_TIMESTAMP}."
             )
+
         if not isinstance(item.get("active"), bool):
             raise SnapshotError("The active value of a key is true or false.")
+
     if not all_unique([item["kid"] for item in items]):
         raise SnapshotError("Each key needs its own kid.")
+
     if not all_unique([item["alg"] for item in items if item["active"]]):
         raise SnapshotError("Each algorithm has at most one active key.")
 
@@ -291,6 +317,7 @@ def snapshot_rows(data):
         )
         client.set_client_metadata(item["client_metadata"])
         rows.append(client)
+
     rows.extend(
         SigningKey(
             kid=item["kid"],
@@ -323,6 +350,7 @@ def import_snapshot(data):
             SigningKey,
         ):
             model.query.delete()
+
         db.session.add_all(snapshot_rows(data))
         row = db.session.get(Settings, SETTINGS_ID)
         row.document = data["configuration"]

@@ -41,11 +41,15 @@ class PlaygroundSession(AuthorizationSession, AuthorizationSessionMixin):
     def get_interaction_time(self, request, interaction):
         if interaction == "login":
             return self.session.get(SESSION_AUTH_TIME)
-        if interaction == "consent":
-            consent = self.stored_consent(request)
-            if consent is not None and consent.covers(request.scope):
-                return consent.granted_at
-        return None
+
+        if interaction != "consent":
+            return None
+
+        consent = self.stored_consent(request)
+        if consent is None or not consent.covers(request.scope):
+            return None
+
+        return consent.granted_at
 
     def get_acr(self, request):
         """Return the first requested acr value. The playground meets any value."""
@@ -57,6 +61,7 @@ class PlaygroundSession(AuthorizationSession, AuthorizationSessionMixin):
         hint = request.payload.data.get("login_hint")
         if not hint:
             return False
+
         hinted = hinted_persona(Persona.query.all(), hint)
         return hinted is not None and hinted.id != self.user.id
 
@@ -78,6 +83,7 @@ def grant_consent(persona, client_id, scope):
     if consent is None:
         consent = Consent(persona_id=persona.id, client_id=client_id, scope="")
         db.session.add(consent)
+
     scopes = consent.scope.split()
     scopes.extend(item for item in scope_to_list(scope) or [] if item not in scopes)
     consent.scope = " ".join(scopes)
@@ -90,6 +96,7 @@ def extra_claims(claims_request, scope):
     """Return the claims that the claims parameter asks for beyond the scope."""
     if not claims_request:
         return []
+
     given = claims_supported(scope_to_list(scope) or [])
     requested = [
         claim
@@ -104,9 +111,11 @@ def current_persona():
     persona_id = session.get(SESSION_PERSONA)
     if persona_id is None:
         return None
+
     persona = db.session.get(Persona, persona_id)
     if persona is None:
         forget_persona()
+
     return persona
 
 
@@ -119,6 +128,7 @@ def is_local_path(url):
     """Tell whether the URL is a path on this server, and not another site."""
     if not url.isprintable() or "\\" in url:
         return False
+
     return url.startswith("/") and not url.startswith("//")
 
 
@@ -126,6 +136,7 @@ def after_interaction():
     next_url = request.args.get("next")
     if next_url and is_local_path(next_url):
         return redirect(next_url)
+
     return redirect(url_for("admin.index"))
 
 
@@ -133,9 +144,11 @@ def authorization_params(next_url):
     """Return the parameters of the authorization request in next_url, or {}."""
     if not next_url:
         return {}
+
     url = urlsplit(next_url)
     if url.path != url_for("oauth.authorize"):
         return {}
+
     return {key: values[0] for key, values in parse_qs(url.query).items()}
 
 
@@ -144,6 +157,7 @@ def requesting_client(next_url):
     client_id = authorization_params(next_url).get("client_id")
     if not client_id:
         return None
+
     return Client.query.filter_by(client_id=client_id).first()
 
 
@@ -151,6 +165,7 @@ def hinted_persona(personas, hint):
     """Return the persona whose sub or email is the login_hint, or None."""
     if not hint:
         return None
+
     folded = hint.casefold()
     return next(
         (
@@ -174,6 +189,7 @@ def select_persona():
         hint = request.args.get("login_hint")
         selected = hinted_persona(all_personas, hint) or current_persona()
         form.persona.data = selected.id if selected else None
+
     if not form.validate_on_submit():
         return render_template(
             "interaction/select_persona.html",

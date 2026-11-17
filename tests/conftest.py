@@ -149,6 +149,7 @@ def logged_in(testapp, persona, monkeypatch):
     with monkeypatch.context() as patch:
         patch.setattr(time, "time", lambda: login_time)
         select_persona(testapp, persona)
+
     return testapp
 
 
@@ -172,6 +173,7 @@ def make_client(
         )
         db.session.add(client)
         db.session.commit()
+
     return {"client_id": client_id, "client_secret": client_secret}
 
 
@@ -238,8 +240,10 @@ def outbound_urls(monkeypatch):
         stored = urls.responses.get(url)
         if stored is None:
             return httpx2.Response(404)
+
         if not stored.is_stream_consumed:
             return stored
+
         # MockTransport returns responses as they are, and a Response built
         # with content is already read: iter_raw would fail.
         return httpx2.Response(

@@ -26,6 +26,7 @@ class LangConverter(BaseConverter):
     def to_python(self, value):
         if value not in available_language_codes():
             raise NotFound(f"Language '{value}' is not available.")
+
         return value
 
 
@@ -38,12 +39,14 @@ def requested_language():
     params = g.get("authorization_params")
     if params is None:
         params = request.args
+
     values = params.get("ui_locales") or ""
     codes = available_language_codes()
     for tag in values.split():
         language = tag.split("-")[0].lower()
         if language in codes:
             return language
+
     return None
 
 
@@ -63,12 +66,14 @@ def setup_i18n(app):
     def add_language_code(endpoint, values):
         if not endpoint or not endpoint.startswith(f"{LOCALIZED_BLUEPRINT}."):
             return
+
         values.setdefault("lang_code", preferred_language())
 
     @app.url_value_preprocessor
     def pull_lang_code(endpoint, values):
         if not values or "lang_code" not in values:
             return
+
         g.lang_code = values.pop("lang_code")
         if session.get("lang_code") != g.lang_code:
             session["lang_code"] = g.lang_code
@@ -83,6 +88,7 @@ def setup_i18n(app):
     def locale_selector():
         if not has_request_context():
             return app.config["BABEL_DEFAULT_LOCALE"]
+
         return preferred_language()
 
     app.config.setdefault("BABEL_DEFAULT_LOCALE", "en")

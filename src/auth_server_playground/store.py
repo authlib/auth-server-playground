@@ -39,6 +39,7 @@ def init_database(app, initial_snapshot=None):
         create_tables()
         if settings_row() is not None:
             return settings_row().secret_key
+
         document = snapshot["configuration"] if snapshot else default_document()
         db.session.add(
             Settings(
@@ -57,12 +58,14 @@ def init_database(app, initial_snapshot=None):
             # Without the settings, the error has another cause.
             if settings_row() is None:
                 raise
+
         return settings_row().secret_key
 
 
 def read_snapshot(path):
     with open(path, encoding="utf-8") as file:
         snapshot = json.load(file)
+
     check_snapshot(snapshot)
     return snapshot
 
@@ -116,5 +119,6 @@ def delete_dynamic_clients():
     for client in clients:
         delete_client_rows(client.client_id)
         db.session.delete(client)
+
     db.session.commit()
     return len(clients)

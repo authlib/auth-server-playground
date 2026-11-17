@@ -39,10 +39,12 @@ class PublicAddressBackend(httpcore2.SyncBackend):
             infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
         except socket.gaierror as error:
             raise httpcore2.ConnectError(str(error)) from error
+
         found = [info[4][0] for info in infos]
         for address in found:
             if not ipaddress.ip_address(address).is_global:
                 raise OutboundError(f"address {address} is not public")
+
         return super().connect_tcp(
             found[0], port, timeout, local_address, socket_options
         )
@@ -63,6 +65,7 @@ class PublicAddressTransport(httpx2.HTTPTransport):
 def make_transport(allow_private_addresses):
     if allow_private_addresses:
         return httpx2.HTTPTransport()
+
     return PublicAddressTransport()
 
 
@@ -72,6 +75,7 @@ def fetch(url, *, allow_private_addresses=True):
         scheme = urlsplit(url).scheme
     except ValueError:
         scheme = None
+
     if scheme not in ("http", "https"):
         raise OutboundError("only http and https URLs are fetched")
 
@@ -88,14 +92,18 @@ def fetch(url, *, allow_private_addresses=True):
         ):
             if response.is_redirect:
                 raise OutboundError(f"redirect refused (HTTP {response.status_code})")
+
             if not response.is_success:
                 raise OutboundError(f"HTTP status {response.status_code}")
+
             for chunk in response.iter_raw():
                 body.extend(chunk)
                 if len(body) > MAX_SIZE:
                     raise OutboundError("response larger than 64 KiB")
+
                 if time.monotonic() > deadline:
                     raise OutboundError("no full response in 10 seconds")
     except (httpx2.HTTPError, httpx2.InvalidURL) as error:
         raise OutboundError(str(error) or type(error).__name__) from error
+
     return bytes(body)
