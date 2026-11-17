@@ -29,3 +29,9 @@ def test_admin_links_follow_the_browser_language(testapp):
 def test_default_locale_outside_a_request(app):
     with app.app_context():
         assert str(get_locale()) == "en"
+
+
+def test_ui_locales_are_limited_to_the_supported_languages(testapp, configure):
+    configure(metadata={"ui_locales_supported": ["en"]})
+    res = testapp.get("/interaction/persona?ui_locales=fr")
+    assert '<html lang="en"' in res.text

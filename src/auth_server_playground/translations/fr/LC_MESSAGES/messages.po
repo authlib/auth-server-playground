@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-17 12:00+0100\n"
+"POT-Creation-Date: 2026-11-17 15:23+0100\n"
 "PO-Revision-Date: 2026-11-13 15:51+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -18,536 +18,568 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: src/auth_server_playground/admin.py:125
+#: src/auth_server_playground/admin.py:127
 msgid "The server configuration is saved."
 msgstr "La configuration du serveur est enregistrée."
 
-#: src/auth_server_playground/admin.py:152
+#: src/auth_server_playground/admin.py:156
 msgid "A new initial access token replaces the old one."
 msgstr "Un nouveau jeton d'accès initial remplace l'ancien."
 
-#: src/auth_server_playground/admin.py:168
+#: src/auth_server_playground/admin.py:174
 msgid "The default configuration is restored."
 msgstr "La configuration par défaut est rétablie."
 
-#: src/auth_server_playground/admin.py:201
+#: src/auth_server_playground/admin.py:210
 #, python-format
 msgid "A new %(alg)s key signs the ID tokens."
 msgstr "Une nouvelle clé %(alg)s signe les jetons d'identité."
 
-#: src/auth_server_playground/admin.py:213
+#: src/auth_server_playground/admin.py:223
 msgid "This key signs the ID tokens. Rotate it first."
 msgstr "Cette clé signe les jetons d'identité. Renouvelez-la d'abord."
 
-#: src/auth_server_playground/admin.py:215
+#: src/auth_server_playground/admin.py:225
 msgid "The key is deleted."
 msgstr "La clé est supprimée."
 
-#: src/auth_server_playground/admin.py:236
+#: src/auth_server_playground/admin.py:249
 #, python-format
 msgid "%(num)d dynamic client is deleted."
 msgid_plural "%(num)d dynamic clients are deleted."
 msgstr[0] "%(num)d client dynamique est supprimé."
 msgstr[1] "%(num)d clients dynamiques sont supprimés."
 
-#: src/auth_server_playground/admin.py:252
+#: src/auth_server_playground/admin.py:265
 msgid "The client is created."
 msgstr "Le client est créé."
 
-#: src/auth_server_playground/admin.py:281
+#: src/auth_server_playground/admin.py:294
 msgid "The client is saved."
 msgstr "Le client est enregistré."
 
-#: src/auth_server_playground/admin.py:291
+#: src/auth_server_playground/admin.py:309
 msgid "The client secret is regenerated."
 msgstr "Le secret du client est régénéré."
 
-#: src/auth_server_playground/admin.py:302
+#: src/auth_server_playground/admin.py:320
 msgid "The client is deleted."
 msgstr "Le client est supprimé."
 
-#: src/auth_server_playground/admin.py:324
+#: src/auth_server_playground/admin.py:342
 msgid "The persona is created."
 msgstr "La persona est créée."
 
-#: src/auth_server_playground/admin.py:335
+#: src/auth_server_playground/admin.py:353
 msgid "A random persona is created."
 msgstr "Une persona aléatoire est créée."
 
-#: src/auth_server_playground/admin.py:362
+#: src/auth_server_playground/admin.py:380
 msgid "The persona is saved."
 msgstr "La persona est enregistrée."
 
-#: src/auth_server_playground/admin.py:387
+#: src/auth_server_playground/admin.py:409
 msgid "The consent is revoked."
 msgstr "Le consentement est révoqué."
 
-#: src/auth_server_playground/admin.py:400
+#: src/auth_server_playground/admin.py:422
 msgid "The persona is deleted."
 msgstr "La persona est supprimée."
 
-#: src/auth_server_playground/admin.py:415
-#: src/auth_server_playground/admin.py:431
+#: src/auth_server_playground/admin.py:437
+#: src/auth_server_playground/admin.py:453
 #, python-format
 msgid "This snapshot cannot be imported: %(error)s"
 msgstr "Impossible d'importer cet instantané : %(error)s"
 
-#: src/auth_server_playground/admin.py:433
+#: src/auth_server_playground/admin.py:455
 msgid "The snapshot is imported."
 msgstr "L'instantané est importé."
 
-#: src/auth_server_playground/endpoints.py:80
+#: src/auth_server_playground/endpoints.py:82
 msgid "The persona changed since this page was shown."
 msgstr "La persona a changé depuis l'affichage de cette page."
 
-#: src/auth_server_playground/forms.py:145
+#: src/auth_server_playground/forms.py:148
 msgid "Persona"
 msgstr "Persona"
 
-#: src/auth_server_playground/forms.py:146
+#: src/auth_server_playground/forms.py:149
 msgid "Continue as this persona"
 msgstr "Continuer avec cette persona"
 
-#: src/auth_server_playground/forms.py:151
+#: src/auth_server_playground/forms.py:154
 msgid "Accept"
 msgstr "Accepter"
 
-#: src/auth_server_playground/forms.py:152
+#: src/auth_server_playground/forms.py:155
 msgid "Deny"
 msgstr "Refuser"
 
-#: src/auth_server_playground/forms.py:157
+#: src/auth_server_playground/forms.py:160
 #: src/auth_server_playground/templates/admin/index.html:8
 msgid "Issuer"
 msgstr "Émetteur"
 
-#: src/auth_server_playground/forms.py:159
+#: src/auth_server_playground/forms.py:162
 msgid "Leave empty to use the URL of each request."
 msgstr "Laisser vide pour utiliser l'URL de chaque requête."
 
-#: src/auth_server_playground/forms.py:163
-#: src/auth_server_playground/forms.py:409
+#: src/auth_server_playground/forms.py:166
+#: src/auth_server_playground/forms.py:448
 #: src/auth_server_playground/templates/admin/clients.html:24
 msgid "Grant types"
 msgstr "Types de grant"
 
-#: src/auth_server_playground/forms.py:168
+#: src/auth_server_playground/forms.py:171
 msgid "Client authentication methods"
 msgstr "Méthodes d'authentification des clients"
 
-#: src/auth_server_playground/forms.py:173
+#: src/auth_server_playground/forms.py:176
 msgid "Client assertion signing algorithms"
 msgstr "Algorithmes de signature des assertions client"
 
-#: src/auth_server_playground/forms.py:175
+#: src/auth_server_playground/forms.py:178
 msgid "For private_key_jwt and client_secret_jwt."
 msgstr "Pour private_key_jwt et client_secret_jwt."
 
-#: src/auth_server_playground/forms.py:179
+#: src/auth_server_playground/forms.py:182
 msgid "PKCE methods"
 msgstr "Méthodes PKCE"
 
-#: src/auth_server_playground/forms.py:181
+#: src/auth_server_playground/forms.py:184
 msgid "Leave all unchecked to disable PKCE."
 msgstr "Tout décocher pour désactiver PKCE."
 
-#: src/auth_server_playground/forms.py:185
+#: src/auth_server_playground/forms.py:188
 msgid "PKCE is required for"
 msgstr "PKCE est exigé pour"
 
-#: src/auth_server_playground/forms.py:187
+#: src/auth_server_playground/forms.py:190
 msgid "All clients"
 msgstr "Tous les clients"
 
-#: src/auth_server_playground/forms.py:188
+#: src/auth_server_playground/forms.py:191
 msgid "Public clients only"
 msgstr "Les clients publics seulement"
 
-#: src/auth_server_playground/forms.py:192
+#: src/auth_server_playground/forms.py:195
 msgid "Access token lifetime"
 msgstr "Durée de vie du jeton d'accès"
 
-#: src/auth_server_playground/forms.py:194
-#: src/auth_server_playground/forms.py:199
-#: src/auth_server_playground/forms.py:223
+#: src/auth_server_playground/forms.py:197
+#: src/auth_server_playground/forms.py:202
+#: src/auth_server_playground/forms.py:232
 msgid "In seconds."
 msgstr "En secondes."
 
-#: src/auth_server_playground/forms.py:197
+#: src/auth_server_playground/forms.py:200
 msgid "Refresh token lifetime"
 msgstr "Durée de vie du jeton de rafraîchissement"
 
-#: src/auth_server_playground/forms.py:202
+#: src/auth_server_playground/forms.py:205
 msgid "Issue a new refresh token on each refresh"
 msgstr "Émettre un nouveau jeton de rafraîchissement à chaque rafraîchissement"
 
-#: src/auth_server_playground/forms.py:206
+#: src/auth_server_playground/forms.py:209
 msgid "Token revocation endpoint"
 msgstr "Endpoint de révocation des jetons"
 
-#: src/auth_server_playground/forms.py:210
-#: src/auth_server_playground/forms.py:414
+#: src/auth_server_playground/forms.py:213
+msgid "Revocation authentication methods"
+msgstr "Méthodes d'authentification pour la révocation"
+
+#: src/auth_server_playground/forms.py:215
+msgid "The client authentication methods of the revocation endpoint."
+msgstr "Les méthodes d'authentification des clients de l'endpoint de révocation."
+
+#: src/auth_server_playground/forms.py:219
+#: src/auth_server_playground/forms.py:453
 msgid "Scopes"
 msgstr "Portées"
 
-#: src/auth_server_playground/forms.py:211
+#: src/auth_server_playground/forms.py:220
 msgid "Separated by spaces. Leave empty to accept any scope."
 msgstr "Séparées par des espaces. Laisser vide pour accepter toutes les portées."
 
-#: src/auth_server_playground/forms.py:215
+#: src/auth_server_playground/forms.py:224
 msgid "ID token signing algorithms"
 msgstr "Algorithmes de signature des jetons d'identité"
 
-#: src/auth_server_playground/forms.py:217
+#: src/auth_server_playground/forms.py:226
 msgid "RS256 is required."
 msgstr "RS256 est obligatoire."
 
-#: src/auth_server_playground/forms.py:221
+#: src/auth_server_playground/forms.py:230
 msgid "ID token lifetime"
 msgstr "Durée de vie du jeton d'identité"
 
-#: src/auth_server_playground/forms.py:226
+#: src/auth_server_playground/forms.py:235
 msgid "Request object signing algorithms"
 msgstr "Algorithmes de signature des objets de requête"
 
-#: src/auth_server_playground/forms.py:231
-#: src/auth_server_playground/forms.py:459
+#: src/auth_server_playground/forms.py:240
+#: src/auth_server_playground/forms.py:498
 msgid "Refuse unsigned request objects"
 msgstr "Refuser les objets de requête non signés"
 
-#: src/auth_server_playground/forms.py:235
+#: src/auth_server_playground/forms.py:244
+msgid "Accept the claims parameter"
+msgstr "Accepter le paramètre claims"
+
+#: src/auth_server_playground/forms.py:248
+msgid "Accept the request parameter"
+msgstr "Accepter le paramètre request"
+
+#: src/auth_server_playground/forms.py:252
+msgid "Prompt values"
+msgstr "Valeurs de prompt"
+
+#: src/auth_server_playground/forms.py:254
+msgid "Other values get an invalid_request error."
+msgstr "Les autres valeurs reçoivent une erreur invalid_request."
+
+#: src/auth_server_playground/forms.py:258
+msgid "Interface languages"
+msgstr "Langues de l'interface"
+
+#: src/auth_server_playground/forms.py:260
+msgid "The languages that ui_locales can select."
+msgstr "Les langues que ui_locales peut choisir."
+
+#: src/auth_server_playground/forms.py:264
 msgid "Dynamic client registration"
 msgstr "Enregistrement dynamique des clients"
 
-#: src/auth_server_playground/forms.py:237
+#: src/auth_server_playground/forms.py:266
 msgid "Disabled"
 msgstr "Désactivé"
 
-#: src/auth_server_playground/forms.py:238
+#: src/auth_server_playground/forms.py:267
 msgid "Open to any client"
 msgstr "Ouvert à tous les clients"
 
-#: src/auth_server_playground/forms.py:239
+#: src/auth_server_playground/forms.py:268
 msgid "With an initial access token"
 msgstr "Avec un jeton d'accès initial"
 
-#: src/auth_server_playground/forms.py:244
+#: src/auth_server_playground/forms.py:273
 msgid "Fetch client URLs at private addresses"
 msgstr "Appeler les URL des clients sur des adresses privées"
 
-#: src/auth_server_playground/forms.py:245
+#: src/auth_server_playground/forms.py:274
 msgid "Such as jwks_uri. Private, loopback and link-local addresses."
 msgstr "Par exemple jwks_uri. Adresses privées, de bouclage et link-local."
 
-#: src/auth_server_playground/forms.py:248
-#: src/auth_server_playground/forms.py:462
-#: src/auth_server_playground/forms.py:724
+#: src/auth_server_playground/forms.py:277
+#: src/auth_server_playground/forms.py:501
+#: src/auth_server_playground/forms.py:781
 msgid "Save"
 msgstr "Enregistrer"
 
-#: src/auth_server_playground/forms.py:339
+#: src/auth_server_playground/forms.py:378
 msgid "This is not an http or https URL."
 msgstr "Ce n'est pas une URL http ou https."
 
-#: src/auth_server_playground/forms.py:348
+#: src/auth_server_playground/forms.py:387
 #, python-format
 msgid "Each line must be an http or https URL without fragment: %(url)s"
 msgstr "Chaque ligne doit être une URL http ou https sans fragment : %(url)s"
 
-#: src/auth_server_playground/forms.py:367
+#: src/auth_server_playground/forms.py:406
 msgid "not supported by the server"
 msgstr "non pris en charge par le serveur"
 
-#: src/auth_server_playground/forms.py:382
+#: src/auth_server_playground/forms.py:421
 #, python-format
 msgid "%(value)s (not supported by the server)"
 msgstr "%(value)s (non pris en charge par le serveur)"
 
-#: src/auth_server_playground/forms.py:390
+#: src/auth_server_playground/forms.py:429
 #: src/auth_server_playground/templates/admin/client.html:51
 #: src/auth_server_playground/templates/admin/clients.html:22
 msgid "Client ID"
 msgstr "ID du client"
 
-#: src/auth_server_playground/forms.py:391
+#: src/auth_server_playground/forms.py:430
 msgid "Leave empty to generate one. Letters, digits, and . _ ~ -"
 msgstr "Laisser vide pour en générer un. Lettres, chiffres et . _ ~ -"
 
-#: src/auth_server_playground/forms.py:395
+#: src/auth_server_playground/forms.py:434
 #: src/auth_server_playground/templates/admin/clients.html:21
 msgid "Name"
 msgstr "Nom"
 
-#: src/auth_server_playground/forms.py:397
+#: src/auth_server_playground/forms.py:436
 #: src/auth_server_playground/templates/interaction/_client.html:7
 msgid "Home page"
 msgstr "Page d'accueil"
 
-#: src/auth_server_playground/forms.py:400
+#: src/auth_server_playground/forms.py:439
 msgid "Logo"
 msgstr "Logo"
 
-#: src/auth_server_playground/forms.py:403
+#: src/auth_server_playground/forms.py:442
 msgid "Redirect URIs"
 msgstr "URIs de redirection"
 
-#: src/auth_server_playground/forms.py:405
-#: src/auth_server_playground/forms.py:433
+#: src/auth_server_playground/forms.py:444
+#: src/auth_server_playground/forms.py:472
 msgid "One per line."
 msgstr "Une par ligne."
 
-#: src/auth_server_playground/forms.py:412
+#: src/auth_server_playground/forms.py:451
 msgid "Response types"
 msgstr "Types de réponse"
 
-#: src/auth_server_playground/forms.py:416
+#: src/auth_server_playground/forms.py:455
 msgid "Authentication method"
 msgstr "Méthode d'authentification"
 
-#: src/auth_server_playground/forms.py:420
+#: src/auth_server_playground/forms.py:459
 msgid "Client assertion signing algorithm"
 msgstr "Algorithme de signature des assertions client"
 
-#: src/auth_server_playground/forms.py:424
+#: src/auth_server_playground/forms.py:463
 msgid "Key set URL"
 msgstr "URL du jeu de clés"
 
-#: src/auth_server_playground/forms.py:427
+#: src/auth_server_playground/forms.py:466
 #: src/auth_server_playground/templates/admin/keys.html:4
 #: src/auth_server_playground/templates/admin/keys.html:7
 #: src/auth_server_playground/templates/admin/layout.html:3
 msgid "Keys"
 msgstr "Clés"
 
-#: src/auth_server_playground/forms.py:428
+#: src/auth_server_playground/forms.py:467
 msgid "A JSON Web Key Set of public keys."
 msgstr "Un jeu de clés JSON Web (JWK Set) de clés publiques."
 
-#: src/auth_server_playground/forms.py:432
+#: src/auth_server_playground/forms.py:471
 msgid "Contacts"
 msgstr "Contacts"
 
-#: src/auth_server_playground/forms.py:437
+#: src/auth_server_playground/forms.py:476
 #: src/auth_server_playground/templates/interaction/_client.html:9
 msgid "Terms of service"
 msgstr "Conditions d'utilisation"
 
-#: src/auth_server_playground/forms.py:440
+#: src/auth_server_playground/forms.py:479
 #: src/auth_server_playground/templates/interaction/_client.html:8
 msgid "Privacy policy"
 msgstr "Politique de confidentialité"
 
-#: src/auth_server_playground/forms.py:445
+#: src/auth_server_playground/forms.py:484
 msgid "ID token signing algorithm"
 msgstr "Algorithme de signature des jetons d'identité"
 
-#: src/auth_server_playground/forms.py:449
+#: src/auth_server_playground/forms.py:488
 msgid "Maximum authentication age"
 msgstr "Âge maximal de l'authentification"
 
-#: src/auth_server_playground/forms.py:451
+#: src/auth_server_playground/forms.py:490
 msgid "In seconds. Leave empty for no limit."
 msgstr "En secondes. Laisser vide pour ne fixer aucune limite."
 
-#: src/auth_server_playground/forms.py:455
+#: src/auth_server_playground/forms.py:494
 msgid "Request object signing algorithm"
 msgstr "Algorithme de signature de l'objet de requête"
 
-#: src/auth_server_playground/forms.py:482
+#: src/auth_server_playground/forms.py:521
 msgid "private_key_jwt needs keys: fill the keys or the key set URL."
 msgstr ""
 "private_key_jwt a besoin de clés : renseignez les clés ou l'URL du jeu de"
 " clés."
 
-#: src/auth_server_playground/forms.py:484
+#: src/auth_server_playground/forms.py:523
 msgid "This algorithm does not fit the authentication method."
 msgstr "Cet algorithme ne convient pas à la méthode d'authentification."
 
-#: src/auth_server_playground/forms.py:523
-#: src/auth_server_playground/forms.py:547
+#: src/auth_server_playground/forms.py:563
+#: src/auth_server_playground/forms.py:587
 msgid "Any algorithm of the server"
 msgstr "Tout algorithme du serveur"
 
-#: src/auth_server_playground/forms.py:542
+#: src/auth_server_playground/forms.py:582
 msgid "Default (RS256)"
 msgstr "Par défaut (RS256)"
 
-#: src/auth_server_playground/forms.py:561
+#: src/auth_server_playground/forms.py:602
 msgid "Use 1 to 48 letters, digits, and . _ ~ - characters."
 msgstr "Utilisez de 1 à 48 lettres, chiffres et caractères . _ ~ -."
 
-#: src/auth_server_playground/forms.py:564
+#: src/auth_server_playground/forms.py:606
 msgid "A client already uses this ID."
 msgstr "Un client utilise déjà cet ID."
 
-#: src/auth_server_playground/forms.py:574
+#: src/auth_server_playground/forms.py:618
 msgid "Fill the keys or the key set URL, not both."
 msgstr "Renseignez les clés ou l'URL du jeu de clés, pas les deux."
 
-#: src/auth_server_playground/forms.py:578
+#: src/auth_server_playground/forms.py:623
 msgid "Use a JSON Web Key Set of public keys."
 msgstr "Utilisez un jeu de clés JSON Web de clés publiques."
 
-#: src/auth_server_playground/forms.py:652
+#: src/auth_server_playground/forms.py:707
 msgid "Use YYYY-MM-DD, YYYY or 0000-MM-DD."
 msgstr "Utilisez AAAA-MM-JJ, AAAA ou 0000-MM-JJ."
 
-#: src/auth_server_playground/forms.py:660
+#: src/auth_server_playground/forms.py:717
 msgid "This date does not exist."
 msgstr "Cette date n'existe pas."
 
-#: src/auth_server_playground/forms.py:665
+#: src/auth_server_playground/forms.py:722
 msgid "Subject"
 msgstr "Sujet"
 
-#: src/auth_server_playground/forms.py:666
+#: src/auth_server_playground/forms.py:723
 msgid "Leave empty to generate one."
 msgstr "Laisser vide pour en générer un."
 
-#: src/auth_server_playground/forms.py:670
+#: src/auth_server_playground/forms.py:727
 msgid "Full name"
 msgstr "Nom complet"
 
-#: src/auth_server_playground/forms.py:672
+#: src/auth_server_playground/forms.py:729
 msgid "Username"
 msgstr "Identifiant"
 
-#: src/auth_server_playground/forms.py:674
+#: src/auth_server_playground/forms.py:731
 msgid "Given name"
 msgstr "Prénom"
 
-#: src/auth_server_playground/forms.py:675
+#: src/auth_server_playground/forms.py:732
 msgid "Family name"
 msgstr "Nom de famille"
 
-#: src/auth_server_playground/forms.py:676
+#: src/auth_server_playground/forms.py:733
 msgid "Middle name"
 msgstr "Deuxième prénom"
 
-#: src/auth_server_playground/forms.py:677
+#: src/auth_server_playground/forms.py:734
 msgid "Nickname"
 msgstr "Surnom"
 
-#: src/auth_server_playground/forms.py:678
+#: src/auth_server_playground/forms.py:735
 msgid "Gender"
 msgstr "Genre"
 
-#: src/auth_server_playground/forms.py:680
+#: src/auth_server_playground/forms.py:737
 msgid "Birth date"
 msgstr "Date de naissance"
 
-#: src/auth_server_playground/forms.py:682
+#: src/auth_server_playground/forms.py:739
 msgid "YYYY-MM-DD, YYYY or 0000-MM-DD."
 msgstr "AAAA-MM-JJ, AAAA ou 0000-MM-JJ."
 
-#: src/auth_server_playground/forms.py:686
+#: src/auth_server_playground/forms.py:743
 msgid "Profile page"
 msgstr "Page de profil"
 
-#: src/auth_server_playground/forms.py:689
+#: src/auth_server_playground/forms.py:746
 msgid "Website"
 msgstr "Site web"
 
-#: src/auth_server_playground/forms.py:692
+#: src/auth_server_playground/forms.py:749
 msgid "Picture"
 msgstr "Image"
 
-#: src/auth_server_playground/forms.py:694
+#: src/auth_server_playground/forms.py:751
 msgid "Leave empty to use the generated avatar."
 msgstr "Laisser vide pour utiliser l'avatar généré."
 
-#: src/auth_server_playground/forms.py:697
+#: src/auth_server_playground/forms.py:754
 msgid "Email"
 msgstr "E-mail"
 
-#: src/auth_server_playground/forms.py:699
+#: src/auth_server_playground/forms.py:756
 msgid "Email verified"
 msgstr "E-mail vérifié"
 
-#: src/auth_server_playground/forms.py:701
+#: src/auth_server_playground/forms.py:758
 msgid "Phone number"
 msgstr "Numéro de téléphone"
 
-#: src/auth_server_playground/forms.py:703
+#: src/auth_server_playground/forms.py:760
 msgid "Phone number verified"
 msgstr "Numéro de téléphone vérifié"
 
-#: src/auth_server_playground/forms.py:705
+#: src/auth_server_playground/forms.py:762
 msgid "Time zone"
 msgstr "Fuseau horaire"
 
-#: src/auth_server_playground/forms.py:706
-#: src/auth_server_playground/forms.py:829
+#: src/auth_server_playground/forms.py:763
+#: src/auth_server_playground/forms.py:898
 msgid "Locale"
 msgstr "Langue"
 
-#: src/auth_server_playground/forms.py:708
+#: src/auth_server_playground/forms.py:765
 msgid "Formatted address"
 msgstr "Adresse mise en forme"
 
-#: src/auth_server_playground/forms.py:711
+#: src/auth_server_playground/forms.py:768
 msgid "Street address"
 msgstr "Rue"
 
-#: src/auth_server_playground/forms.py:713
+#: src/auth_server_playground/forms.py:770
 msgid "Locality"
 msgstr "Ville"
 
-#: src/auth_server_playground/forms.py:714
+#: src/auth_server_playground/forms.py:771
 msgid "Region"
 msgstr "Région"
 
-#: src/auth_server_playground/forms.py:716
+#: src/auth_server_playground/forms.py:773
 msgid "Postal code"
 msgstr "Code postal"
 
-#: src/auth_server_playground/forms.py:718
+#: src/auth_server_playground/forms.py:775
 msgid "Country"
 msgstr "Pays"
 
-#: src/auth_server_playground/forms.py:720
+#: src/auth_server_playground/forms.py:777
 msgid "Other claims"
 msgstr "Autres claims"
 
-#: src/auth_server_playground/forms.py:721
+#: src/auth_server_playground/forms.py:778
 msgid "A JSON object. Standard claims have their own field."
 msgstr "Un objet JSON. Les claims standard ont leur propre champ."
 
-#: src/auth_server_playground/forms.py:760
+#: src/auth_server_playground/forms.py:820
 msgid "Use at most 255 printable ASCII characters."
 msgstr "Utilisez au plus 255 caractères ASCII imprimables."
 
-#: src/auth_server_playground/forms.py:763
+#: src/auth_server_playground/forms.py:824
 msgid "A persona already uses this subject."
 msgstr "Une persona utilise déjà ce sujet."
 
-#: src/auth_server_playground/forms.py:768
+#: src/auth_server_playground/forms.py:829
 msgid "A persona already uses this username."
 msgstr "Une persona utilise déjà cet identifiant."
 
-#: src/auth_server_playground/forms.py:776
+#: src/auth_server_playground/forms.py:838
 msgid "The claims must be a JSON object."
 msgstr "Les claims doivent être un objet JSON."
 
-#: src/auth_server_playground/forms.py:781
+#: src/auth_server_playground/forms.py:844
 #, python-format
 msgid "These standard claims have their own field: %(claims)s"
 msgstr "Ces claims standard ont leur propre champ : %(claims)s"
 
-#: src/auth_server_playground/forms.py:832
+#: src/auth_server_playground/forms.py:901
 msgid "Random persona"
 msgstr "Persona aléatoire"
 
-#: src/auth_server_playground/forms.py:836
+#: src/auth_server_playground/forms.py:905
 msgid "Snapshot file"
 msgstr "Fichier d'instantané"
 
-#: src/auth_server_playground/forms.py:837
+#: src/auth_server_playground/forms.py:906
 #: src/auth_server_playground/templates/admin/snapshot.html:16
 msgid "Import"
 msgstr "Importer"
 
-#: src/auth_server_playground/forms.py:842
+#: src/auth_server_playground/forms.py:911
 msgid "Replace everything"
 msgstr "Tout remplacer"
 
@@ -623,7 +655,7 @@ msgid "A public client has no secret."
 msgstr "Un client public n'a pas de secret."
 
 #: src/auth_server_playground/templates/admin/client.html:65
-#: src/auth_server_playground/templates/admin/server.html:41
+#: src/auth_server_playground/templates/admin/server.html:46
 msgid "Dynamic registration"
 msgstr "Enregistrement dynamique"
 
@@ -909,28 +941,28 @@ msgstr "Langue de la persona aléatoire"
 msgid "Restore the defaults"
 msgstr "Rétablir les valeurs par défaut"
 
-#: src/auth_server_playground/templates/admin/server.html:35
+#: src/auth_server_playground/templates/admin/server.html:36
 msgid "OpenID Connect"
 msgstr "OpenID Connect"
 
-#: src/auth_server_playground/templates/admin/server.html:36
+#: src/auth_server_playground/templates/admin/server.html:37
 msgid "On when the scopes hold <code>openid</code>."
 msgstr "Actif quand les portées contiennent <code>openid</code>."
 
-#: src/auth_server_playground/templates/admin/server.html:52
-#: src/auth_server_playground/templates/admin/server.html:54
+#: src/auth_server_playground/templates/admin/server.html:57
+#: src/auth_server_playground/templates/admin/server.html:59
 msgid "Initial access token"
 msgstr "Jeton d'accès initial"
 
-#: src/auth_server_playground/templates/admin/server.html:53
+#: src/auth_server_playground/templates/admin/server.html:58
 msgid "Clients send it as a Bearer token to register."
 msgstr "Les clients l'envoient comme jeton Bearer pour s'enregistrer."
 
-#: src/auth_server_playground/templates/admin/server.html:54
+#: src/auth_server_playground/templates/admin/server.html:59
 msgid "Copy the initial access token"
 msgstr "Copier le jeton d'accès initial"
 
-#: src/auth_server_playground/templates/admin/server.html:57
+#: src/auth_server_playground/templates/admin/server.html:62
 msgid "Renew the token"
 msgstr "Renouveler le jeton"
 

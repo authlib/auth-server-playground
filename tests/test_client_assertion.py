@@ -223,6 +223,16 @@ def test_method_disabled_on_the_server(testapp, configure, key_client, rsa_key):
     refused(testapp, assertion(key_client, rsa_key, "RS256"))
 
 
+def test_method_disabled_on_every_endpoint(testapp, configure, key_client, rsa_key):
+    configure(
+        metadata={
+            "token_endpoint_auth_methods_supported": ["client_secret_basic"],
+            "revocation_endpoint_auth_methods_supported": ["client_secret_basic"],
+        }
+    )
+    refused(testapp, assertion(key_client, rsa_key, "RS256"))
+
+
 def test_revocation_with_private_key_jwt(app, testapp, key_client, rsa_key):
     token = token_request(testapp, assertion(key_client, rsa_key, "RS256")).json
     testapp.post(

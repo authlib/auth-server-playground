@@ -31,13 +31,18 @@
             </div>
             {{ form.refresh_token_rotation() }}
             {{ form.revocation_enabled() }}
+            {{ form.revocation_endpoint_auth_methods_supported() }}
             {{ form.scopes_supported() }}
             <h3>{% trans %}OpenID Connect{% endtrans %}</h3>
             <p><small>{% trans %}On when the scopes hold <code>openid</code>.{% endtrans %}</small></p>
             {{ form.id_token_signing_alg_values_supported() }}
             {{ form.id_token_lifetime() }}
+            {{ form.prompt_values_supported() }}
+            {{ form.ui_locales_supported() }}
             {{ form.request_object_signing_alg_values_supported() }}
             {{ form.require_signed_request_object() }}
+            {{ form.request_parameter_supported() }}
+            {{ form.claims_parameter_supported() }}
             <h3>{% trans %}Dynamic registration{% endtrans %}</h3>
             {{ form.registration() }}
             {{ form.outbound_private_addresses() }}

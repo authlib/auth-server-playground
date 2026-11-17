@@ -60,8 +60,10 @@ from .settings import GRANT_TYPES
 from .settings import ID_TOKEN_ALGORITHMS
 from .settings import MAX_LIFETIME
 from .settings import PKCE_METHODS
+from .settings import PROMPT_VALUES
 from .settings import REQUEST_OBJECT_ALGORITHMS
 from .settings import RESPONSE_TYPES
+from .settings import UI_LOCALES
 from .settings import is_oidc_enabled
 from .settings import response_types_for
 
@@ -207,6 +209,12 @@ class ServerForm(BaseForm):
         _("Token revocation endpoint"),
         render_kw={"role": "switch", "param": "revocation_endpoint"},
     )
+    revocation_endpoint_auth_methods_supported = MultiCheckboxField(
+        _("Revocation authentication methods"),
+        choices=[SelectChoice(method, method) for method in AUTH_METHODS],
+        description=_("The client authentication methods of the revocation endpoint."),
+        render_kw={"param": "revocation_endpoint_auth_methods_supported"},
+    )
     scopes_supported = StringField(
         _("Scopes"),
         description=_("Separated by spaces. Leave empty to accept any scope."),
@@ -231,6 +239,26 @@ class ServerForm(BaseForm):
     require_signed_request_object = BooleanField(
         _("Refuse unsigned request objects"),
         render_kw={"role": "switch", "param": "require_signed_request_object"},
+    )
+    claims_parameter_supported = BooleanField(
+        _("Accept the claims parameter"),
+        render_kw={"role": "switch", "param": "claims_parameter_supported"},
+    )
+    request_parameter_supported = BooleanField(
+        _("Accept the request parameter"),
+        render_kw={"role": "switch", "param": "request_parameter_supported"},
+    )
+    prompt_values_supported = MultiCheckboxField(
+        _("Prompt values"),
+        choices=[SelectChoice(value, value) for value in PROMPT_VALUES],
+        description=_("Other values get an invalid_request error."),
+        render_kw={"param": "prompt_values_supported"},
+    )
+    ui_locales_supported = MultiCheckboxField(
+        _("Interface languages"),
+        choices=[SelectChoice(locale, locale) for locale in UI_LOCALES],
+        description=_("The languages that ui_locales can select."),
+        render_kw={"param": "ui_locales_supported"},
     )
     registration = RadioField(
         _("Dynamic client registration"),
@@ -300,6 +328,13 @@ class ServerForm(BaseForm):
                 ),
                 "require_signed_request_object": (
                     self.require_signed_request_object.data
+                ),
+                "prompt_values_supported": self.prompt_values_supported.data,
+                "ui_locales_supported": self.ui_locales_supported.data,
+                "claims_parameter_supported": self.claims_parameter_supported.data,
+                "request_parameter_supported": self.request_parameter_supported.data,
+                "revocation_endpoint_auth_methods_supported": (
+                    self.revocation_endpoint_auth_methods_supported.data
                 ),
             },
             "settings": settings,

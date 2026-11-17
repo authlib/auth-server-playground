@@ -292,3 +292,11 @@ def test_request_object_signed_with_hmac_by_a_client_without_secret(
     request = signed(request_claims(client), OctKey.import_key(SECRET), "HS256")
     res = logged_in.get(request_url(client, request), status="*")
     assert error_of(res) == "invalid_request_object"
+
+
+def test_request_parameter_disabled(logged_in, client, configure):
+    configure(metadata={"request_parameter_supported": False})
+    url = authorize_url(
+        client_id=client["client_id"], request=unsigned(request_claims(client))
+    )
+    assert error_of(logged_in.get(url, status=400)) == "request_not_supported"

@@ -77,3 +77,9 @@ def test_stored_consent_for_the_scope_is_enough(logged_in, client):
     claims_request = {"userinfo": {"email": None}}
     res = logged_in.get(oidc_url(client, claims=json.dumps(claims_request)))
     assert "code" in callback_params(res)
+
+
+def test_claims_parameter_disabled(logged_in, client, configure):
+    configure(metadata={"claims_parameter_supported": False})
+    tokens = tokens_for(logged_in, client, {"userinfo": {"email": None}})
+    assert "email" not in userinfo(logged_in, tokens["access_token"])

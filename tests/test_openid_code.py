@@ -422,3 +422,11 @@ def test_post_authorization_request_with_a_persona(logged_in, client):
     assert "consent" in res.forms
     params = callback_params(res.forms["consent"].submit("accept"))
     assert "code" in params
+
+
+def test_prompt_value_outside_the_supported_list(logged_in, client, configure):
+    configure(metadata={"prompt_values_supported": ["none", "consent"]})
+    res = logged_in.get(oidc_url(client, prompt="login"), status=400)
+    assert res.json["error"] == "invalid_request"
+    res = logged_in.get(oidc_url(client, prompt="consent"))
+    assert "consent" in res.forms

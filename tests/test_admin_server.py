@@ -274,3 +274,23 @@ def test_preview_in_token_mode(testapp):
     res = testapp.post("/en/server/preview", form.submit_fields())
     assert 'role="alert"' not in res
     assert "token_endpoint" in res
+
+
+def test_save_the_remaining_metadata(app, testapp):
+    form = testapp.get("/en/server").forms["server"]
+    form["revocation_endpoint_auth_methods_supported"] = ["client_secret_basic"]
+    form["prompt_values_supported"] = ["none", "login"]
+    form["ui_locales_supported"] = ["fr"]
+    form["claims_parameter_supported"] = False
+    form["request_parameter_supported"] = False
+    form.submit().follow()
+    with app.app_context():
+        metadata = current_document()["metadata"]
+
+    assert metadata["revocation_endpoint_auth_methods_supported"] == [
+        "client_secret_basic"
+    ]
+    assert metadata["prompt_values_supported"] == ["none", "login"]
+    assert metadata["ui_locales_supported"] == ["fr"]
+    assert metadata["claims_parameter_supported"] is False
+    assert metadata["request_parameter_supported"] is False

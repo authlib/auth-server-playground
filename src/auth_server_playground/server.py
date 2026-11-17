@@ -15,6 +15,7 @@ from authlib.oauth2.rfc9101 import JWTAuthenticationRequest
 from authlib.oidc.core import ClaimsParameter
 from authlib.oidc.core import OpenIDCode
 from authlib.oidc.core import UserInfoEndpoint
+from authlib.oidc.prompt_create import PromptValues
 from flask import current_app
 from flask import url_for
 from joserfc import jwt
@@ -137,9 +138,16 @@ class PlaygroundUserInfoEndpoint(UserInfoEndpoint):
 class PlaygroundJWTAuthenticationRequest(JWTAuthenticationRequest):
     """Accept signed and unsigned request objects."""
 
-    def __init__(self, issuer, algorithms, require_signed, allow_private_addresses):
+    def __init__(
+        self,
+        issuer,
+        algorithms,
+        require_signed,
+        allow_private_addresses,
+        support_request,
+    ):
         # Per RFC 9101 §10.4, fetching a request_uri exposes the server to SSRF.
-        super().__init__(support_request=True, support_request_uri=False)
+        super().__init__(support_request=support_request, support_request_uri=False)
         self.issuer = issuer
         self.algorithms = algorithms
         self.require_signed = require_signed
@@ -175,6 +183,16 @@ class PlaygroundJWTAuthenticationRequest(JWTAuthenticationRequest):
             "request_object_signing_alg_values_supported": self.algorithms,
             "require_signed_request_object": self.require_signed,
         }
+
+
+class PlaygroundPromptValues(PromptValues):
+    """Refuse the prompt values that the configuration does not list."""
+
+    def __init__(self, values):
+        self.values = list(values)
+
+    def get_server_metadata(self):
+        return {"prompt_values_supported": self.values}
 
 
 class PasswordGrant(grants.ResourceOwnerPasswordCredentialsGrant):
@@ -432,8 +450,13 @@ def build_server(document):
 
         server.register_grant(configured(GRANTS[grant_type], **attributes), extensions)
 
+    revocation_methods = metadata["revocation_endpoint_auth_methods_supported"]
+    jwt_methods = set(auth_methods)
+    if settings["revocation_enabled"]:
+        jwt_methods |= set(revocation_methods)
+
     for method in JWT_AUTH_METHODS:
-        if method not in auth_methods:
+        if method not in jwt_methods:
             continue
 
         server.register_client_auth_method(
@@ -449,20 +472,26 @@ def build_server(document):
     if settings["revocation_enabled"]:
         endpoint = create_revocation_endpoint(db.session, Token)
         server.register_endpoint(
-            configured(endpoint, CLIENT_AUTH_METHODS=list(auth_methods))
+            configured(endpoint, CLIENT_AUTH_METHODS=list(revocation_methods))
         )
 
     if is_oidc_enabled(document):
         server.register_endpoint(
             PlaygroundUserInfoEndpoint(resource_protector=require_oauth)
         )
-        server.register_extension(ClaimsParameter())
+        if metadata["claims_parameter_supported"]:
+            server.register_extension(ClaimsParameter())
+
+        server.register_extension(
+            PlaygroundPromptValues(metadata["prompt_values_supported"])
+        )
         server.register_extension(
             PlaygroundJWTAuthenticationRequest(
                 metadata["issuer"],
                 metadata["request_object_signing_alg_values_supported"],
                 metadata["require_signed_request_object"],
                 settings["outbound_private_addresses"],
+                metadata["request_parameter_supported"],
             )
         )
 

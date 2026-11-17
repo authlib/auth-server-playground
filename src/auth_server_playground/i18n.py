@@ -8,6 +8,8 @@ from flask_babel import get_locale
 from werkzeug.exceptions import NotFound
 from werkzeug.routing import BaseConverter
 
+from .store import settings_row
+
 babel = Babel()
 
 #: The blueprint whose URLs start with the language code.
@@ -41,7 +43,8 @@ def requested_language():
         params = request.args
 
     values = params.get("ui_locales") or ""
-    codes = available_language_codes()
+    supported = settings_row().document["metadata"]["ui_locales_supported"]
+    codes = [code for code in available_language_codes() if code in supported]
     for tag in values.split():
         language = tag.split("-")[0].lower()
         if language in codes:

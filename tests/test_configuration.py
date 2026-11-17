@@ -338,3 +338,39 @@ def test_disabling_an_algorithm_keeps_its_key(app, configure):
     configure(metadata={"id_token_signing_alg_values_supported": ["RS256"]})
     with app.app_context():
         assert keys.active_kid("ES256") is not None
+
+
+def test_revocation_methods_are_configurable(app, testapp, client, configure):
+    configure(
+        metadata={"revocation_endpoint_auth_methods_supported": ["client_secret_post"]}
+    )
+    post_client = make_client(
+        app,
+        client_id="post-client",
+        client_secret="post-secret",
+        metadata={
+            "grant_types": ["client_credentials"],
+            "response_types": [],
+            "token_endpoint_auth_method": "client_secret_post",
+        },
+    )
+    basic_token = client_credentials_token(testapp, client).json
+    res = testapp.post(
+        "/oauth/revoke",
+        {"token": basic_token["access_token"]},
+        headers=basic_auth(client),
+        status="4*",
+    )
+    assert res.json["error"] == "invalid_client"
+    testapp.get("/api/resource", headers=bearer(basic_token["access_token"]))
+    credentials = {**post_client, "grant_type": "client_credentials"}
+    post_token = testapp.post("/oauth/token", credentials).json
+    testapp.post(
+        "/oauth/revoke",
+        {
+            "token": post_token["access_token"],
+            "client_id": post_client["client_id"],
+            "client_secret": post_client["client_secret"],
+        },
+    )
+    testapp.get("/api/resource", headers=bearer(post_token["access_token"]), status=401)

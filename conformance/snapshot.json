@@ -44,7 +44,26 @@
         "Ed25519",
         "HS256"
       ],
-      "require_signed_request_object": false
+      "require_signed_request_object": false,
+      "prompt_values_supported": [
+        "none",
+        "login",
+        "consent",
+        "select_account"
+      ],
+      "ui_locales_supported": [
+        "en",
+        "fr"
+      ],
+      "claims_parameter_supported": true,
+      "request_parameter_supported": true,
+      "revocation_endpoint_auth_methods_supported": [
+        "client_secret_basic",
+        "client_secret_post",
+        "none",
+        "private_key_jwt",
+        "client_secret_jwt"
+      ]
     },
     "settings": {
       "pkce_required": "public",

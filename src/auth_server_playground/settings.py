@@ -59,6 +59,10 @@ OIDC_METADATA = (
     "id_token_signing_alg_values_supported",
     "request_object_signing_alg_values_supported",
     "require_signed_request_object",
+    "prompt_values_supported",
+    "ui_locales_supported",
+    "claims_parameter_supported",
+    "request_parameter_supported",
 )
 
 #: The client authentication methods that sign a JWT.
@@ -89,6 +93,11 @@ DEFAULT_DOCUMENT = {
         "id_token_signing_alg_values_supported": ["RS256"],
         "request_object_signing_alg_values_supported": list(REQUEST_OBJECT_ALGORITHMS),
         "require_signed_request_object": False,
+        "prompt_values_supported": list(PROMPT_VALUES),
+        "ui_locales_supported": list(UI_LOCALES),
+        "claims_parameter_supported": True,
+        "request_parameter_supported": True,
+        "revocation_endpoint_auth_methods_supported": list(AUTH_METHODS),
     },
     "settings": {
         "pkce_required": "all",
@@ -111,6 +120,9 @@ LIST_CHOICES = {
     "code_challenge_methods_supported": PKCE_METHODS,
     "id_token_signing_alg_values_supported": ID_TOKEN_ALGORITHMS,
     "request_object_signing_alg_values_supported": REQUEST_OBJECT_ALGORITHMS,
+    "prompt_values_supported": PROMPT_VALUES,
+    "ui_locales_supported": UI_LOCALES,
+    "revocation_endpoint_auth_methods_supported": AUTH_METHODS,
 }
 
 
@@ -182,6 +194,9 @@ def published_metadata(document, issuer, endpoint_urls):
     if not jwt_methods:
         hidden.add("token_endpoint_auth_signing_alg_values_supported")
 
+    if not settings["revocation_enabled"]:
+        hidden.add("revocation_endpoint_auth_methods_supported")
+
     # RFC 8414 §2 marks response_types_supported as REQUIRED, even when empty.
     metadata.update(
         {
@@ -192,23 +207,18 @@ def published_metadata(document, issuer, endpoint_urls):
             and (key == "response_types_supported" or value != [])
         }
     )
-    if settings["revocation_enabled"]:
-        metadata["revocation_endpoint_auth_methods_supported"] = methods
-        # Per RFC 8414 §2, required when a JWT method is listed.
-        if jwt_methods:
-            metadata["revocation_endpoint_auth_signing_alg_values_supported"] = stored[
-                "token_endpoint_auth_signing_alg_values_supported"
-            ]
+    revocation_methods = set(stored["revocation_endpoint_auth_methods_supported"])
+    # Per RFC 8414 §2, required when a JWT method is listed.
+    if settings["revocation_enabled"] and revocation_methods & set(JWT_AUTH_METHODS):
+        metadata["revocation_endpoint_auth_signing_alg_values_supported"] = stored[
+            "token_endpoint_auth_signing_alg_values_supported"
+        ]
 
     if oidc:
         metadata.update(
             {
                 "subject_types_supported": ["public"],
                 "claims_supported": claims_supported(stored["scopes_supported"]),
-                "prompt_values_supported": PROMPT_VALUES,
-                "ui_locales_supported": UI_LOCALES,
-                "claims_parameter_supported": True,
-                "request_parameter_supported": True,
                 # Per OIDC Discovery §3, the default value is true.
                 "request_uri_parameter_supported": False,
             }
@@ -247,6 +257,19 @@ def validate_document(document):
             {
                 "token_endpoint_auth_methods_supported": (
                     "The token endpoint needs at least one method."
+                )
+            }
+        )
+
+    # Per RFC 8414 §2, an omitted list would mean client_secret_basic.
+    if (
+        document["settings"]["revocation_enabled"]
+        and not metadata["revocation_endpoint_auth_methods_supported"]
+    ):
+        raise InvalidDocument(
+            {
+                "revocation_endpoint_auth_methods_supported": (
+                    "The revocation endpoint needs at least one method."
                 )
             }
         )
@@ -311,8 +334,13 @@ def _metadata_errors(metadata):
     if issuer is not None and not isinstance(issuer, str):
         errors["issuer"] = "A URL, or null."
 
-    if not isinstance(metadata.get("require_signed_request_object"), bool):
-        errors["require_signed_request_object"] = "true or false."
+    for key in (
+        "require_signed_request_object",
+        "claims_parameter_supported",
+        "request_parameter_supported",
+    ):
+        if not isinstance(metadata.get(key), bool):
+            errors[key] = "true or false."
 
     return errors
 

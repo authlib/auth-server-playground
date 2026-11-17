@@ -428,7 +428,6 @@ def test_client_jwt_algorithms_need_a_jwt_method():
     )
     metadata = published_metadata(document, "https://server.test", URLS)
     assert "token_endpoint_auth_signing_alg_values_supported" not in metadata
-    assert "revocation_endpoint_auth_signing_alg_values_supported" not in metadata
 
 
 def test_client_jwt_algorithms_are_published_with_a_jwt_method():
@@ -523,3 +522,86 @@ def test_jwt_methods_need_algorithms():
         metadata={"token_endpoint_auth_signing_alg_values_supported": []}
     )
     assert "token_endpoint_auth_signing_alg_values_supported" in errors_of(document)
+
+
+def test_fixed_metadata_is_configurable():
+    document = changed(
+        metadata={
+            "prompt_values_supported": ["none", "login"],
+            "ui_locales_supported": ["fr"],
+            "claims_parameter_supported": False,
+            "request_parameter_supported": False,
+        }
+    )
+    metadata = published_metadata(document, "https://server.test", URLS)
+    assert metadata["prompt_values_supported"] == ["none", "login"]
+    assert metadata["ui_locales_supported"] == ["fr"]
+    assert metadata["claims_parameter_supported"] is False
+    assert metadata["request_parameter_supported"] is False
+
+
+def test_revocation_methods():
+    document = changed(
+        metadata={"revocation_endpoint_auth_methods_supported": ["client_secret_basic"]}
+    )
+    metadata = published_metadata(document, "https://server.test", URLS)
+    assert metadata["revocation_endpoint_auth_methods_supported"] == [
+        "client_secret_basic"
+    ]
+    assert "revocation_endpoint_auth_signing_alg_values_supported" not in metadata
+
+
+def test_revocation_signing_algorithms_follow_the_revocation_methods():
+    document = changed(
+        metadata={
+            "token_endpoint_auth_methods_supported": ["client_secret_basic"],
+            "revocation_endpoint_auth_methods_supported": ["private_key_jwt"],
+        }
+    )
+    metadata = published_metadata(document, "https://server.test", URLS)
+    assert metadata["revocation_endpoint_auth_signing_alg_values_supported"]
+
+
+def test_revocation_methods_need_the_endpoint():
+    document = changed(settings={"revocation_enabled": False})
+    metadata = published_metadata(document, "https://server.test", URLS)
+    assert "revocation_endpoint_auth_methods_supported" not in metadata
+
+
+@pytest.mark.parametrize(
+    "key,value",
+    [
+        ("prompt_values_supported", ["create"]),
+        ("ui_locales_supported", ["de"]),
+        ("claims_parameter_supported", "yes"),
+        ("request_parameter_supported", None),
+        ("revocation_endpoint_auth_methods_supported", ["tls_client_auth"]),
+    ],
+)
+def test_invalid_fixed_metadata(key, value):
+    assert key in errors_of(changed(metadata={key: value}))
+
+
+def test_revocation_needs_a_method():
+    document = changed(metadata={"revocation_endpoint_auth_methods_supported": []})
+    errors = errors_of(document)
+    assert "revocation_endpoint_auth_methods_supported" in errors
+
+
+def test_revocation_without_methods_is_valid_when_disabled():
+    document = changed(
+        metadata={"revocation_endpoint_auth_methods_supported": []},
+        settings={"revocation_enabled": False},
+    )
+    validate_document(document)
+
+
+def test_revocation_signing_algorithms_need_a_jwt_method():
+    document = changed(
+        metadata={
+            "token_endpoint_auth_methods_supported": ["client_secret_basic"],
+            "revocation_endpoint_auth_methods_supported": ["client_secret_basic"],
+        }
+    )
+    metadata = published_metadata(document, "https://server.test", URLS)
+    assert "revocation_endpoint_auth_signing_alg_values_supported" not in metadata
