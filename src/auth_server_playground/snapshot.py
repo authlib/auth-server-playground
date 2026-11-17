@@ -30,7 +30,7 @@ from .settings import REQUEST_OBJECT_ALGORITHMS
 from .settings import InvalidDocument
 from .settings import validate_document
 
-SNAPSHOT_VERSION = 2
+SNAPSHOT_VERSION = 1
 
 #: The last second of the year 9999, the end of what a datetime holds.
 MAX_TIMESTAMP = 253402300799

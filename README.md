@@ -16,7 +16,7 @@ The web interface has five sections:
 - **Keys**: the keys that sign the ID tokens, one active key per algorithm. A rotation creates a new active key. The old key stays in the JWKS until it is deleted, so clients can still verify the tokens it signed.
 - **Clients**: create and edit the clients by hand, and see the clients that registered themselves. A client can have keys, as a key set or a key set URL. The form marks the values that the server does not support.
 - **Personas**: the users of the server. The server checks no password: at the authorization endpoint, pick the persona to act as. Each persona has the standard claims of OpenID Connect. The persona page lists the consents of the persona, and revokes them.
-- **Snapshot**: export the configuration, the personas, the clients and the signing keys to a JSON file, and import such a file. The file holds the client secrets and the private keys: keep it private. The server refuses a snapshot from an earlier version.
+- **Snapshot**: export the configuration, the personas, the clients and the signing keys to a JSON file, and import such a file. The file holds the client secrets and the private keys: keep it private.
 
 The server supports these grants and endpoints:
 
