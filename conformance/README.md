@@ -105,7 +105,7 @@ Remove the folder to free the space.
 `expected-failures.json` lists the known failures and warnings, in the format of the suite runner.
 Each entry gives the test module, its variant, the block, the condition and the expected result.
 Its `comment` says why the result happens.
-It only lists Authlib gaps, limits of the bench, and the features that the playground leaves out on purpose, such as signed request objects.
+It only lists Authlib gaps, limits of the bench, and the features that the playground leaves out on purpose, such as `request_uri`.
 Any other failure that comes from the playground gets a fix, not an entry.
 
 When an Authlib release fixes a finding:

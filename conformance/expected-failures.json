@@ -1,17 +1,5 @@
 [
   {
-    "test-name": "oidcc-discovery-endpoint-verification",
-    "variant": {
-      "server_metadata": "discovery",
-      "client_registration": "static_client"
-    },
-    "configuration-filename": "config.json",
-    "current-block": "",
-    "condition": "CheckDiscEndpointRequestObjectSigningAlgValuesSupportedIncludesRS256",
-    "expected-result": "warning",
-    "comment": "The playground only accepts unsigned request objects, because its clients have no keys yet. Per OIDC Discovery §3, servers SHOULD also support RS256. Signed request objects come with dynamic client registration."
-  },
-  {
     "test-name": "oidcc-userinfo-post-body",
     "variant": {
       "client_auth_type": "client_secret_basic",
