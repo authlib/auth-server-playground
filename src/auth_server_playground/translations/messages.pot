@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-17 10:53+0100\n"
+"POT-Creation-Date: 2026-11-17 12:00+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -126,7 +126,7 @@ msgstr ""
 
 #: src/auth_server_playground/forms.py:163
 #: src/auth_server_playground/forms.py:409
-#: src/auth_server_playground/templates/admin/clients.html:22
+#: src/auth_server_playground/templates/admin/clients.html:24
 msgid "Grant types"
 msgstr ""
 
@@ -264,7 +264,7 @@ msgstr ""
 
 #: src/auth_server_playground/forms.py:390
 #: src/auth_server_playground/templates/admin/client.html:51
-#: src/auth_server_playground/templates/admin/clients.html:20
+#: src/auth_server_playground/templates/admin/clients.html:22
 msgid "Client ID"
 msgstr ""
 
@@ -273,11 +273,12 @@ msgid "Leave empty to generate one. Letters, digits, and . _ ~ -"
 msgstr ""
 
 #: src/auth_server_playground/forms.py:395
-#: src/auth_server_playground/templates/admin/clients.html:19
+#: src/auth_server_playground/templates/admin/clients.html:21
 msgid "Name"
 msgstr ""
 
 #: src/auth_server_playground/forms.py:397
+#: src/auth_server_playground/templates/interaction/_client.html:7
 msgid "Home page"
 msgstr ""
 
@@ -326,10 +327,12 @@ msgid "Contacts"
 msgstr ""
 
 #: src/auth_server_playground/forms.py:437
+#: src/auth_server_playground/templates/interaction/_client.html:9
 msgid "Terms of service"
 msgstr ""
 
 #: src/auth_server_playground/forms.py:440
+#: src/auth_server_playground/templates/interaction/_client.html:8
 msgid "Privacy policy"
 msgstr ""
 
@@ -565,7 +568,7 @@ msgstr ""
 msgid "Error:"
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/clients.html:37
+#: src/auth_server_playground/templates/admin/clients.html:39
 #: src/auth_server_playground/templates/admin/index.html:39
 #: src/auth_server_playground/templates/layout.html:26
 msgid "Warning:"
@@ -588,7 +591,7 @@ msgid "Published metadata"
 msgstr ""
 
 #: src/auth_server_playground/templates/admin/client.html:5
-#: src/auth_server_playground/templates/admin/clients.html:12
+#: src/auth_server_playground/templates/admin/clients.html:13
 msgid "New client"
 msgstr ""
 
@@ -664,24 +667,24 @@ msgstr ""
 msgid "Clients"
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/clients.html:9
+#: src/auth_server_playground/templates/admin/clients.html:10
 #, python-format
 msgid "Delete the dynamic clients (%(count)s)"
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/clients.html:21
+#: src/auth_server_playground/templates/admin/clients.html:23
 msgid "Authentication"
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/clients.html:28
+#: src/auth_server_playground/templates/admin/clients.html:30
 msgid "dynamic"
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/clients.html:38
+#: src/auth_server_playground/templates/admin/clients.html:40
 msgid "The server does not support:"
 msgstr ""
 
-#: src/auth_server_playground/templates/admin/clients.html:51
+#: src/auth_server_playground/templates/admin/clients.html:53
 msgid "No client yet."
 msgstr ""
 
@@ -997,51 +1000,56 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: src/auth_server_playground/templates/interaction/consent.html:3
-msgid "Consent"
+#: src/auth_server_playground/templates/interaction/_client.html:4
+#, python-format
+msgid "Logo of %(client)s"
 msgstr ""
 
-#: src/auth_server_playground/templates/interaction/consent.html:8
-#, python-format
-msgid "%(client)s asks for access"
+#: src/auth_server_playground/templates/interaction/consent.html:4
+msgid "Consent"
 msgstr ""
 
 #: src/auth_server_playground/templates/interaction/consent.html:10
 #, python-format
-msgid "You act as <strong>%(persona)s</strong>."
-msgstr ""
-
-#: src/auth_server_playground/templates/interaction/consent.html:11
-msgid "Change persona"
+msgid "%(client)s asks for access"
 msgstr ""
 
 #: src/auth_server_playground/templates/interaction/consent.html:14
+#, python-format
+msgid "You act as <strong>%(persona)s</strong>."
+msgstr ""
+
+#: src/auth_server_playground/templates/interaction/consent.html:15
+msgid "Change persona"
+msgstr ""
+
+#: src/auth_server_playground/templates/interaction/consent.html:18
 msgid "Requested scopes:"
 msgstr ""
 
-#: src/auth_server_playground/templates/interaction/consent.html:22
+#: src/auth_server_playground/templates/interaction/consent.html:26
 msgid "Claims requested beyond the scopes:"
 msgstr ""
 
-#: src/auth_server_playground/templates/interaction/consent.html:30
+#: src/auth_server_playground/templates/interaction/consent.html:34
 msgid "Authorization request"
 msgstr ""
 
-#: src/auth_server_playground/templates/interaction/select_persona.html:3
-#: src/auth_server_playground/templates/interaction/select_persona.html:8
+#: src/auth_server_playground/templates/interaction/select_persona.html:4
+#: src/auth_server_playground/templates/interaction/select_persona.html:9
 msgid "Choose a persona"
 msgstr ""
 
-#: src/auth_server_playground/templates/interaction/select_persona.html:12
+#: src/auth_server_playground/templates/interaction/select_persona.html:17
 #, python-format
 msgid "<strong>%(client_name)s</strong> asks you to sign in."
 msgstr ""
 
-#: src/auth_server_playground/templates/interaction/select_persona.html:14
+#: src/auth_server_playground/templates/interaction/select_persona.html:19
 msgid "The playground does not check passwords: pick who you act as."
 msgstr ""
 
-#: src/auth_server_playground/templates/interaction/select_persona.html:48
+#: src/auth_server_playground/templates/interaction/select_persona.html:53
 msgid "Continue with a new random persona"
 msgstr ""
 

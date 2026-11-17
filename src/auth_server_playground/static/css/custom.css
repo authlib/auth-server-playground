@@ -276,3 +276,18 @@ fieldset ul li {
     clip-path: inset(50%);
     white-space: nowrap;
 }
+
+/* The logo comes from the client: its size is unknown. */
+.client-logo {
+    display: block;
+    max-width: 8rem;
+    max-height: 4rem;
+    object-fit: contain;
+    margin-bottom: var(--pico-spacing);
+}
+
+.client-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--pico-spacing);
+}

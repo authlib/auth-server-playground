@@ -140,14 +140,11 @@ def authorization_params(next_url):
 
 
 def requesting_client(next_url):
-    """Return the name of the client of the authorization request in next_url."""
+    """Return the client of the authorization request in next_url, or None."""
     client_id = authorization_params(next_url).get("client_id")
     if not client_id:
         return None
-    client = Client.query.filter_by(client_id=client_id).first()
-    if client is None:
-        return None
-    return client.client_name or client.client_id
+    return Client.query.filter_by(client_id=client_id).first()
 
 
 def hinted_persona(personas, hint):
@@ -183,7 +180,7 @@ def select_persona():
             form=form,
             random_form=ActionForm(prefix="random"),
             personas={persona.id: persona for persona in all_personas},
-            client_name=requesting_client(next_url),
+            client=requesting_client(next_url),
         )
 
     act_as(form.persona.data)

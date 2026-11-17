@@ -11,6 +11,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from . import admin
 from . import endpoints
 from . import interaction
+from .forms import is_web_url
 from .highlighting import highlight
 from .highlighting import stylesheet
 from .i18n import preferred_language
@@ -77,6 +78,7 @@ def setup_app(app):
         return version
 
     app.add_template_filter(highlight)
+    app.add_template_test(is_web_url, "web_url")
 
     @app.route("/highlight.css")
     def highlight_css():

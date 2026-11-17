@@ -1,11 +1,15 @@
 {% extends "layout.html" %}
 {% from "_form.html" import render_form %}
+{% from "interaction/_client.html" import client_identity %}
 {% block title %}{% trans %}Consent{% endtrans %}{% endblock %}
 {% block container_class %} narrow{% endblock %}
 {% block content %}
     <article>
         {% set client = grant.client.client_name or grant.client.client_id %}
-        <header><h2>{% trans %}{{ client }} asks for access{% endtrans %}</h2></header>
+        <header>
+            <h2>{% trans %}{{ client }} asks for access{% endtrans %}</h2>
+            {{ client_identity(grant.client) }}
+        </header>
         <p>
             {% trans %}You act as <strong>{{ persona }}</strong>.{% endtrans %}
             <a href="{{ url_for('interaction.select_persona', next=request.script_root + request.full_path, ui_locales=ui_locales) }}">{% trans %}Change persona{% endtrans %}</a>

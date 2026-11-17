@@ -1,0 +1,18 @@
+{% macro client_identity(client) %}
+    {% set name = client.client_name or client.client_id %}
+    {% if client.logo_uri is web_url %}
+        <img class="client-logo" src="{{ client.logo_uri }}" alt="{{ _('Logo of %(client)s', client=name) }}" referrerpolicy="no-referrer">
+    {% endif %}
+    {% set links = [
+    (client.client_uri, _("Home page")),
+    (client.policy_uri, _("Privacy policy")),
+    (client.tos_uri, _("Terms of service")),
+    ]|selectattr(0, "web_url")|list %}
+    {% if links %}
+        <p class="client-links">
+            {% for url, label in links %}
+                <small><a href="{{ url }}" rel="noopener noreferrer">{{ label }}</a></small>
+            {% endfor %}
+        </p>
+    {% endif %}
+{% endmacro %}

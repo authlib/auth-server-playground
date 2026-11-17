@@ -5,10 +5,12 @@ import pytest
 
 from auth_server_playground.models import Persona
 from auth_server_playground.models import db
+from tests.conftest import make_client
 from tests.utils import REDIRECT_URI
 from tests.utils import authorize_url
 from tests.utils import callback_params
 from tests.utils import consent
+from tests.utils import oidc_url
 
 
 def code_url(client):
@@ -155,3 +157,102 @@ def test_selector_without_a_client_id(testapp):
     )
     res = testapp.get(url)
     assert "asks you" not in res.html.select_one("main").get_text()
+
+
+@pytest.fixture
+def described_client(app):
+    return make_client(
+        app,
+        client_id="described",
+        client_secret="described-secret",
+        metadata={
+            "scope": "openid profile",
+            "grant_types": ["authorization_code"],
+            "response_types": ["code"],
+            "client_uri": "https://client.test/",
+            "logo_uri": "https://client.test/logo.png",
+            "policy_uri": "https://client.test/privacy",
+            "tos_uri": "https://client.test/terms",
+        },
+    )
+
+
+def check_client_identity(page):
+    logo = page.html.select_one("img.client-logo")
+    assert logo["src"] == "https://client.test/logo.png"
+    assert logo["referrerpolicy"] == "no-referrer"
+    assert logo["alt"]
+    links = page.html.select(".client-links a")
+    assert [link["href"] for link in links] == [
+        "https://client.test/",
+        "https://client.test/privacy",
+        "https://client.test/terms",
+    ]
+    assert all(link["rel"] == ["noopener", "noreferrer"] for link in links)
+
+
+def test_persona_page_shows_the_client(testapp, described_client):
+    check_client_identity(testapp.get(oidc_url(described_client)).follow())
+
+
+def test_consent_page_shows_the_client(logged_in, described_client):
+    check_client_identity(logged_in.get(oidc_url(described_client)))
+
+
+def test_client_without_logo_or_links(logged_in, client):
+    page = logged_in.get(oidc_url(client))
+    assert page.html.select_one("img.client-logo") is None
+    assert page.html.select_one(".client-links") is None
+
+
+@pytest.mark.parametrize("url", ["myapp://home", "javascript:alert(1)"])
+def test_only_web_urls_are_shown(app, logged_in, url):
+    client = make_client(
+        app,
+        client_id="native",
+        client_secret="native-secret",
+        metadata={
+            "scope": "openid profile",
+            "grant_types": ["authorization_code"],
+            "response_types": ["code"],
+            "client_uri": url,
+            "logo_uri": url,
+        },
+    )
+    page = logged_in.get(oidc_url(client))
+    assert page.html.select_one("img.client-logo") is None
+    assert page.html.select_one(".client-links") is None
+
+
+HOSTILE_LOGO = 'https://client.test/a.png" onerror="alert(1)'
+
+
+@pytest.fixture
+def hostile_client(app):
+    return make_client(
+        app,
+        client_id="hostile",
+        client_secret="hostile-secret",
+        metadata={
+            "client_name": "<script>alert(1)</script>",
+            "scope": "openid profile",
+            "grant_types": ["authorization_code"],
+            "response_types": ["code"],
+            "logo_uri": HOSTILE_LOGO,
+        },
+    )
+
+
+def check_hostile_client_is_escaped(page):
+    assert not [s for s in page.html.select("script") if "alert(1)" in s.text]
+    logo = page.html.select_one("img.client-logo")
+    assert logo["src"] == HOSTILE_LOGO
+    assert not logo.has_attr("onerror")
+
+
+def test_persona_page_escapes_the_client(testapp, hostile_client):
+    check_hostile_client_is_escaped(testapp.get(oidc_url(hostile_client)).follow())
+
+
+def test_consent_page_escapes_the_client(logged_in, hostile_client):
+    check_hostile_client_is_escaped(logged_in.get(oidc_url(hostile_client)))
