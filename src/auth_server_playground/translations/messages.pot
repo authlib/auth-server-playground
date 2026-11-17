@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-17 15:46+0100\n"
+"POT-Creation-Date: 2026-11-17 21:20+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,81 +17,89 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: src/auth_server_playground/admin.py:127
+#: src/auth_server_playground/admin.py:100
+msgid "The page expired. Reload it and try again."
+msgstr ""
+
+#: src/auth_server_playground/admin.py:136
 msgid "The server configuration is saved."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:156
+#: src/auth_server_playground/admin.py:166
 msgid "A new initial access token replaces the old one."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:174
+#: src/auth_server_playground/admin.py:185
 msgid "The default configuration is restored."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:210
+#: src/auth_server_playground/admin.py:222
 #, python-format
 msgid "A new %(alg)s key signs the ID tokens."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:223
+#: src/auth_server_playground/admin.py:236
 msgid "This key signs the ID tokens. Rotate it first."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:225
+#: src/auth_server_playground/admin.py:238
 msgid "The key is deleted."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:249
+#: src/auth_server_playground/admin.py:263
 #, python-format
 msgid "%(num)d dynamic client is deleted."
 msgid_plural "%(num)d dynamic clients are deleted."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/auth_server_playground/admin.py:265
+#: src/auth_server_playground/admin.py:279
 msgid "The client is created."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:294
+#: src/auth_server_playground/admin.py:308
 msgid "The client is saved."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:309
+#: src/auth_server_playground/admin.py:320
+msgid "This client has no secret."
+msgstr ""
+
+#: src/auth_server_playground/admin.py:325
 msgid "The client secret is regenerated."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:320
+#: src/auth_server_playground/admin.py:336
 msgid "The client is deleted."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:342
+#: src/auth_server_playground/admin.py:358
 msgid "The persona is created."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:353
+#: src/auth_server_playground/admin.py:369
 msgid "A random persona is created."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:380
+#: src/auth_server_playground/admin.py:396
 msgid "The persona is saved."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:409
+#: src/auth_server_playground/admin.py:427
 msgid "The consent is revoked."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:422
+#: src/auth_server_playground/admin.py:440
 msgid "The persona is deleted."
 msgstr ""
 
-#: src/auth_server_playground/admin.py:437
-#: src/auth_server_playground/admin.py:453
+#: src/auth_server_playground/admin.py:455
+#: src/auth_server_playground/admin.py:471
 #, python-format
 msgid "This snapshot cannot be imported: %(error)s"
 msgstr ""
 
-#: src/auth_server_playground/admin.py:455
+#: src/auth_server_playground/admin.py:473
 msgid "The snapshot is imported."
 msgstr ""
 

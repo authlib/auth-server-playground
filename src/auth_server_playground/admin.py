@@ -92,6 +92,15 @@ def index():
     )
 
 
+def action_confirmed(form):
+    """Return True when the form is valid. Otherwise, flash why."""
+    if form.validate_on_submit():
+        return True
+
+    flash(_("The page expired. Reload it and try again."), "error")
+    return False
+
+
 def stored_token():
     return current_document()["settings"]["initial_access_token"]
 
@@ -147,14 +156,15 @@ def server():
 
 @bp.route("/server/initial-access-token", methods=["POST"])
 def renew_initial_access_token():
-    if not ActionForm(prefix="renew").validate_on_submit():
-        return redirect(url_for("admin.server"))
+    back = url_for("admin.server")
+    if not action_confirmed(ActionForm(prefix="renew")):
+        return redirect(back)
 
     document = current_document()
     document["settings"]["initial_access_token"] = secrets.token_urlsafe(32)
     save_document(document)
     flash(_("A new initial access token replaces the old one."), "success")
-    return redirect(url_for("admin.server"))
+    return redirect(back)
 
 
 @bp.route("/server/preview", methods=["POST"])
@@ -167,12 +177,13 @@ def server_preview():
 
 @bp.route("/server/defaults", methods=["POST"])
 def server_defaults():
-    if not ActionForm().validate_on_submit():
-        return redirect(url_for("admin.server"))
+    back = url_for("admin.server")
+    if not action_confirmed(ActionForm()):
+        return redirect(back)
 
     save_document(default_document())
     flash(_("The default configuration is restored."), "success")
-    return redirect(url_for("admin.server"))
+    return redirect(back)
 
 
 def enabled_algorithms():
@@ -203,19 +214,21 @@ def rotate_key(alg):
     if alg not in enabled_algorithms():
         abort(404)
 
-    if not ActionForm(prefix=f"rotate-{alg}").validate_on_submit():
-        return redirect(url_for("admin.keys"))
+    back = url_for("admin.keys")
+    if not action_confirmed(ActionForm(prefix=f"rotate-{alg}")):
+        return redirect(back)
 
     rotate_signing_key(alg)
     flash(_("A new %(alg)s key signs the ID tokens.", alg=alg), "success")
-    return redirect(url_for("admin.keys"))
+    return redirect(back)
 
 
 @bp.route("/keys/<kid>/delete", methods=["POST"])
 def remove_key(kid):
     key = db.get_or_404(SigningKey, kid)
-    if not ActionForm(prefix=f"delete-{kid}").validate_on_submit():
-        return redirect(url_for("admin.keys"))
+    back = url_for("admin.keys")
+    if not action_confirmed(ActionForm(prefix=f"delete-{kid}")):
+        return redirect(back)
 
     try:
         delete_key(key, enabled_algorithms())
@@ -224,7 +237,7 @@ def remove_key(kid):
     else:
         flash(_("The key is deleted."), "success")
 
-    return redirect(url_for("admin.keys"))
+    return redirect(back)
 
 
 @bp.route("/clients")
@@ -240,8 +253,9 @@ def clients():
 
 @bp.route("/dynamic-clients/delete", methods=["POST"])
 def remove_dynamic_clients():
-    if not ActionForm(prefix="delete-dynamic").validate_on_submit():
-        return redirect(url_for("admin.clients"))
+    back = url_for("admin.clients")
+    if not action_confirmed(ActionForm(prefix="delete-dynamic")):
+        return redirect(back)
 
     count = delete_dynamic_clients()
     flash(
@@ -252,7 +266,7 @@ def remove_dynamic_clients():
         ),
         "success",
     )
-    return redirect(url_for("admin.clients"))
+    return redirect(back)
 
 
 @bp.route("/clients/new", methods=["GET", "POST"])
@@ -298,22 +312,24 @@ def edit_client(client_id):
 @bp.route("/clients/<client_id>/secret", methods=["POST"])
 def regenerate_secret(client_id):
     client = get_client(client_id)
-    if (
-        not ActionForm(prefix="regenerate").validate_on_submit()
-        or not client.client_secret
-    ):
-        return redirect(url_for("admin.edit_client", client_id=client_id))
+    back = url_for("admin.edit_client", client_id=client_id)
+    if not action_confirmed(ActionForm(prefix="regenerate")):
+        return redirect(back)
+
+    if not client.client_secret:
+        flash(_("This client has no secret."), "error")
+        return redirect(back)
 
     client.client_secret = secrets.token_urlsafe(36)
     db.session.commit()
     flash(_("The client secret is regenerated."), "success")
-    return redirect(url_for("admin.edit_client", client_id=client_id))
+    return redirect(back)
 
 
 @bp.route("/clients/<client_id>/delete", methods=["POST"])
 def remove_client(client_id):
     client = get_client(client_id)
-    if not ActionForm(prefix="delete").validate_on_submit():
+    if not action_confirmed(ActionForm(prefix="delete")):
         return redirect(url_for("admin.edit_client", client_id=client_id))
 
     delete_client(client)
@@ -346,7 +362,7 @@ def new_persona():
 @bp.route("/personas/random", methods=["POST"])
 def random_persona():
     form = RandomPersonaForm(prefix="random")
-    if not form.validate_on_submit():
+    if not action_confirmed(form):
         return redirect(url_for("admin.personas"))
 
     persona = create_random_persona(form.locale.data)
@@ -384,14 +400,15 @@ def edit_persona(persona_id):
 @bp.route("/personas/<int:persona_id>/avatar", methods=["POST"])
 def redraw_avatar(persona_id):
     persona = get_persona(persona_id)
-    if not ActionForm(prefix="avatar").validate_on_submit():
-        return redirect(url_for("admin.edit_persona", persona_id=persona_id))
+    back = url_for("admin.edit_persona", persona_id=persona_id)
+    if not action_confirmed(ActionForm(prefix="avatar")):
+        return redirect(back)
 
     persona.picture_svg = render_avatar()
     # The picture claim changes with the avatar.
     persona.claims = {**persona.claims, "updated_at": int(time.time())}
     db.session.commit()
-    return redirect(url_for("admin.edit_persona", persona_id=persona_id))
+    return redirect(back)
 
 
 @bp.route(
@@ -401,19 +418,20 @@ def revoke_consent(persona_id, consent_id):
     consent = db.first_or_404(
         db.select(Consent).filter_by(id=consent_id, persona_id=persona_id)
     )
-    if not revoke_form(consent).validate_on_submit():
-        return redirect(url_for("admin.edit_persona", persona_id=persona_id))
+    back = url_for("admin.edit_persona", persona_id=persona_id)
+    if not action_confirmed(revoke_form(consent)):
+        return redirect(back)
 
     db.session.delete(consent)
     db.session.commit()
     flash(_("The consent is revoked."), "success")
-    return redirect(url_for("admin.edit_persona", persona_id=persona_id))
+    return redirect(back)
 
 
 @bp.route("/personas/<int:persona_id>/delete", methods=["POST"])
 def remove_persona(persona_id):
     persona = get_persona(persona_id)
-    if not ActionForm(prefix="delete").validate_on_submit():
+    if not action_confirmed(ActionForm(prefix="delete")):
         return redirect(url_for("admin.edit_persona", persona_id=persona_id))
 
     # The cascade of the model deletes the codes, tokens and consents of the persona.

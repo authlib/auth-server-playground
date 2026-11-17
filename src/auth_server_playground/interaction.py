@@ -45,11 +45,8 @@ class PlaygroundSession(AuthorizationSession, AuthorizationSessionMixin):
         if interaction != "consent":
             return None
 
-        consent = self.stored_consent(request)
-        if consent is None or not consent.covers(request.scope):
-            return None
-
-        return consent.granted_at
+        consent = self.covering_consent(request)
+        return consent.granted_at if consent else None
 
     def get_acr(self, request):
         """Return the first requested acr value. The playground meets any value."""
@@ -66,20 +63,25 @@ class PlaygroundSession(AuthorizationSession, AuthorizationSessionMixin):
         return hinted is not None and hinted.id != self.user.id
 
     def is_consent_needed(self, request):
-        consent = self.stored_consent(request)
-        return consent is None or not consent.covers(request.scope)
+        return self.covering_consent(request) is None
 
-    def stored_consent(self, request):
-        return Consent.query.filter_by(
-            persona_id=self.user.id, client_id=request.client.client_id
-        ).first()
+    def covering_consent(self, request):
+        """Return the stored consent when it covers the scope, else None."""
+        consent = stored_consent(self.user.id, request.client.client_id)
+        if consent is None or not consent.covers(request.scope):
+            return None
+
+        return consent
+
+
+def stored_consent(persona_id, client_id):
+    """Return the consent of the persona for the client, or None."""
+    return Consent.query.filter_by(persona_id=persona_id, client_id=client_id).first()
 
 
 def grant_consent(persona, client_id, scope):
     """Store the consent, merged with the scopes granted before."""
-    consent = Consent.query.filter_by(
-        persona_id=persona.id, client_id=client_id
-    ).first()
+    consent = stored_consent(persona.id, client_id)
     if consent is None:
         consent = Consent(persona_id=persona.id, client_id=client_id, scope="")
         db.session.add(consent)
