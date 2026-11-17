@@ -1097,5 +1097,5 @@ msgstr ""
 
 #: src/auth_server_playground/templates/interaction/select_persona.html:53
 msgid "Continue with a new random persona"
-msgstr "Continuer avec une nouvelle persona aléatoire"
+msgstr "Nouvelle persona aléatoire"
 
