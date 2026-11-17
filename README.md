@@ -14,18 +14,21 @@ The web interface has five sections:
 
 - **Server**: the published metadata, the grants, the client authentication methods, PKCE, the token lifetimes, the scopes and the ID token algorithms. The defaults follow RFC 9700.
 - **Keys**: the keys that sign the ID tokens, one active key per algorithm. A rotation creates a new active key. The old key stays in the JWKS until it is deleted, so clients can still verify the tokens it signed.
-- **Clients**: create and edit the clients by hand. The form marks the values that the server does not support.
+- **Clients**: create and edit the clients by hand, and see the clients that registered themselves. A client can have keys, as a key set or a key set URL. The form marks the values that the server does not support.
 - **Personas**: the users of the server. The server checks no password: at the authorization endpoint, pick the persona to act as. Each persona has the standard claims of OpenID Connect. The persona page lists the consents of the persona, and revokes them.
 - **Snapshot**: export the configuration, the personas, the clients and the signing keys to a JSON file, and import such a file. The file holds the client secrets and the private keys: keep it private.
 
 The server supports these grants and endpoints:
 
 - Authorization code grant, with PKCE (RFC 7636).
+  Authorization errors redirect to the client with HTTP 303.
 - Implicit grant, off by default.
 - Resource owner password credentials grant, off by default.
 - Client credentials grant.
 - Refresh token grant.
 - Token revocation (RFC 7009).
+- Dynamic client registration (RFC 7591) and client configuration (RFC 7592), at `/oauth/register`.
+- Client authentication with `client_secret_basic`, `client_secret_post`, `private_key_jwt` and `client_secret_jwt` (RFC 7523 §2.2, OpenID Connect Core §9), and public clients with `none`.
 - Authorization server metadata (RFC 8414), at `/.well-known/oauth-authorization-server`.
 - A protected resource, `/api/resource`, that returns the scope, the client and the persona of the access token.
 
@@ -40,8 +43,11 @@ The server then supports:
   The server accepts any `acr` value: the ID token holds the first requested value.
 - A default `max_age` for each client.
 - The `claims` parameter. The consent page lists the claims that the scopes do not give.
-- Request objects in the `request` parameter, unsigned only (`alg` `none`): the clients have no keys yet.
+- Request objects in the `request` parameter (RFC 9101), unsigned (`alg` `none`) or signed with RS256, PS256, ES256, Ed25519 or HS256.
+  A client verifies a signed object with its keys. HS256 uses the client secret, so a public client cannot send one.
   The `request_uri` parameter is not supported.
+- Registration of the OpenID Connect client metadata (OpenID Connect Registration).
+- The client logo and links (`logo_uri`, `client_uri`, `policy_uri`, `tos_uri`) on the persona and consent pages. Only `http` and `https` URLs show.
 
 ## Run the server
 
@@ -106,6 +112,54 @@ $ curl -u demo:<SECRET> -d grant_type=password -d username=alice -d password=x h
 ```
 
 Enable it in **Server**, then in the client.
+
+## Try dynamic client registration
+
+The default configuration lets any client register itself.
+The registration endpoint is `/oauth/register`, and the discovery documents publish it as `registration_endpoint`.
+Register a client with a JSON request:
+
+```console
+$ curl -s -X POST -H 'Content-Type: application/json' -d '{"client_name":"Demo app","redirect_uris":["http://127.0.0.1:8000/callback"],"token_endpoint_auth_method":"client_secret_basic","scope":"openid profile"}' http://127.0.0.1:3000/oauth/register
+{"grant_types": ["authorization_code"], "response_types": ["code"], "redirect_uris": ["http://127.0.0.1:8000/callback"], "token_endpoint_auth_method": "client_secret_basic", "client_name": "Demo app", "scope": "openid profile", "application_type": "web", "id_token_signed_response_alg": "RS256", "require_auth_time": false, "require_signed_request_object": false, "client_id": "WTq5BbF5l2fkN89OqWcLmPhu", "client_secret": "k9wuEF...5qCR", "client_id_issued_at": 1794920968, "client_secret_expires_at": 0, "registration_client_uri": "http://127.0.0.1:3000/oauth/register/WTq5BbF5l2fkN89OqWcLmPhu", "registration_access_token": "6AZu5x...GUc"}
+```
+
+The response holds the client secret, shortened here.
+It also holds `registration_client_uri` and `registration_access_token`.
+Per RFC 7592, the client reads, changes and deletes its registration at that URI, with the registration access token as Bearer token:
+
+```console
+$ curl -s -H "Authorization: Bearer <REGISTRATION_ACCESS_TOKEN>" http://127.0.0.1:3000/oauth/register/WTq5BbF5l2fkN89OqWcLmPhu
+{"client_id": "WTq5BbF5l2fkN89OqWcLmPhu", "client_secret": "k9wuEF...5qCR", "client_id_issued_at": 1794920968, "client_secret_expires_at": 0, "grant_types": ["authorization_code"], "response_types": ["code"], "redirect_uris": ["http://127.0.0.1:8000/callback"], "token_endpoint_auth_method": "client_secret_basic", "client_name": "Demo app", "scope": "openid profile", "application_type": "web", "id_token_signed_response_alg": "RS256", "require_auth_time": false, "require_signed_request_object": false, "registration_client_uri": "http://127.0.0.1:3000/oauth/register/WTq5BbF5l2fkN89OqWcLmPhu", "registration_access_token": "6AZu5x...GUc"}
+```
+
+The server applies the defaults of RFC 7591 §2: the `authorization_code` grant and the `code` response type.
+It refuses invalid metadata, such as `private_key_jwt` without `jwks` or `jwks_uri`:
+
+```console
+$ curl -s -X POST -H 'Content-Type: application/json' -d '{"redirect_uris":["http://127.0.0.1:8000/callback"],"token_endpoint_auth_method":"private_key_jwt"}' http://127.0.0.1:3000/oauth/register
+{"error": "invalid_client_metadata", "error_description": "private_key_jwt needs jwks or jwks_uri."}
+```
+
+### Registration modes
+
+Set the mode in **Server**, under **Dynamic registration**:
+
+- `disabled`: the registration endpoint and the client configuration endpoint answer 404, and the discovery documents do not publish `registration_endpoint`.
+- `open`: any client can register. This is the default.
+- `token`: a client must send the initial access token as Bearer token (RFC 7591 §3).
+  The server page shows the token and has a button to replace it.
+  The server creates a token when the mode becomes `token`.
+
+The mode and the token are in the configuration document, so a snapshot keeps them.
+
+### Dynamic clients in the web interface
+
+A client that registered itself is a dynamic client.
+The client list marks it with `dynamic`.
+Its page shows the registration URL and the registration access token, and the form edits it like any other client.
+One button of the client list, **Delete the dynamic clients (N)**, deletes all the dynamic clients.
+The button shows when at least one dynamic client exists.
 
 ## Try OpenID Connect
 
@@ -211,6 +265,42 @@ The Docker image serves the server with [Granian](https://github.com/emmett-fram
 
 Granian reads its other settings from `GRANIAN_*` variables too.
 The workers share the key stored in the database, so several workers need no `SECRET_KEY`.
+
+### Client keys and JWT authentication
+
+A client has keys when its metadata holds `jwks` (a JWK Set with public keys) or `jwks_uri` (the URL of a JWK Set).
+The two exclude each other.
+The server reads the keys to verify the JWTs of the client.
+With several keys, the JWT header needs a `kid`. With one key, it can omit it.
+
+The `private_key_jwt` method needs keys.
+The client signs an assertion with a private key (RFC 7523 §2.2).
+The server accepts RS256, PS256, ES256 and Ed25519.
+
+The `client_secret_jwt` method uses the client secret.
+The client signs the assertion with HS256.
+
+For both methods, the client sends `client_assertion_type` and `client_assertion` to the token endpoint, and to the revocation endpoint when it is on.
+The `aud` claim is the issuer or the URL of the token endpoint.
+Each `jti` is accepted once.
+The client can set `token_endpoint_auth_signing_alg` to allow one algorithm only.
+In **Server**, uncheck an algorithm of the token endpoint to refuse it.
+
+The server checks the method registered by the client on every endpoint.
+A `client_secret_post` client that sends Basic credentials to `/oauth/revoke` is refused.
+
+The server checks a signed request object with the same client keys.
+With HS256, the key is the client secret, and a public client gets `invalid_request_object`.
+An algorithm that the server does not support gives `invalid_request`.
+
+### Private addresses
+
+The server fetches `jwks_uri` when it verifies a JWT.
+The fetch accepts `http` and `https` only, follows no redirect, waits 5 seconds for each operation and 10 seconds in total, and reads 64 KiB at most.
+The **Fetch client URLs at private addresses** setting of **Server** controls the addresses.
+It is on by default, so that a client on `localhost` works.
+Switch it off on a server that other people reach: the server then refuses `jwks_uri` URLs that resolve to private, loopback or link-local addresses.
+The setting is `outbound_private_addresses` in the configuration document.
 
 ## Run in production
 
