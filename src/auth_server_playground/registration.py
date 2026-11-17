@@ -156,7 +156,7 @@ class ConfigurationEndpoint(ClientConfigurationEndpoint):
         ).first()
 
     def revoke_access_token(self, token, request):
-        """RFC 7592 §2 says the server SHOULD revoke the token.
+        """Per RFC 7592 §2, the server SHOULD revoke the token.
 
         The playground keeps it: the token belongs to another client, which still exists.
         """

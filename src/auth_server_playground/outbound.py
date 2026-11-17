@@ -45,9 +45,19 @@ class PublicAddressBackend(httpcore2.SyncBackend):
             if not ipaddress.ip_address(address).is_global:
                 raise OutboundError(f"address {address} is not public")
 
-        return super().connect_tcp(
-            found[0], port, timeout, local_address, socket_options
-        )
+        if not found:
+            raise httpcore2.ConnectError(f"no address found for {host}")
+
+        error = None
+        for address in found:
+            try:
+                return super().connect_tcp(
+                    address, port, timeout, local_address, socket_options
+                )
+            except (httpcore2.ConnectError, httpcore2.ConnectTimeout) as exc:
+                error = exc
+
+        raise error
 
 
 class PublicAddressTransport(httpx2.HTTPTransport):

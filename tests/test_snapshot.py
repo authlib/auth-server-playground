@@ -39,7 +39,7 @@ def test_snapshot_content(app, client):
         snapshot = export_snapshot()
         secret_key = db.session.get(Settings, SETTINGS_ID).secret_key
 
-    assert snapshot["version"] == 1
+    assert snapshot["version"] == 2
     assert snapshot["configuration"]["settings"]["access_token_lifetime"] == 3600
     assert COMPLETE_SUB in {persona["sub"] for persona in snapshot["personas"]}
     assert snapshot["clients"][0]["client_secret"] == client["client_secret"]
@@ -74,7 +74,7 @@ def test_import_bumps_the_revision(app):
     "change",
     [
         lambda s: s.clear(),
-        lambda s: s.update(version=2),
+        lambda s: s.update(version=1),
         lambda s: s.pop("clients"),
         lambda s: s.update(personas={}),
         lambda s: s["configuration"]["settings"].update(pkce_required="never"),
@@ -208,7 +208,7 @@ def test_import_a_large_snapshot(app, testapp):
     [
         b"{not json",
         b"\xff\xfe",
-        b'{"version": 2}',
+        b'{"version": 1}',
         b"[]",
         b"1" * 5000,
         b"[" * 100_000 + b"]" * 100_000,
@@ -259,7 +259,7 @@ def test_export_download(testapp):
     res = testapp.get("/en/snapshot/export")
     assert res.content_type == "application/json"
     assert "attachment" in res.headers["Content-Disposition"]
-    assert res.json["version"] == 1
+    assert res.json["version"] == 2
 
 
 def write_snapshot(app, tmp_path, lifetime):
@@ -300,7 +300,7 @@ def test_initial_snapshot_on_empty_database(app, tmp_path, make_app, monkeypatch
 
 def test_invalid_initial_snapshot(tmp_path, make_app, monkeypatch):
     path = tmp_path / "snapshot.json"
-    path.write_text('{"version": 2}')
+    path.write_text('{"version": 1}')
     monkeypatch.setenv("INITIAL_SNAPSHOT", str(path))
     with pytest.raises(SnapshotError):
         make_app()

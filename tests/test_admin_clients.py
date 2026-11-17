@@ -467,7 +467,19 @@ def test_unsigned_request_objects_by_default(app, testapp, client):
 
 
 def test_unsupported_algorithm_is_marked(app, testapp, configure):
-    configure(metadata={"token_endpoint_auth_signing_alg_values_supported": ["RS256"]})
+    configure(
+        metadata={
+            "token_endpoint_auth_signing_alg_values_supported": ["RS256"],
+            "token_endpoint_auth_methods_supported": [
+                "client_secret_basic",
+                "private_key_jwt",
+            ],
+            "revocation_endpoint_auth_methods_supported": [
+                "client_secret_basic",
+                "private_key_jwt",
+            ],
+        }
+    )
     make_client(
         app,
         client_id="ps256-client",

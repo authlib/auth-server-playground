@@ -9,6 +9,10 @@ from joserfc.jwk import OctKey
 from joserfc.jwk import OKPKey
 from joserfc.jwk import RSAKey
 
+from auth_server_playground.models import Settings
+from auth_server_playground.models import db
+from auth_server_playground.store import current_document
+from auth_server_playground.store import settings_row
 from tests.conftest import make_client
 from tests.utils import bearer
 
@@ -138,13 +142,38 @@ def test_client_of_another_method(testapp, client, rsa_key):
 
 
 def test_server_algorithms(testapp, configure, key_client, rsa_key):
-    configure(metadata={"token_endpoint_auth_signing_alg_values_supported": ["RS256"]})
+    configure(
+        metadata={
+            "token_endpoint_auth_signing_alg_values_supported": ["RS256"],
+            "token_endpoint_auth_methods_supported": [
+                "client_secret_basic",
+                "private_key_jwt",
+            ],
+            "revocation_endpoint_auth_methods_supported": [
+                "client_secret_basic",
+                "private_key_jwt",
+            ],
+        }
+    )
     token_request(testapp, assertion(key_client, rsa_key, "RS256"))
     refused(testapp, assertion(key_client, rsa_key, "PS256"), "not allowed")
 
 
-def test_no_algorithm_for_the_method(testapp, configure, secret_client):
-    configure(metadata={"token_endpoint_auth_signing_alg_values_supported": ["RS256"]})
+def store_unchecked(app, algorithms):
+    """Store a document that validation refuses, as an older server could have."""
+    with app.app_context():
+        document = current_document()
+        document["metadata"]["token_endpoint_auth_signing_alg_values_supported"] = (
+            algorithms
+        )
+        row = settings_row()
+        row.document = document
+        row.revision = Settings.revision + 1
+        db.session.commit()
+
+
+def test_no_algorithm_for_the_method(app, testapp, secret_client):
+    store_unchecked(app, ["RS256"])
     refused(
         testapp,
         assertion(secret_client, OctKey.import_key(SECRET), "HS256"),
@@ -262,13 +291,13 @@ def test_huge_exp_is_refused(testapp, key_client, rsa_key):
     refused(testapp, token, "exp")
 
 
-def test_no_algorithm_fetches_nothing(app, testapp, configure, outbound_urls, rsa_key):
+def test_no_algorithm_fetches_nothing(app, testapp, outbound_urls, rsa_key):
     client_id = jwt_client(
         app,
         "uri-client",
         {"token_endpoint_auth_method": "private_key_jwt", "jwks_uri": JWKS_URI},
     )
-    configure(metadata={"token_endpoint_auth_signing_alg_values_supported": ["HS256"]})
+    store_unchecked(app, ["HS256"])
     refused(testapp, assertion(client_id, rsa_key, "RS256"), "no algorithm")
     assert outbound_urls.requested == []
 

@@ -108,7 +108,7 @@ DEFAULT_DOCUMENT = {
         "id_token_lifetime": 3600,
         "registration": "open",
         "initial_access_token": None,
-        "outbound_private_addresses": True,
+        "outbound_private_addresses": False,
     },
 }
 
@@ -273,6 +273,41 @@ def validate_document(document):
                 )
             }
         )
+
+    methods = set(metadata["token_endpoint_auth_methods_supported"])
+    if document["settings"]["revocation_enabled"]:
+        methods |= set(metadata["revocation_endpoint_auth_methods_supported"])
+
+    signing_algorithms = set(
+        metadata["token_endpoint_auth_signing_alg_values_supported"]
+    )
+    for method, message in (
+        ("private_key_jwt", "private_key_jwt needs an asymmetric algorithm."),
+        ("client_secret_jwt", "client_secret_jwt needs an HMAC algorithm."),
+    ):
+        if method in methods and not signing_algorithms & set(JWT_AUTH_METHODS[method]):
+            raise InvalidDocument(
+                {"token_endpoint_auth_signing_alg_values_supported": message}
+            )
+
+    if metadata["require_signed_request_object"]:
+        if not metadata["request_parameter_supported"]:
+            raise InvalidDocument(
+                {
+                    "require_signed_request_object": (
+                        "Signed request objects need the request parameter."
+                    )
+                }
+            )
+
+        if not set(metadata["request_object_signing_alg_values_supported"]) - {"none"}:
+            raise InvalidDocument(
+                {
+                    "require_signed_request_object": (
+                        "Signed request objects need an algorithm other than none."
+                    )
+                }
+            )
 
     # Only confidential clients use this grant (RFC 6749 §4.4).
     confidential_methods = set(metadata["token_endpoint_auth_methods_supported"]) - {

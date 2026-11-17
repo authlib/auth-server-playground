@@ -390,7 +390,7 @@ def test_default_registration_settings():
     document = default_document()
     assert document["settings"]["registration"] == "open"
     assert document["settings"]["initial_access_token"] is None
-    assert document["settings"]["outbound_private_addresses"] is True
+    assert document["settings"]["outbound_private_addresses"] is False
     assert document["metadata"]["require_signed_request_object"] is False
     assert (
         document["metadata"]["token_endpoint_auth_signing_alg_values_supported"]
@@ -605,3 +605,80 @@ def test_revocation_signing_algorithms_need_a_jwt_method():
     )
     metadata = published_metadata(document, "https://server.test", URLS)
     assert "revocation_endpoint_auth_signing_alg_values_supported" not in metadata
+
+
+@pytest.mark.parametrize(
+    "metadata, settings",
+    [
+        ({"token_endpoint_auth_methods_supported": ["private_key_jwt"]}, {}),
+        ({"revocation_endpoint_auth_methods_supported": ["private_key_jwt"]}, {}),
+    ],
+)
+def test_private_key_jwt_needs_an_asymmetric_algorithm(metadata, settings):
+    document = changed(
+        {
+            **metadata,
+            "token_endpoint_auth_signing_alg_values_supported": ["HS256"],
+        },
+        settings,
+    )
+    assert errors_of(document) == {
+        "token_endpoint_auth_signing_alg_values_supported": (
+            "private_key_jwt needs an asymmetric algorithm."
+        )
+    }
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        {"token_endpoint_auth_methods_supported": ["client_secret_jwt"]},
+        {"revocation_endpoint_auth_methods_supported": ["client_secret_jwt"]},
+    ],
+)
+def test_client_secret_jwt_needs_an_hmac_algorithm(metadata):
+    document = changed(
+        {**metadata, "token_endpoint_auth_signing_alg_values_supported": ["RS256"]}
+    )
+    assert errors_of(document) == {
+        "token_endpoint_auth_signing_alg_values_supported": (
+            "client_secret_jwt needs an HMAC algorithm."
+        )
+    }
+
+
+def test_jwt_algorithms_are_free_without_a_jwt_method():
+    document = changed(
+        {
+            "token_endpoint_auth_methods_supported": ["client_secret_basic"],
+            "revocation_endpoint_auth_methods_supported": ["private_key_jwt"],
+            "token_endpoint_auth_signing_alg_values_supported": [],
+        },
+        {"revocation_enabled": False},
+    )
+    validate_document(document)
+
+
+def test_signed_request_objects_need_the_request_parameter():
+    document = changed(
+        {"require_signed_request_object": True, "request_parameter_supported": False}
+    )
+    assert errors_of(document) == {
+        "require_signed_request_object": (
+            "Signed request objects need the request parameter."
+        )
+    }
+
+
+def test_signed_request_objects_need_an_algorithm_other_than_none():
+    document = changed(
+        {
+            "require_signed_request_object": True,
+            "request_object_signing_alg_values_supported": ["none"],
+        }
+    )
+    assert errors_of(document) == {
+        "require_signed_request_object": (
+            "Signed request objects need an algorithm other than none."
+        )
+    }

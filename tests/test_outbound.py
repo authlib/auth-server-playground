@@ -123,6 +123,41 @@ def test_backend_connects_to_the_checked_address(monkeypatch, connections):
     assert connections == ["93.184.215.14"]
 
 
+def test_backend_tries_the_next_address(monkeypatch):
+    hosts = []
+
+    def connect_tcp(self, host, port, *args, **kwargs):
+        hosts.append(host)
+        if host == "93.184.215.14":
+            raise httpcore2.ConnectError("refused")
+
+        return "stream"
+
+    monkeypatch.setattr(httpcore2.SyncBackend, "connect_tcp", connect_tcp)
+    resolve_to(monkeypatch, "93.184.215.14", "93.184.215.15")
+    stream = PublicAddressBackend().connect_tcp("client.test", 443)
+    assert stream == "stream"
+    assert hosts == ["93.184.215.14", "93.184.215.15"]
+
+
+def test_backend_raises_the_last_error(monkeypatch):
+    def connect_tcp(self, host, port, *args, **kwargs):
+        raise httpcore2.ConnectError(f"refused by {host}")
+
+    monkeypatch.setattr(httpcore2.SyncBackend, "connect_tcp", connect_tcp)
+    resolve_to(monkeypatch, "93.184.215.14", "93.184.215.15")
+    with pytest.raises(httpcore2.ConnectError, match="refused by 93.184.215.15"):
+        PublicAddressBackend().connect_tcp("client.test", 443)
+
+
+def test_backend_reports_an_empty_answer(monkeypatch, connections):
+    resolve_to(monkeypatch)
+    with pytest.raises(httpcore2.ConnectError, match="no address found"):
+        PublicAddressBackend().connect_tcp("client.test", 443)
+
+    assert connections == []
+
+
 @pytest.mark.parametrize(
     "values",
     [

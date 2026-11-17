@@ -16,7 +16,7 @@ The web interface has five sections:
 - **Keys**: the keys that sign the ID tokens, one active key per algorithm. A rotation creates a new active key. The old key stays in the JWKS until it is deleted, so clients can still verify the tokens it signed.
 - **Clients**: create and edit the clients by hand, and see the clients that registered themselves. A client can have keys, as a key set or a key set URL. The form marks the values that the server does not support.
 - **Personas**: the users of the server. The server checks no password: at the authorization endpoint, pick the persona to act as. Each persona has the standard claims of OpenID Connect. The persona page lists the consents of the persona, and revokes them.
-- **Snapshot**: export the configuration, the personas, the clients and the signing keys to a JSON file, and import such a file. The file holds the client secrets and the private keys: keep it private.
+- **Snapshot**: export the configuration, the personas, the clients and the signing keys to a JSON file, and import such a file. The file holds the client secrets and the private keys: keep it private. The server refuses a snapshot from an earlier version.
 
 The server supports these grants and endpoints:
 
@@ -66,6 +66,8 @@ Open `http://127.0.0.1:3000/` to reach the web interface.
 The server stores its data in a SQLite database in the Flask instance folder.
 At start, the server creates the missing tables, but it does not change the existing ones.
 After an update that changes a table, remove the database: the server creates a new one.
+An update can also add keys to the configuration document, and the server does not migrate a stored one.
+So remove the database after such an update too.
 
 Run the server with Docker:
 
@@ -298,8 +300,8 @@ An algorithm that the server does not support gives `invalid_request`.
 The server fetches `jwks_uri` when it verifies a JWT.
 The fetch accepts `http` and `https` only, follows no redirect, waits 5 seconds for each operation and 10 seconds in total, and reads 64 KiB at most.
 The **Fetch client URLs at private addresses** setting of **Server** controls the addresses.
-It is on by default, so that a client on `localhost` works.
-Switch it off on a server that other people reach: the server then refuses `jwks_uri` URLs that resolve to private, loopback or link-local addresses.
+It is off by default: the server refuses `jwks_uri` URLs that resolve to private, loopback or link-local addresses.
+Switch it on to let a client on `localhost` work.
 The setting is `outbound_private_addresses` in the configuration document.
 
 ## Run in production
