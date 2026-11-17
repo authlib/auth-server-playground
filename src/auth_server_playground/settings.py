@@ -18,7 +18,13 @@ GRANT_TYPES = [
     "refresh_token",
 ]
 RESPONSE_TYPES = {"authorization_code": "code", "implicit": "token"}
-AUTH_METHODS = ["client_secret_basic", "client_secret_post", "none"]
+AUTH_METHODS = [
+    "client_secret_basic",
+    "client_secret_post",
+    "none",
+    "private_key_jwt",
+    "client_secret_jwt",
+]
 PKCE_METHODS = ["S256", "plain"]
 PKCE_REQUIRED = ["all", "public"]
 #: The asymmetric signing algorithms. RFC 9864 deprecates EdDSA for Ed25519.

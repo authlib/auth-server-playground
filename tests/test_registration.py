@@ -1,8 +1,7 @@
 import pytest
-from authlib.oauth2.rfc7591 import InvalidClientMetadataError
+from joserfc.jwk import RSAKey
 
 from auth_server_playground.models import Client
-from auth_server_playground.registration import checked_metadata
 from tests.utils import REDIRECT_URI
 from tests.utils import bearer
 from tests.utils import callback_params
@@ -126,7 +125,37 @@ def test_body_must_be_an_object(testapp):
     assert res.json["error"] == "invalid_request"
 
 
-def test_key_errors_refuse_the_metadata():
-    # Authlib refuses these methods first, until the server publishes them.
-    with pytest.raises(InvalidClientMetadataError):
-        checked_metadata({"token_endpoint_auth_method": "private_key_jwt"})
+def test_private_key_jwt_client_gets_no_secret(testapp, rsa_pool):
+    key = RSAKey.import_key(rsa_pool[0]).as_dict(private=False)
+    body = register(
+        testapp,
+        {
+            **REGISTRATION,
+            "token_endpoint_auth_method": "private_key_jwt",
+            "jwks": {"keys": [key]},
+        },
+    ).json
+    assert "client_secret" not in body
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        {"token_endpoint_auth_method": "private_key_jwt"},
+        {
+            "token_endpoint_auth_method": "client_secret_jwt",
+            "token_endpoint_auth_signing_alg": "RS256",
+        },
+        {
+            "jwks": {
+                "keys": [
+                    {"kty": "oct", "k": "c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0"}
+                ]
+            }
+        },
+        {"jwks": {"keys": []}, "jwks_uri": "https://client.test/jwks.json"},
+    ],
+)
+def test_invalid_key_metadata(testapp, metadata):
+    res = register(testapp, {**REGISTRATION, **metadata}, status=400)
+    assert res.json["error"] == "invalid_client_metadata"

@@ -82,7 +82,7 @@ def test_response_types_must_match_the_grants():
     "key,value",
     [
         ("grant_types_supported", ["device_code"]),
-        ("token_endpoint_auth_methods_supported", ["private_key_jwt"]),
+        ("token_endpoint_auth_methods_supported", ["tls_client_auth"]),
         ("code_challenge_methods_supported", ["S512"]),
         ("response_types_supported", "code"),
         ("scopes_supported", ["two words"]),
@@ -158,6 +158,8 @@ def test_published_metadata_computes_the_endpoints():
         "client_secret_basic",
         "client_secret_post",
         "none",
+        "private_key_jwt",
+        "client_secret_jwt",
     ]
 
 
@@ -203,13 +205,13 @@ def test_unsupported_values():
     client_metadata = {
         "grant_types": ["authorization_code", "password"],
         "response_types": ["code", "token"],
-        "token_endpoint_auth_method": "client_secret_jwt",
+        "token_endpoint_auth_method": "tls_client_auth",
         "scope": "profile admin",
     }
     assert unsupported_values(client_metadata, default_document()) == {
         "grant_types": ["password"],
         "response_types": ["token"],
-        "token_endpoint_auth_method": ["client_secret_jwt"],
+        "token_endpoint_auth_method": ["tls_client_auth"],
         "scope": ["admin"],
     }
 
@@ -419,7 +421,10 @@ def test_request_object_metadata_needs_openid():
 
 
 def test_client_jwt_algorithms_need_a_jwt_method():
-    metadata = published_metadata(default_document(), "https://server.test", URLS)
+    document = changed(
+        metadata={"token_endpoint_auth_methods_supported": ["client_secret_basic"]}
+    )
+    metadata = published_metadata(document, "https://server.test", URLS)
     assert "token_endpoint_auth_signing_alg_values_supported" not in metadata
     assert "revocation_endpoint_auth_signing_alg_values_supported" not in metadata
 
@@ -500,3 +505,19 @@ def test_unsupported_client_algorithms():
 def test_request_object_algorithm_without_openid_is_not_reported():
     document = changed(metadata={"scopes_supported": ["profile"]})
     assert unsupported_values({"request_object_signing_alg": "RS256"}, document) == {}
+
+
+def test_published_client_jwt_algorithms():
+    metadata = published_metadata(default_document(), "https://server.test", URLS)
+    algorithms = ["RS256", "PS256", "ES256", "Ed25519", "HS256"]
+    assert metadata["token_endpoint_auth_signing_alg_values_supported"] == algorithms
+    assert (
+        metadata["revocation_endpoint_auth_signing_alg_values_supported"] == algorithms
+    )
+
+
+def test_jwt_methods_need_algorithms():
+    document = changed(
+        metadata={"token_endpoint_auth_signing_alg_values_supported": []}
+    )
+    assert "token_endpoint_auth_signing_alg_values_supported" in errors_of(document)

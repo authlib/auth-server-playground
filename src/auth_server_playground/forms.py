@@ -536,10 +536,7 @@ class ClientForm(BaseForm):
             )
             db.session.add(client)
         client.set_client_metadata(self.client_metadata())
-        if client.token_endpoint_auth_method == "none":
-            client.client_secret = ""
-        elif not client.client_secret:
-            client.client_secret = secrets.token_urlsafe(36)
+        client.update_secret()
         db.session.commit()
         return client
 

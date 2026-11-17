@@ -7,27 +7,40 @@ from authlib.integrations.flask_oauth2 import ResourceProtector
 from authlib.integrations.sqla_oauth2 import create_bearer_token_validator
 from authlib.integrations.sqla_oauth2 import create_query_client_func
 from authlib.integrations.sqla_oauth2 import create_revocation_endpoint
+from authlib.oauth2.rfc6749 import InvalidClientError
 from authlib.oauth2.rfc6749 import grants
+from authlib.oauth2.rfc7523 import JWTBearerClientAssertion
 from authlib.oauth2.rfc7636 import CodeChallenge
 from authlib.oauth2.rfc9101 import JWTAuthenticationRequest
 from authlib.oidc.core import ClaimsParameter
 from authlib.oidc.core import OpenIDCode
 from authlib.oidc.core import UserInfoEndpoint
 from flask import current_app
+from flask import url_for
+from joserfc import jwt
+from joserfc.errors import JoseError
+from joserfc.errors import UnsupportedAlgorithmError
 from joserfc.jwk import KeySet
+from sqlalchemy.exc import IntegrityError
 
+from .client_keys import ClientKeysError
+from .client_keys import public_keys
+from .client_keys import secret_key
 from .keys import active_kid
 from .keys import private_key_set
 from .metadata import issuer_for
 from .models import AuthorizationCode
 from .models import Client
+from .models import ClientAssertion
 from .models import Token
 from .models import db
 from .personas import find_by_username
 from .personas import user_info
 from .registration import ConfigurationEndpoint
 from .registration import RegistrationEndpoint
+from .settings import JWT_AUTH_METHODS
 from .settings import is_oidc_enabled
+from .snapshot import MAX_TIMESTAMP
 from .store import settings_row
 
 CACHE_KEY = "auth_server_playground.server"
@@ -182,6 +195,99 @@ class PlaygroundCodeChallenge(CodeChallenge):
         return super().is_code_challenge_required(request)
 
 
+class PlaygroundClientAssertion(JWTBearerClientAssertion):
+    """private_key_jwt or client_secret_jwt (RFC 7523 §2.2, OIDC Core §9)."""
+
+    def __init__(self, method, algorithms, issuer, allow_private_addresses):
+        super().__init__()
+        self.CLIENT_AUTH_METHOD = method
+        self.algorithms = [alg for alg in algorithms if alg in JWT_AUTH_METHODS[method]]
+        self.issuer = issuer
+        self.allow_private_addresses = allow_private_addresses
+
+    def __call__(self, query_client, request):
+        # The Authlib dispatcher stops at the first exception, and
+        # JWTBearerClientAssertion raises one for a client of the other
+        # method. So each instance leaves these clients to the other one,
+        # before the jti is used.
+        method = self.claimed_method(query_client, request)
+        if method is not None and method != self.CLIENT_AUTH_METHOD:
+            return None
+        return super().__call__(query_client, request)
+
+    def claimed_method(self, query_client, request):
+        """Return the method of the client in the assertion, if it exists."""
+        assertion = request.form.get("client_assertion")
+        if (
+            request.form.get("client_assertion_type") != self.CLIENT_ASSERTION_TYPE
+            or not assertion
+        ):
+            return None
+        try:
+            _, claims = self.extract_assertion(assertion)
+        except InvalidClientError:
+            return None
+        client_id = claims.get("sub")
+        client = query_client(client_id) if isinstance(client_id, str) else None
+        return client.token_endpoint_auth_method if client else None
+
+    def get_audiences(self):
+        return [issuer_for(self.issuer), url_for("oauth.issue_token", _external=True)]
+
+    def resolve_client_public_key(self, client):
+        # Authlib calls jwt.decode without algorithms, and joserfc then
+        # accepts HS256, RS256 and ES256 only, whatever the server publishes.
+        # So process_assertion_claims passes the algorithms itself. An empty
+        # list must be refused here: joserfc would take it as "use the
+        # defaults". It also avoids fetching the jwks_uri for nothing.
+        if not self.algorithms:
+            raise InvalidClientError(
+                description=f"The server has no algorithm for {self.CLIENT_AUTH_METHOD}."
+            )
+        try:
+            if self.CLIENT_AUTH_METHOD == "client_secret_jwt":
+                key = secret_key(client)
+            else:
+                key = public_keys(
+                    client, allow_private_addresses=self.allow_private_addresses
+                )
+        except ClientKeysError as error:
+            raise InvalidClientError(description=error.description) from error
+        required = client.client_metadata.get("token_endpoint_auth_signing_alg")
+
+        # Authlib ignores token_endpoint_auth_signing_alg of the client.
+        def resolve(token):
+            if required and token.headers()["alg"] != required:
+                raise UnsupportedAlgorithmError(f"The client signs with {required}.")
+            return key
+
+        return resolve
+
+    def process_assertion_claims(self, assertion, resolve_key):
+        try:
+            token = jwt.decode(assertion, resolve_key, algorithms=self.algorithms)
+        except JoseError as error:
+            raise InvalidClientError(description=error.description) from error
+        self.verify_claims(token.claims)
+        return token.claims
+
+    def validate_jti(self, claims, jti):
+        # A huge exp would overflow the integer column.
+        if not 0 <= claims["exp"] <= MAX_TIMESTAMP:
+            raise InvalidClientError(description="Invalid claim: 'exp'")
+        db.session.add(
+            ClientAssertion(
+                client_id=claims["sub"], jti=str(jti), expires_at=int(claims["exp"])
+            )
+        )
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return False
+        return True
+
+
 GRANTS = {
     "authorization_code": AuthorizationCodeGrant,
     "implicit": grants.ImplicitGrant,
@@ -285,6 +391,18 @@ def build_server(document):
                 PlaygroundOpenIDCode(metadata["issuer"], settings["id_token_lifetime"])
             )
         server.register_grant(configured(GRANTS[grant_type], **attributes), extensions)
+
+    for method in JWT_AUTH_METHODS:
+        if method in auth_methods:
+            server.register_client_auth_method(
+                method,
+                PlaygroundClientAssertion(
+                    method,
+                    metadata["token_endpoint_auth_signing_alg_values_supported"],
+                    metadata["issuer"],
+                    settings["outbound_private_addresses"],
+                ),
+            )
 
     if settings["revocation_enabled"]:
         endpoint = create_revocation_endpoint(db.session, Token)

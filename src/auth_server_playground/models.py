@@ -106,6 +106,11 @@ class Client(db.Model, OAuth2ClientMixin):
     def is_dynamic(self):
         return self.registration_access_token is not None
 
+    def check_endpoint_auth_method(self, method, endpoint):
+        # Authlib checks the method for the token endpoint only. Per RFC 7009
+        # §2.1, the revocation endpoint authenticates confidential clients too.
+        return self.token_endpoint_auth_method == method
+
     def update_secret(self):
         """Give a secret to a client whose method needs one, and drop it otherwise."""
         if self.token_endpoint_auth_method not in SECRET_AUTH_METHODS:

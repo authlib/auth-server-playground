@@ -8,6 +8,7 @@ from auth_server_playground import keys
 from auth_server_playground.models import Token
 from auth_server_playground.models import db
 from auth_server_playground.store import settings_row
+from tests.conftest import make_client
 from tests.utils import REDIRECT_URI
 from tests.utils import authorize_url
 from tests.utils import basic_auth
@@ -179,17 +180,60 @@ def test_revocation_disabled(testapp, client, configure):
     testapp.get("/api/resource", headers=bearer(token["access_token"]))
 
 
-def test_revocation_with_client_secret_post(testapp, client):
-    token = client_credentials_token(testapp, client).json
+def test_revocation_with_client_secret_post(app, testapp):
+    post_client = make_client(
+        app,
+        client_id="post-client",
+        client_secret="post-secret",
+        metadata={
+            "grant_types": ["client_credentials"],
+            "response_types": [],
+            "token_endpoint_auth_method": "client_secret_post",
+        },
+    )
+    credentials = {**post_client, "grant_type": "client_credentials"}
+    token = testapp.post("/oauth/token", credentials).json
     testapp.post(
         "/oauth/revoke",
         {
             "token": token["access_token"],
-            "client_id": client["client_id"],
-            "client_secret": client["client_secret"],
+            "client_id": post_client["client_id"],
+            "client_secret": post_client["client_secret"],
         },
     )
     testapp.get("/api/resource", headers=bearer(token["access_token"]), status=401)
+
+
+def test_public_client_revokes_with_its_id(app, testapp, public_client):
+    with app.app_context():
+        db.session.add(
+            Token(
+                client_id=public_client["client_id"],
+                token_type="Bearer",
+                access_token="public-access-token",
+                scope="profile",
+                issued_at=int(time.time()),
+                expires_in=3600,
+            )
+        )
+        db.session.commit()
+    testapp.get("/api/resource", headers=bearer("public-access-token"))
+    testapp.post(
+        "/oauth/revoke",
+        {"token": "public-access-token", "client_id": public_client["client_id"]},
+    )
+    testapp.get("/api/resource", headers=bearer("public-access-token"), status=401)
+
+
+def test_revocation_needs_the_secret(testapp, client):
+    token = client_credentials_token(testapp, client).json
+    res = testapp.post(
+        "/oauth/revoke",
+        {"token": token["access_token"], "client_id": client["client_id"]},
+        status="4*",
+    )
+    assert res.json["error"] == "invalid_client"
+    testapp.get("/api/resource", headers=bearer(token["access_token"]))
 
 
 def test_metadata(testapp):

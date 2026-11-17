@@ -235,7 +235,7 @@ def test_edit_keeps_unknown_values(app, testapp, client):
     set_metadata(
         app,
         client["client_id"],
-        token_endpoint_auth_method="private_key_jwt",
+        token_endpoint_auth_method="tls_client_auth",
         grant_types=[
             "authorization_code",
             "urn:ietf:params:oauth:grant-type:jwt-bearer",
@@ -245,7 +245,7 @@ def test_edit_keeps_unknown_values(app, testapp, client):
     assert "not supported" in text(res, "#wrap-token_endpoint_auth_method")
     res.forms["client"].submit()
     metadata = stored(app, client["client_id"])["client_metadata"]
-    assert metadata["token_endpoint_auth_method"] == "private_key_jwt"
+    assert metadata["token_endpoint_auth_method"] == "tls_client_auth"
     assert "urn:ietf:params:oauth:grant-type:jwt-bearer" in metadata["grant_types"]
 
 
@@ -354,4 +354,15 @@ def test_is_dynamic(app, client, dynamic_client):
         assert Client.query.filter_by(client_id="dynamic-client").one().is_dynamic
         assert (
             not Client.query.filter_by(client_id=client["client_id"]).one().is_dynamic
+        )
+
+
+def test_private_key_jwt_client_has_no_secret(app, testapp, client):
+    form = testapp.get(f"/en/clients/{client['client_id']}").forms["client"]
+    form["token_endpoint_auth_method"] = "private_key_jwt"
+    form.submit()
+    with app.app_context():
+        assert (
+            Client.query.filter_by(client_id=client["client_id"]).one().client_secret
+            == ""
         )
