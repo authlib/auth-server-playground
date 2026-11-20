@@ -60,6 +60,7 @@ def test_public_client_gets_no_secret(testapp):
         testapp, {**REGISTRATION, "token_endpoint_auth_method": "none"}
     ).json
     assert "client_secret" not in body
+    assert "client_secret_expires_at" not in body
 
 
 def test_open_registration_ignores_a_token(testapp):

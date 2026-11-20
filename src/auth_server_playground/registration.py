@@ -101,9 +101,11 @@ class RegistrationEndpoint(ClientRegistrationEndpoint):
 
     def generate_client_info(self, request):
         info = super().generate_client_info(request)
-        # Authlib puts "client_secret": null in the response for a public client.
+        # Per RFC 7591 §3.2.1, client_secret_expires_at goes with a client_secret.
+        # Authlib sends both, with a null secret. Authlib main fixes it (PR #1071).
         if info["client_secret"] is None:
             del info["client_secret"]
+            del info["client_secret_expires_at"]
 
         return info
 
@@ -115,7 +117,7 @@ class RegistrationEndpoint(ClientRegistrationEndpoint):
             client_id=client_info["client_id"],
             client_secret=client_info.get("client_secret", ""),
             client_id_issued_at=client_info["client_id_issued_at"],
-            client_secret_expires_at=client_info["client_secret_expires_at"],
+            client_secret_expires_at=client_info.get("client_secret_expires_at", 0),
             registration_access_token=secrets.token_urlsafe(32),
         )
         client.set_client_metadata(client_metadata)
