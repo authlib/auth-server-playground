@@ -26,11 +26,25 @@ from .store import delete_client
 DEFAULT_METADATA = {"grant_types": ["authorization_code"], "response_types": ["code"]}
 
 
-def claims_classes(oidc):
-    if oidc:
-        return [ClientMetadataClaims, OIDCClientMetadataClaims, RequestObjectClaims]
+class DefaultScopeClaims(ClientMetadataClaims):
+    """Give the server scopes to a client registered without scope.
 
-    return [ClientMetadataClaims]
+    Per RFC 7591 §2, the server MAY register a client with a default scope.
+    Authlib documents this pattern.
+    """
+
+    def validate_scope(self):
+        if scopes := self.params.get("scopes_supported"):
+            self.setdefault("scope", " ".join(scopes))
+
+        super().validate_scope()
+
+
+def claims_classes(oidc, base=ClientMetadataClaims):
+    if oidc:
+        return [base, OIDCClientMetadataClaims, RequestObjectClaims]
+
+    return [base]
 
 
 def bearer_token(request):
@@ -67,7 +81,7 @@ def registration_info(client):
 
 class RegistrationEndpoint(ClientRegistrationEndpoint):
     def __init__(self, mode, initial_access_token, oidc):
-        super().__init__(claims_classes=claims_classes(oidc))
+        super().__init__(claims_classes=claims_classes(oidc, DefaultScopeClaims))
         self.mode = mode
         self.initial_access_token = initial_access_token
 

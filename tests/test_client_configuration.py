@@ -72,6 +72,18 @@ def test_replace_the_metadata(testapp, registered):
     )
 
 
+def test_replace_without_scope_keeps_no_default(testapp, registered):
+    res = testapp.put_json(
+        configuration_url(registered),
+        {
+            "redirect_uris": REGISTRATION["redirect_uris"],
+            "client_id": registered["client_id"],
+        },
+        headers=headers_of(registered),
+    )
+    assert "scope" not in res.json
+
+
 def test_replace_with_invalid_metadata(testapp, registered):
     res = testapp.put_json(
         configuration_url(registered),

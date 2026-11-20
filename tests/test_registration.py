@@ -55,6 +55,31 @@ def test_registered_client_runs_the_code_flow(logged_in):
     assert exchange_code(logged_in, client, code).json["id_token"]
 
 
+def test_client_without_scope_gets_the_server_scopes(app, testapp):
+    body = register(testapp, {"redirect_uris": [REDIRECT_URI]}).json
+    assert body["scope"] == "openid profile email address phone"
+    with app.app_context():
+        client = Client.query.filter_by(client_id=body["client_id"]).one()
+        assert client.scope == body["scope"]
+
+
+def test_client_without_scope_runs_the_openid_flow(logged_in):
+    client = register(logged_in, {"redirect_uris": [REDIRECT_URI]}).json
+    code = callback_params(consent(logged_in, oidc_url(client)))["code"]
+    assert exchange_code(logged_in, client, code).json["id_token"]
+
+
+def test_client_without_scope_on_a_server_without_scopes(testapp, configure):
+    configure(metadata={"scopes_supported": []})
+    body = register(testapp, {"redirect_uris": [REDIRECT_URI]}).json
+    assert "scope" not in body
+
+
+def test_client_scope_is_kept(testapp):
+    body = register(testapp).json
+    assert body["scope"] == "openid profile"
+
+
 def test_public_client_gets_no_secret(testapp):
     body = register(
         testapp, {**REGISTRATION, "token_endpoint_auth_method": "none"}
