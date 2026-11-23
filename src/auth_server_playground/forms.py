@@ -64,6 +64,7 @@ from .settings import PROMPT_VALUES
 from .settings import REQUEST_OBJECT_ALGORITHMS
 from .settings import RESPONSE_TYPES
 from .settings import UI_LOCALES
+from .settings import USERINFO_ALGORITHMS
 from .settings import is_oidc_enabled
 from .settings import response_types_for
 
@@ -226,6 +227,12 @@ class ServerForm(BaseForm):
         description=_("RS256 is required."),
         render_kw={"param": "id_token_signing_alg_values_supported"},
     )
+    userinfo_signing_alg_values_supported = MultiCheckboxField(
+        _("UserInfo signing algorithms"),
+        choices=[SelectChoice(alg, alg) for alg in USERINFO_ALGORITHMS],
+        description=_("Leave all unchecked to answer in JSON only."),
+        render_kw={"param": "userinfo_signing_alg_values_supported"},
+    )
     id_token_lifetime = IntegerField(
         _("ID token lifetime"),
         validators=[InputRequired(), NumberRange(min=1, max=MAX_LIFETIME)],
@@ -322,6 +329,9 @@ class ServerForm(BaseForm):
                 ),
                 "id_token_signing_alg_values_supported": (
                     self.id_token_signing_alg_values_supported.data
+                ),
+                "userinfo_signing_alg_values_supported": (
+                    self.userinfo_signing_alg_values_supported.data
                 ),
                 "request_object_signing_alg_values_supported": (
                     self.request_object_signing_alg_values_supported.data
@@ -484,6 +494,10 @@ class ClientForm(BaseForm):
         _("ID token signing algorithm"),
         render_kw={"param": "id_token_signed_response_alg"},
     )
+    userinfo_signed_response_alg = SelectField(
+        _("UserInfo signing algorithm"),
+        render_kw={"param": "userinfo_signed_response_alg"},
+    )
     default_max_age = IntegerField(
         _("Maximum authentication age"),
         validators=[Optional(), NumberRange(min=0)],
@@ -502,6 +516,7 @@ class ClientForm(BaseForm):
 
     OIDC_METADATA = (
         "id_token_signed_response_alg",
+        "userinfo_signed_response_alg",
         "default_max_age",
         "request_object_signing_alg",
     )
@@ -570,6 +585,7 @@ class ClientForm(BaseForm):
         self.oidc = is_oidc_enabled(document)
         if not self.oidc:
             del self.id_token_signed_response_alg
+            del self.userinfo_signed_response_alg
             del self.default_max_age
             del self.request_object_signing_alg
             del self.require_signed_request_object
@@ -581,6 +597,15 @@ class ClientForm(BaseForm):
         self.id_token_signed_response_alg.choices = [
             SelectChoice("", _("Default (RS256)")),
             *marked_options(algorithms, supported),
+        ]
+        userinfo_supported = metadata["userinfo_signing_alg_values_supported"]
+        userinfo_alg = stored.get("userinfo_signed_response_alg")
+        self.userinfo_signed_response_alg.choices = [
+            SelectChoice("", _("Unsigned JSON")),
+            *marked_options(
+                with_stored(userinfo_supported, [userinfo_alg] if userinfo_alg else []),
+                userinfo_supported,
+            ),
         ]
         request_alg = stored.get("request_object_signing_alg")
         self.request_object_signing_alg.choices = [

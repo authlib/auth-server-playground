@@ -1,4 +1,4 @@
-"""The keys that sign the ID tokens."""
+"""The keys that sign the ID tokens and the UserInfo responses."""
 
 import time
 
@@ -34,7 +34,7 @@ MIN_RSA_BITS = 2048
 
 
 class KeyInUse(ValueError):
-    """The key signs the ID tokens of an enabled algorithm."""
+    """The key is the active key of an enabled algorithm."""
 
 
 def generate_jwk(alg):
@@ -119,6 +119,13 @@ def delete_key(key, enabled_algorithms):
 
 def all_keys():
     return SigningKey.query.order_by(SigningKey.created_at, SigningKey.kid).all()
+
+
+def active_key_set():
+    """Return the active keys, one per algorithm."""
+    return KeySet(
+        [import_key(key.jwk) for key in SigningKey.query.filter_by(active=True)]
+    )
 
 
 def private_key_set():

@@ -37,6 +37,7 @@
             <p><small>{% trans %}On when the scopes hold <code>openid</code>.{% endtrans %}</small></p>
             {{ form.id_token_signing_alg_values_supported() }}
             {{ form.id_token_lifetime() }}
+            {{ form.userinfo_signing_alg_values_supported() }}
             {{ form.prompt_values_supported() }}
             {{ form.ui_locales_supported() }}
             {{ form.request_object_signing_alg_values_supported() }}

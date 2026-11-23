@@ -29,12 +29,13 @@
             {% if form.id_token_signed_response_alg %}
                 <div class="grid">
                     {{ form.id_token_signed_response_alg() }}
-                    {{ form.default_max_age() }}
+                    {{ form.userinfo_signed_response_alg() }}
                 </div>
                 <div class="grid">
+                    {{ form.default_max_age() }}
                     {{ form.request_object_signing_alg() }}
-                    {{ form.require_signed_request_object() }}
                 </div>
+                {{ form.require_signed_request_object() }}
             {% endif %}
             {{ form.contacts() }}
             <div class="grid">

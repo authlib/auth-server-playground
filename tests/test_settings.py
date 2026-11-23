@@ -11,6 +11,7 @@ from auth_server_playground.settings import default_document
 from auth_server_playground.settings import is_oidc_enabled
 from auth_server_playground.settings import published_metadata
 from auth_server_playground.settings import response_types_for
+from auth_server_playground.settings import signing_algorithms
 from auth_server_playground.settings import unsupported_values
 from auth_server_playground.settings import validate_document
 
@@ -302,6 +303,37 @@ def test_published_openid_metadata():
     )
 
 
+def test_userinfo_algorithms_are_published():
+    document = default_document()
+    assert document["metadata"]["userinfo_signing_alg_values_supported"] == ["RS256"]
+    metadata = published_metadata(document, "https://server.test", URLS)
+    assert metadata["userinfo_signing_alg_values_supported"] == ["RS256"]
+
+
+def test_no_userinfo_algorithm_is_left_out():
+    document = changed(metadata={"userinfo_signing_alg_values_supported": []})
+    metadata = published_metadata(document, "https://server.test", URLS)
+    assert "userinfo_signing_alg_values_supported" not in metadata
+
+
+@pytest.mark.parametrize("value", [["HS256"], ["none"], "RS256"])
+def test_invalid_userinfo_algorithms(value):
+    errors = errors_of(
+        changed(metadata={"userinfo_signing_alg_values_supported": value})
+    )
+    assert "userinfo_signing_alg_values_supported" in errors
+
+
+def test_signing_algorithms_follow_the_algorithm_order():
+    document = changed(
+        metadata={
+            "id_token_signing_alg_values_supported": ["RS256"],
+            "userinfo_signing_alg_values_supported": ["ES256", "RS256"],
+        }
+    )
+    assert signing_algorithms(document) == ["RS256", "ES256"]
+
+
 def test_claims_follow_the_scopes():
     assert claims_supported(["openid", "email"]) == [
         "sub",
@@ -322,6 +354,7 @@ def test_oauth_metadata_without_openid():
         "subject_types_supported",
         "claims_supported",
         "id_token_signing_alg_values_supported",
+        "userinfo_signing_alg_values_supported",
         "prompt_values_supported",
         "ui_locales_supported",
         "claims_parameter_supported",
@@ -383,6 +416,24 @@ def test_unsupported_id_token_algorithm():
 def test_id_token_algorithm_without_openid():
     document = changed(metadata={"scopes_supported": ["profile"]})
     client_metadata = {"id_token_signed_response_alg": "ES256"}
+    assert unsupported_values(client_metadata, document) == {}
+
+
+def test_unsupported_userinfo_algorithm():
+    client_metadata = {"userinfo_signed_response_alg": "ES256"}
+    assert unsupported_values(client_metadata, default_document()) == {
+        "userinfo_signed_response_alg": ["ES256"]
+    }
+
+
+def test_supported_userinfo_algorithm():
+    client_metadata = {"userinfo_signed_response_alg": "RS256"}
+    assert unsupported_values(client_metadata, default_document()) == {}
+
+
+def test_userinfo_algorithm_without_openid():
+    document = changed(metadata={"scopes_supported": ["profile"]})
+    client_metadata = {"userinfo_signed_response_alg": "ES256"}
     assert unsupported_values(client_metadata, document) == {}
 
 

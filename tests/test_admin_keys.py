@@ -90,6 +90,29 @@ def test_key_of_a_disabled_algorithm_can_be_deleted(app, testapp, configure):
         assert db.session.get(SigningKey, kid) is None
 
 
+def test_userinfo_algorithm_gets_a_key(app, testapp, configure):
+    configure(metadata={"userinfo_signing_alg_values_supported": ["ES256"]})
+    kid = active(app, "ES256")
+    assert kid is not None
+    res = testapp.get("/en/keys")
+    assert "Rotate ES256" in res
+    assert f"delete-{kid}" not in res.forms
+
+
+def test_active_key_of_a_userinfo_algorithm_cannot_be_deleted(app, testapp, configure):
+    configure(metadata={"userinfo_signing_alg_values_supported": ["ES256"]})
+    kid = active(app, "ES256")
+    res = testapp.get("/en/keys")
+    assert f"delete-{kid}" not in res.forms
+    token = res.forms["rotate-ES256"]["rotate-ES256-csrf_token"].value
+    res = testapp.post(
+        f"/en/keys/{kid}/delete", {f"delete-{kid}-csrf_token": token}
+    ).follow()
+    assert "This key is active. Rotate it first." in res
+    with app.app_context():
+        assert db.session.get(SigningKey, kid) is not None
+
+
 def test_row_buttons_have_distinct_names(app, testapp):
     old = active(app, "RS256")
     testapp.get("/en/keys").forms["rotate-RS256"].submit()

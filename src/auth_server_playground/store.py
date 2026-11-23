@@ -16,6 +16,7 @@ from .models import Token
 from .models import db
 from .personas import default_personas
 from .settings import default_document
+from .settings import signing_algorithms
 from .settings import validate_document
 from .snapshot import check_snapshot
 from .snapshot import snapshot_rows
@@ -51,7 +52,7 @@ def init_database(app, initial_snapshot=None):
         )
         db.session.add_all(snapshot_rows(snapshot) if snapshot else default_personas())
         try:
-            ensure_keys(document["metadata"]["id_token_signing_alg_values_supported"])
+            ensure_keys(signing_algorithms(document))
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
@@ -96,7 +97,7 @@ def save_document(document):
     # Computed by the database, so that two saves at the same time do not
     # write the same revision.
     row.revision = Settings.revision + 1
-    ensure_keys(document["metadata"]["id_token_signing_alg_values_supported"])
+    ensure_keys(signing_algorithms(document))
     db.session.commit()
 
 

@@ -40,6 +40,7 @@ from .settings import ENDPOINTS
 from .settings import InvalidDocument
 from .settings import default_document
 from .settings import is_oidc_enabled
+from .settings import signing_algorithms
 from .settings import unsupported_values
 from .settings import validate_document
 from .snapshot import check_snapshot
@@ -187,7 +188,7 @@ def server_defaults():
 
 
 def enabled_algorithms():
-    return current_document()["metadata"]["id_token_signing_alg_values_supported"]
+    return signing_algorithms(current_document())
 
 
 @bp.route("/keys")
@@ -219,7 +220,7 @@ def rotate_key(alg):
         return redirect(back)
 
     rotate_signing_key(alg)
-    flash(_("A new %(alg)s key signs the ID tokens.", alg=alg), "success")
+    flash(_("A new %(alg)s key is active.", alg=alg), "success")
     return redirect(back)
 
 
@@ -233,7 +234,7 @@ def remove_key(kid):
     try:
         delete_key(key, enabled_algorithms())
     except KeyInUse:
-        flash(_("This key signs the ID tokens. Rotate it first."), "error")
+        flash(_("This key is active. Rotate it first."), "error")
     else:
         flash(_("The key is deleted."), "success")
 

@@ -28,7 +28,7 @@ class Settings(db.Model):
 
 
 class SigningKey(db.Model):
-    """A private key that signs the ID tokens."""
+    """A private key that signs the ID tokens and the UserInfo responses."""
 
     __tablename__ = "signing_key"
 

@@ -196,6 +196,28 @@ def test_server_form_sets_the_openid_settings(app, testapp):
         assert keys.active_kid("Ed25519") is not None
 
 
+def test_server_form_sets_the_userinfo_algorithms(app, testapp):
+    form = testapp.get("/en/server").forms["server"]
+    form["userinfo_signing_alg_values_supported"] = ["RS256", "ES256"]
+    form.submit().follow()
+    with app.app_context():
+        document = current_document()
+        assert document["metadata"]["userinfo_signing_alg_values_supported"] == [
+            "RS256",
+            "ES256",
+        ]
+        assert keys.active_kid("ES256") is not None
+
+
+def test_server_form_answers_in_json_only(app, testapp):
+    form = testapp.get("/en/server").forms["server"]
+    form["userinfo_signing_alg_values_supported"] = []
+    form.submit().follow()
+    with app.app_context():
+        document = current_document()
+        assert document["metadata"]["userinfo_signing_alg_values_supported"] == []
+
+
 def test_server_form_shows_the_rs256_error(testapp):
     form = testapp.get("/en/server").forms["server"]
     form["id_token_signing_alg_values_supported"] = ["ES256"]

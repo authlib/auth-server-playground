@@ -83,6 +83,17 @@ def test_active_key_of_a_disabled_algorithm_can_be_deleted(app):
         assert keys.active_kid("ES256") is None
 
 
+def test_active_key_set_holds_one_key_per_algorithm(app):
+    with app.app_context():
+        keys.ensure_keys(["ES256"])
+        keys.rotate_key("RS256")
+        db.session.commit()
+        kids = [key.kid for key in keys.active_key_set().keys]
+        assert sorted(kids) == sorted(
+            [keys.active_kid("RS256"), keys.active_kid("ES256")]
+        )
+
+
 def test_private_key_set_holds_retired_keys(app):
     with app.app_context():
         old = keys.active_kid("RS256")

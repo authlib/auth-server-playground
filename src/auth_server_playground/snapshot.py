@@ -27,7 +27,9 @@ from .settings import CLIENT_JWT_ALGORITHMS
 from .settings import ID_TOKEN_ALGORITHMS
 from .settings import MAX_LIFETIME
 from .settings import REQUEST_OBJECT_ALGORITHMS
+from .settings import USERINFO_ALGORITHMS
 from .settings import InvalidDocument
+from .settings import signing_algorithms
 from .settings import validate_document
 
 SNAPSHOT_VERSION = 1
@@ -196,7 +198,6 @@ def is_timestamp(value):
 #: server options, Authlib's get_claims_options would not refuse them either:
 #: it only checks a value when the server publishes the matching list.
 UNSUPPORTED_CLIENT_METADATA = (
-    "userinfo_signed_response_alg",
     "userinfo_encrypted_response_alg",
     "userinfo_encrypted_response_enc",
     "id_token_encrypted_response_alg",
@@ -223,6 +224,13 @@ def check_openid_values(client_id, metadata):
         raise SnapshotError(
             f"Client {client_id!r}: id_token_signed_response_alg is one of "
             f"{', '.join(ID_TOKEN_ALGORITHMS)}."
+        )
+
+    alg = metadata.get("userinfo_signed_response_alg")
+    if alg is not None and alg not in USERINFO_ALGORITHMS:
+        raise SnapshotError(
+            f"Client {client_id!r}: userinfo_signed_response_alg is one of "
+            f"{', '.join(USERINFO_ALGORITHMS)}."
         )
 
 
@@ -355,9 +363,7 @@ def import_snapshot(data):
         row = db.session.get(Settings, SETTINGS_ID)
         row.document = data["configuration"]
         row.revision = Settings.revision + 1
-        ensure_keys(
-            data["configuration"]["metadata"]["id_token_signing_alg_values_supported"]
-        )
+        ensure_keys(signing_algorithms(data["configuration"]))
         db.session.commit()
     except Exception:
         db.session.rollback()

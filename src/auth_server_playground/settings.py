@@ -30,6 +30,7 @@ PKCE_REQUIRED = ["all", "public"]
 #: The asymmetric signing algorithms. RFC 9864 deprecates EdDSA for Ed25519.
 ASYMMETRIC_ALGORITHMS = ["RS256", "PS256", "ES256", "Ed25519"]
 ID_TOKEN_ALGORITHMS = ASYMMETRIC_ALGORITHMS
+USERINFO_ALGORITHMS = ASYMMETRIC_ALGORITHMS
 #: The algorithms that use the client secret as key.
 HMAC_ALGORITHMS = ["HS256"]
 #: The algorithms of the JWTs that clients sign: assertions and request objects.
@@ -57,6 +58,7 @@ PROMPT_VALUES = ["none", "login", "consent", "select_account"]
 #: The stored metadata that only OpenID Connect publishes.
 OIDC_METADATA = (
     "id_token_signing_alg_values_supported",
+    "userinfo_signing_alg_values_supported",
     "request_object_signing_alg_values_supported",
     "require_signed_request_object",
     "prompt_values_supported",
@@ -91,6 +93,7 @@ DEFAULT_DOCUMENT = {
         "token_endpoint_auth_signing_alg_values_supported": list(CLIENT_JWT_ALGORITHMS),
         "code_challenge_methods_supported": ["S256"],
         "id_token_signing_alg_values_supported": ["RS256"],
+        "userinfo_signing_alg_values_supported": ["RS256"],
         "request_object_signing_alg_values_supported": list(REQUEST_OBJECT_ALGORITHMS),
         "require_signed_request_object": False,
         "prompt_values_supported": list(PROMPT_VALUES),
@@ -119,6 +122,7 @@ LIST_CHOICES = {
     "token_endpoint_auth_signing_alg_values_supported": CLIENT_JWT_ALGORITHMS,
     "code_challenge_methods_supported": PKCE_METHODS,
     "id_token_signing_alg_values_supported": ID_TOKEN_ALGORITHMS,
+    "userinfo_signing_alg_values_supported": USERINFO_ALGORITHMS,
     "request_object_signing_alg_values_supported": REQUEST_OBJECT_ALGORITHMS,
     "prompt_values_supported": PROMPT_VALUES,
     "ui_locales_supported": UI_LOCALES,
@@ -145,6 +149,16 @@ def response_types_for(grant_types):
         for grant in GRANT_TYPES
         if grant in grant_types and grant in RESPONSE_TYPES
     ]
+
+
+def signing_algorithms(document):
+    """Return the algorithms that need a server key: ID tokens and UserInfo responses."""
+    metadata = document["metadata"]
+    used = {
+        *metadata["id_token_signing_alg_values_supported"],
+        *metadata["userinfo_signing_alg_values_supported"],
+    }
+    return [alg for alg in ASYMMETRIC_ALGORITHMS if alg in used]
 
 
 def is_oidc_enabled(document):
@@ -465,6 +479,7 @@ def unsupported_values(client_metadata, document):
     scopes = (client_metadata.get("scope") or "").split()
     alg = client_metadata.get("id_token_signed_response_alg")
     auth_alg = client_metadata.get("token_endpoint_auth_signing_alg")
+    userinfo_alg = client_metadata.get("userinfo_signed_response_alg")
     request_alg = client_metadata.get("request_object_signing_alg")
     result = {
         "grant_types": [
@@ -493,6 +508,13 @@ def unsupported_values(client_metadata, document):
             if alg
             and is_oidc_enabled(document)
             and alg not in metadata["id_token_signing_alg_values_supported"]
+            else []
+        ),
+        "userinfo_signed_response_alg": (
+            [userinfo_alg]
+            if userinfo_alg
+            and is_oidc_enabled(document)
+            and userinfo_alg not in metadata["userinfo_signing_alg_values_supported"]
             else []
         ),
         "token_endpoint_auth_signing_alg": (

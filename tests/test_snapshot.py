@@ -309,7 +309,6 @@ def test_invalid_initial_snapshot(tmp_path, make_app, monkeypatch):
 @pytest.mark.parametrize(
     "key",
     [
-        "userinfo_signed_response_alg",
         "userinfo_encrypted_response_alg",
         "userinfo_encrypted_response_enc",
         "id_token_encrypted_response_alg",
@@ -357,11 +356,28 @@ def test_unsignable_client_algorithm_is_refused(app, client, alg):
         check_snapshot(snapshot)
 
 
+def test_signed_userinfo_algorithm_is_accepted(app, client):
+    with app.app_context():
+        snapshot = export_snapshot()
+
+    snapshot["clients"][0]["client_metadata"]["userinfo_signed_response_alg"] = "RS256"
+    check_snapshot(snapshot)
+
+
+def test_unsignable_userinfo_algorithm_is_refused(app, client):
+    with app.app_context():
+        snapshot = export_snapshot()
+
+    snapshot["clients"][0]["client_metadata"]["userinfo_signed_response_alg"] = "HS256"
+    with pytest.raises(SnapshotError, match="userinfo_signed_response_alg"):
+        check_snapshot(snapshot)
+
+
 def test_null_unsupported_client_metadata_is_accepted(app, client):
     with app.app_context():
         snapshot = export_snapshot()
 
-    snapshot["clients"][0]["client_metadata"]["userinfo_signed_response_alg"] = None
+    snapshot["clients"][0]["client_metadata"]["userinfo_encrypted_response_alg"] = None
     check_snapshot(snapshot)
 
 

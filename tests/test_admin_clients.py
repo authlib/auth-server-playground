@@ -282,6 +282,38 @@ def test_client_openid_fields(app, testapp, configure):
         assert metadata["default_max_age"] == 600
 
 
+def test_client_userinfo_algorithm(app, testapp, configure):
+    configure(metadata={"userinfo_signing_alg_values_supported": ["RS256", "ES256"]})
+    form = testapp.get("/en/clients/new").forms["client"]
+    assert [option[0] for option in form["userinfo_signed_response_alg"].options] == [
+        "",
+        "RS256",
+        "ES256",
+    ]
+    assert "Unsigned JSON" in testapp.get("/en/clients/new")
+    form["client_id"] = "signed-client"
+    form["redirect_uris"] = "https://client.test/cb"
+    form["userinfo_signed_response_alg"] = "ES256"
+    form.submit().follow()
+    with app.app_context():
+        metadata = (
+            Client.query.filter_by(client_id="signed-client").one().client_metadata
+        )
+        assert metadata["userinfo_signed_response_alg"] == "ES256"
+
+
+def test_unpublished_userinfo_algorithm_is_marked(app, testapp, configure):
+    make_client(
+        app,
+        client_id="signed-client",
+        client_secret="signed-secret",
+        metadata={"userinfo_signed_response_alg": "ES256"},
+    )
+    res = testapp.get("/en/clients/signed-client")
+    assert "ES256 (not supported by the server)" in res
+    assert "userinfo_signed_response_alg" in testapp.get("/en/clients")
+
+
 def test_client_openid_fields_are_optional(app, testapp):
     form = testapp.get("/en/clients/new").forms["client"]
     form["client_id"] = "plain-client"
@@ -298,6 +330,7 @@ def test_no_openid_fields_without_openid(testapp, configure):
     configure(metadata={"scopes_supported": ["profile"]})
     form = testapp.get("/en/clients/new").forms["client"]
     assert "id_token_signed_response_alg" not in form.fields
+    assert "userinfo_signed_response_alg" not in form.fields
 
 
 def test_openid_values_are_kept_without_openid(app, testapp, configure, client):

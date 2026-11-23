@@ -123,12 +123,38 @@ def test_token_mode_accepts_the_token(testapp, token_mode):
         {**REGISTRATION, "redirect_uris": ["not a url"]},
         {**REGISTRATION, "grant_types": ["password"]},
         {**REGISTRATION, "token_endpoint_auth_method": "tls_client_auth"},
-        {**REGISTRATION, "userinfo_signed_response_alg": "RS256"},
+        {**REGISTRATION, "userinfo_encrypted_response_alg": "RSA-OAEP"},
         {**REGISTRATION, "subject_type": "pairwise"},
     ],
 )
 def test_invalid_metadata(testapp, metadata):
     res = register(testapp, metadata, status=400)
+    assert res.json["error"] == "invalid_client_metadata"
+
+
+def test_register_signed_userinfo(testapp):
+    body = register(
+        testapp, {**REGISTRATION, "userinfo_signed_response_alg": "RS256"}
+    ).json
+    assert body["userinfo_signed_response_alg"] == "RS256"
+
+
+def test_signed_userinfo_with_an_unpublished_algorithm(testapp):
+    res = register(
+        testapp,
+        {**REGISTRATION, "userinfo_signed_response_alg": "PS256"},
+        status=400,
+    )
+    assert res.json["error"] == "invalid_client_metadata"
+
+
+def test_signed_userinfo_when_the_server_does_not_sign(testapp, configure):
+    configure(metadata={"userinfo_signing_alg_values_supported": []})
+    res = register(
+        testapp,
+        {**REGISTRATION, "userinfo_signed_response_alg": "RS256"},
+        status=400,
+    )
     assert res.json["error"] == "invalid_client_metadata"
 
 

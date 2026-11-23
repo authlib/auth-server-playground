@@ -26,6 +26,7 @@ from sqlalchemy.exc import IntegrityError
 from .client_keys import ClientKeysError
 from .client_keys import public_keys
 from .client_keys import secret_key
+from .keys import active_key_set
 from .keys import active_kid
 from .keys import private_key_set
 from .metadata import issuer_for
@@ -128,11 +129,27 @@ class PlaygroundOpenIDCode(OpenIDCode):
 
 
 class PlaygroundUserInfoEndpoint(UserInfoEndpoint):
+    def __init__(self, issuer, algorithms, resource_protector):
+        super().__init__(resource_protector=resource_protector)
+        self.issuer = issuer
+        self.algorithms = algorithms
+
     def generate_user_info(self, user, scope, claims):
         return user_info(user, scope, claims)
 
     def get_token_claims_request(self, token):
         return token.claims_request
+
+    def get_issuer(self):
+        return issuer_for(self.issuer)
+
+    def get_supported_algorithms(self):
+        return self.algorithms
+
+    def resolve_private_key(self):
+        # With a key set, joserfc picks the key of the algorithm and writes
+        # its kid. With a single key, it writes no kid (joserfc#115).
+        return active_key_set()
 
 
 class PlaygroundJWTAuthenticationRequest(JWTAuthenticationRequest):
@@ -477,7 +494,11 @@ def build_server(document):
 
     if is_oidc_enabled(document):
         server.register_endpoint(
-            PlaygroundUserInfoEndpoint(resource_protector=require_oauth)
+            PlaygroundUserInfoEndpoint(
+                metadata["issuer"],
+                metadata["userinfo_signing_alg_values_supported"],
+                resource_protector=require_oauth,
+            )
         )
         if metadata["claims_parameter_supported"]:
             server.register_extension(ClaimsParameter())

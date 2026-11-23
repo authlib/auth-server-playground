@@ -56,13 +56,19 @@ def bearer_token(request):
     return token
 
 
-def checked_metadata(metadata):
+def checked_metadata(metadata, server_metadata):
     """Add the RFC 7591 defaults, and apply the rules that Authlib does not apply."""
     metadata = {**DEFAULT_METADATA, **metadata}
     if unsupported := [key for key in UNSUPPORTED_CLIENT_METADATA if key in metadata]:
         raise InvalidClientMetadataError(
             f"The server does not support {', '.join(unsupported)}."
         )
+
+    # Authlib checks the value only when the server publishes its list.
+    if "userinfo_signed_response_alg" in metadata and not server_metadata.get(
+        "userinfo_signing_alg_values_supported"
+    ):
+        raise InvalidClientMetadataError("The server does not sign UserInfo responses.")
 
     if errors := client_key_errors(metadata):
         raise InvalidClientMetadataError(" ".join(errors.values()))
@@ -98,7 +104,9 @@ class RegistrationEndpoint(ClientRegistrationEndpoint):
         return None
 
     def extract_client_metadata(self, request):
-        metadata = checked_metadata(super().extract_client_metadata(request))
+        metadata = checked_metadata(
+            super().extract_client_metadata(request), self.get_server_metadata()
+        )
         # Authlib does not pass the metadata to generate_client_secret.
         request.client_metadata = metadata
         return metadata
@@ -181,7 +189,9 @@ class ConfigurationEndpoint(ClientConfigurationEndpoint):
         return True
 
     def extract_client_metadata(self, request):
-        return checked_metadata(super().extract_client_metadata(request))
+        return checked_metadata(
+            super().extract_client_metadata(request), self.get_server_metadata()
+        )
 
     def introspect_client(self, client):
         info = super().introspect_client(client)
