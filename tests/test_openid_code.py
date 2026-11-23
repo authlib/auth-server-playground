@@ -4,6 +4,7 @@ from urllib.parse import parse_qsl
 from urllib.parse import urlparse
 
 import pytest
+from joserfc import jwt
 
 from auth_server_playground import keys
 from auth_server_playground.models import Client
@@ -101,6 +102,31 @@ def test_client_signing_algorithm(app, logged_in, configure, alg):
     assert token.header["alg"] == alg
     with app.app_context():
         assert token.header["kid"] == keys.active_kid(alg)
+
+
+@pytest.mark.filterwarnings("ignore::joserfc.errors.SecurityWarning")
+def test_unsigned_id_token(app, logged_in, configure):
+    configure(metadata={"id_token_signing_alg_values_supported": ["RS256", "none"]})
+    client = make_client(
+        app,
+        client_id="unsigned-client",
+        client_secret="unsigned-secret",
+        metadata={
+            "scope": "openid profile",
+            "grant_types": ["authorization_code"],
+            "response_types": ["code"],
+            "token_endpoint_auth_method": "client_secret_basic",
+            "id_token_signed_response_alg": "none",
+        },
+    )
+    code = callback_params(consent(logged_in, oidc_url(client)))["code"]
+    id_token = exchange_code(logged_in, client, code).json["id_token"]
+    assert id_token.endswith(".")
+    token = jwt.decode(id_token, None, algorithms=["none"])
+    assert token.header["alg"] == "none"
+    assert "kid" not in token.header
+    assert "at_hash" not in token.claims
+    assert token.claims["sub"] == COMPLETE_SUB
 
 
 def test_header_has_no_kid_without_an_active_key(app, client):

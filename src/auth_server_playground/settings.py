@@ -29,7 +29,7 @@ PKCE_METHODS = ["S256", "plain"]
 PKCE_REQUIRED = ["all", "public"]
 #: The asymmetric signing algorithms. RFC 9864 deprecates EdDSA for Ed25519.
 ASYMMETRIC_ALGORITHMS = ["RS256", "PS256", "ES256", "Ed25519"]
-ID_TOKEN_ALGORITHMS = ASYMMETRIC_ALGORITHMS
+ID_TOKEN_ALGORITHMS = ["none", *ASYMMETRIC_ALGORITHMS]
 USERINFO_ALGORITHMS = ASYMMETRIC_ALGORITHMS
 #: The algorithms that use the client secret as key.
 HMAC_ALGORITHMS = ["HS256"]

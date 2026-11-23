@@ -334,6 +334,25 @@ def test_signing_algorithms_follow_the_algorithm_order():
     assert signing_algorithms(document) == ["RS256", "ES256"]
 
 
+def test_unsigned_id_tokens_are_valid_with_rs256():
+    document = changed(
+        metadata={"id_token_signing_alg_values_supported": ["RS256", "none"]}
+    )
+    validate_document(document)
+
+
+def test_unsigned_id_tokens_need_rs256():
+    document = changed(metadata={"id_token_signing_alg_values_supported": ["none"]})
+    assert "id_token_signing_alg_values_supported" in errors_of(document)
+
+
+def test_none_needs_no_signing_key():
+    document = changed(
+        metadata={"id_token_signing_alg_values_supported": ["RS256", "none"]}
+    )
+    assert signing_algorithms(document) == ["RS256"]
+
+
 def test_claims_follow_the_scopes():
     assert claims_supported(["openid", "email"]) == [
         "sub",

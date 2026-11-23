@@ -346,7 +346,7 @@ def test_valid_default_max_age_is_accepted(app, client, value):
     check_snapshot(snapshot)
 
 
-@pytest.mark.parametrize("alg", ["none", "HS256", "foo", "EdDSA", "RS384"])
+@pytest.mark.parametrize("alg", ["HS256", "foo", "EdDSA", "RS384"])
 def test_unsignable_client_algorithm_is_refused(app, client, alg):
     with app.app_context():
         snapshot = export_snapshot()
@@ -354,6 +354,14 @@ def test_unsignable_client_algorithm_is_refused(app, client, alg):
     snapshot["clients"][0]["client_metadata"]["id_token_signed_response_alg"] = alg
     with pytest.raises(SnapshotError, match="id_token_signed_response_alg"):
         check_snapshot(snapshot)
+
+
+def test_unsigned_id_token_algorithm_is_accepted(app, client):
+    with app.app_context():
+        snapshot = export_snapshot()
+
+    snapshot["clients"][0]["client_metadata"]["id_token_signed_response_alg"] = "none"
+    check_snapshot(snapshot)
 
 
 def test_signed_userinfo_algorithm_is_accepted(app, client):

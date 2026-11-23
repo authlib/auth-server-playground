@@ -13,7 +13,7 @@ from auth_server_playground import keys
 from auth_server_playground.keys import KeyInUse
 from auth_server_playground.models import SigningKey
 from auth_server_playground.models import db
-from auth_server_playground.settings import ID_TOKEN_ALGORITHMS
+from auth_server_playground.settings import ASYMMETRIC_ALGORITHMS
 from tests.conftest import REAL_GENERATORS
 
 KEY_TYPES = {
@@ -24,7 +24,7 @@ KEY_TYPES = {
 }
 
 
-@pytest.mark.parametrize("alg", ID_TOKEN_ALGORITHMS)
+@pytest.mark.parametrize("alg", ASYMMETRIC_ALGORITHMS)
 def test_generated_key(monkeypatch, alg):
     monkeypatch.setitem(keys.GENERATORS, alg, REAL_GENERATORS[alg])
     jwk = keys.generate_jwk(alg)
@@ -133,7 +133,7 @@ def test_empty_jwks(app, testapp):
 
 
 def test_the_algorithm_tables_agree():
-    assert set(keys.GENERATORS) == set(keys.KEY_TYPES) == set(ID_TOKEN_ALGORITHMS)
+    assert set(keys.GENERATORS) == set(keys.KEY_TYPES) == set(ASYMMETRIC_ALGORITHMS)
 
 
 @functools.cache
@@ -153,7 +153,7 @@ def valid_jwk(alg):
     return jwk.as_dict(private=True)
 
 
-@pytest.mark.parametrize("alg", ID_TOKEN_ALGORITHMS)
+@pytest.mark.parametrize("alg", ASYMMETRIC_ALGORITHMS)
 def test_generated_jwk_is_valid(alg):
     jwk = valid_jwk(alg)
     assert keys.is_valid_key(jwk, alg, jwk["kid"])

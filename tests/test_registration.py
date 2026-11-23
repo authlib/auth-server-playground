@@ -139,6 +139,23 @@ def test_register_signed_userinfo(testapp):
     assert body["userinfo_signed_response_alg"] == "RS256"
 
 
+def test_register_unsigned_id_token(testapp, configure):
+    configure(metadata={"id_token_signing_alg_values_supported": ["RS256", "none"]})
+    body = register(
+        testapp, {**REGISTRATION, "id_token_signed_response_alg": "none"}
+    ).json
+    assert body["id_token_signed_response_alg"] == "none"
+
+
+def test_unsigned_id_token_when_not_published(testapp):
+    res = register(
+        testapp,
+        {**REGISTRATION, "id_token_signed_response_alg": "none"},
+        status=400,
+    )
+    assert res.json["error"] == "invalid_client_metadata"
+
+
 def test_signed_userinfo_with_an_unpublished_algorithm(testapp):
     res = register(
         testapp,
