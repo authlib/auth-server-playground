@@ -6,6 +6,7 @@ from authlib.oidc.registration import ClientMetadataClaims as OIDCClientMetadata
 from joserfc.errors import JoseError
 
 from .client_keys import client_key_errors
+from .client_metadata import client_metadata_errors
 from .keys import KEY_TYPES
 from .keys import all_keys
 from .keys import ensure_keys
@@ -274,6 +275,10 @@ def check_client_metadata(client):
 
     # After the claims: Authlib refuses the values of the wrong type.
     check_key_values(client["client_id"], metadata)
+    if errors := client_metadata_errors(metadata):
+        raise SnapshotError(
+            f"Client {client['client_id']!r}: {' '.join(errors.values())}"
+        )
 
 
 def check_keys(items):

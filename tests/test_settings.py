@@ -298,6 +298,7 @@ def test_published_openid_metadata():
     assert metadata["claims_parameter_supported"] is True
     assert metadata["request_parameter_supported"] is True
     assert metadata["request_uri_parameter_supported"] is False
+    assert "require_request_uri_registration" not in metadata
     assert metadata["request_object_signing_alg_values_supported"] == (
         REQUEST_OBJECT_ALGORITHMS
     )
@@ -365,7 +366,12 @@ def test_claims_follow_the_scopes():
 
 
 def test_oauth_metadata_without_openid():
-    document = changed(metadata={"scopes_supported": ["profile"]})
+    document = changed(
+        metadata={
+            "scopes_supported": ["profile"],
+            "request_uri_parameter_supported": True,
+        }
+    )
     metadata = published_metadata(document, "https://server.test", URLS)
     assert not is_oidc_enabled(document)
     for key in (
@@ -379,6 +385,7 @@ def test_oauth_metadata_without_openid():
         "claims_parameter_supported",
         "request_parameter_supported",
         "request_uri_parameter_supported",
+        "require_request_uri_registration",
         "request_object_signing_alg_values_supported",
     ):
         assert key not in metadata
@@ -485,6 +492,19 @@ def test_published_request_object_metadata():
     assert metadata["require_signed_request_object"] is False
 
 
+def test_request_uri_defaults():
+    metadata = default_document()["metadata"]
+    assert metadata["request_uri_parameter_supported"] is False
+    assert metadata["require_request_uri_registration"] is True
+
+
+def test_request_uri_registration_is_published_with_request_uri():
+    document = changed(metadata={"request_uri_parameter_supported": True})
+    metadata = published_metadata(document, "https://server.test", URLS)
+    assert metadata["request_uri_parameter_supported"] is True
+    assert metadata["require_request_uri_registration"] is True
+
+
 def test_request_object_metadata_needs_openid():
     document = changed(metadata={"scopes_supported": ["profile"]})
     metadata = published_metadata(document, "https://server.test", URLS)
@@ -521,6 +541,8 @@ def test_client_jwt_algorithms_are_published_with_a_jwt_method():
         ("token_endpoint_auth_signing_alg_values_supported", ["HS512"]),
         ("request_object_signing_alg_values_supported", ["EdDSA"]),
         ("require_signed_request_object", "no"),
+        ("request_uri_parameter_supported", "yes"),
+        ("require_request_uri_registration", None),
     ],
 )
 def test_invalid_registration_metadata_is_refused(key, value):

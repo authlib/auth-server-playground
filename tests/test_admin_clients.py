@@ -494,6 +494,45 @@ def test_request_object_settings(app, testapp, client):
     assert metadata["require_signed_request_object"] is True
 
 
+def test_request_uris(app, testapp, client):
+    form = testapp.get(f"/en/clients/{client['client_id']}").forms["client"]
+    form["request_uris"] = "https://client.test/a.jwt\n\nhttps://client.test/b.jwt\n"
+    form.submit()
+    assert metadata_of(app, client["client_id"])["request_uris"] == [
+        "https://client.test/a.jwt",
+        "https://client.test/b.jwt",
+    ]
+    form = testapp.get(f"/en/clients/{client['client_id']}").forms["client"]
+    assert form["request_uris"].value == (
+        "https://client.test/a.jwt\nhttps://client.test/b.jwt"
+    )
+    form["request_uris"] = ""
+    form.submit()
+    assert "request_uris" not in metadata_of(app, client["client_id"])
+
+
+@pytest.mark.parametrize("insecure_transport", [False])
+@pytest.mark.parametrize(
+    "value", ["ftp://client.test/a.jwt", "http://client.test/a.jwt"]
+)
+def test_invalid_request_uris(testapp, value):
+    res = new_client_form(testapp, request_uris=value).submit()
+    assert res.html.select_one("#request_uris-error")
+
+
+def test_stored_request_uris_without_openid(app, testapp, client, configure):
+    with app.app_context():
+        stored = Client.query.filter_by(client_id=client["client_id"]).one()
+        stored.set_client_metadata(
+            {**stored.client_metadata, "request_uris": ["ftp://client.test/a.jwt"]}
+        )
+        db.session.commit()
+
+    configure(metadata={"scopes_supported": ["profile"]})
+    res = testapp.get(f"/en/clients/{client['client_id']}").forms["client"].submit()
+    assert "Each line must be an https URL." in res.text
+
+
 def test_unsigned_request_objects_by_default(app, testapp, client):
     testapp.get(f"/en/clients/{client['client_id']}").forms["client"].submit()
     assert "require_signed_request_object" not in metadata_of(app, client["client_id"])

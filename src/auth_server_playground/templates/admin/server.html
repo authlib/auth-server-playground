@@ -43,6 +43,8 @@
             {{ form.request_object_signing_alg_values_supported() }}
             {{ form.require_signed_request_object() }}
             {{ form.request_parameter_supported() }}
+            {{ form.request_uri_parameter_supported() }}
+            {{ form.require_request_uri_registration() }}
             {{ form.claims_parameter_supported() }}
             <h3>{% trans %}Dynamic registration{% endtrans %}</h3>
             {{ form.registration() }}

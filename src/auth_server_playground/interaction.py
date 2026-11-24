@@ -29,6 +29,7 @@ bp = Blueprint("interaction", __name__)
 
 SESSION_PERSONA = "persona_id"
 SESSION_AUTH_TIME = "auth_time"
+SESSION_REQUEST_URI = "request_uri"
 
 
 class PlaygroundSession(AuthorizationSession, AuthorizationSessionMixin):

@@ -245,7 +245,7 @@ Copy it to `.env`: the `auth-server-playground` command loads `.env` from the cu
 | `DATABASE_URL` | `sqlite:///db.sqlite` | SQLAlchemy database URL. A relative SQLite path goes in the Flask instance folder. |
 | `INITIAL_SNAPSHOT` | unset | Snapshot file loaded when the database is empty. An invalid file stops the server. |
 | `PROXY_FIX` | `false` | Set to `true` behind a reverse proxy. |
-| `AUTHLIB_INSECURE_TRANSPORT` | unset | Set to `1` to accept plain HTTP requests. |
+| `AUTHLIB_INSECURE_TRANSPORT` | unset | Set to `1` to accept plain HTTP requests, and request objects at `http` URLs. |
 | `FLASK_RUN_HOST` | `127.0.0.1` | Address of the `auth-server-playground` command. |
 | `FLASK_RUN_PORT` | `3000` | Port of the `auth-server-playground` command. |
 | `FLASK_DEBUG` | `False` | Set to `True` to enable the Flask debug mode. |

@@ -65,6 +65,8 @@ OIDC_METADATA = (
     "ui_locales_supported",
     "claims_parameter_supported",
     "request_parameter_supported",
+    "request_uri_parameter_supported",
+    "require_request_uri_registration",
 )
 
 #: The client authentication methods that sign a JWT.
@@ -100,6 +102,8 @@ DEFAULT_DOCUMENT = {
         "ui_locales_supported": list(UI_LOCALES),
         "claims_parameter_supported": True,
         "request_parameter_supported": True,
+        "request_uri_parameter_supported": False,
+        "require_request_uri_registration": True,
         "revocation_endpoint_auth_methods_supported": list(AUTH_METHODS),
     },
     "settings": {
@@ -211,6 +215,9 @@ def published_metadata(document, issuer, endpoint_urls):
     if not settings["revocation_enabled"]:
         hidden.add("revocation_endpoint_auth_methods_supported")
 
+    if not stored["request_uri_parameter_supported"]:
+        hidden.add("require_request_uri_registration")
+
     # RFC 8414 §2 marks response_types_supported as REQUIRED, even when empty.
     metadata.update(
         {
@@ -233,8 +240,6 @@ def published_metadata(document, issuer, endpoint_urls):
             {
                 "subject_types_supported": ["public"],
                 "claims_supported": claims_supported(stored["scopes_supported"]),
-                # Per OIDC Discovery §3, the default value is true.
-                "request_uri_parameter_supported": False,
             }
         )
 
@@ -387,6 +392,8 @@ def _metadata_errors(metadata):
         "require_signed_request_object",
         "claims_parameter_supported",
         "request_parameter_supported",
+        "request_uri_parameter_supported",
+        "require_request_uri_registration",
     ):
         if not isinstance(metadata.get(key), bool):
             errors[key] = "true or false."

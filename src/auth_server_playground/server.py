@@ -1,7 +1,9 @@
 """The Authlib authorization server, built from the configuration document."""
 
+import hashlib
 import time
 
+from authlib.common.security import is_secure_transport
 from authlib.integrations.flask_oauth2 import AuthorizationServer
 from authlib.integrations.flask_oauth2 import ResourceProtector
 from authlib.integrations.sqla_oauth2 import create_bearer_token_validator
@@ -11,12 +13,13 @@ from authlib.oauth2.rfc6749 import InvalidClientError
 from authlib.oauth2.rfc6749 import grants
 from authlib.oauth2.rfc7523 import JWTBearerClientAssertion
 from authlib.oauth2.rfc7636 import CodeChallenge
-from authlib.oauth2.rfc9101 import JWTAuthenticationRequest
 from authlib.oidc.core import ClaimsParameter
 from authlib.oidc.core import OpenIDCode
+from authlib.oidc.core import OpenIDJWTAuthenticationRequest
 from authlib.oidc.core import UserInfoEndpoint
 from authlib.oidc.prompt_create import PromptValues
 from flask import current_app
+from flask import g
 from flask import url_for
 from joserfc import jwt
 from joserfc.errors import JoseError
@@ -26,6 +29,7 @@ from sqlalchemy.exc import IntegrityError
 from .client_keys import ClientKeysError
 from .client_keys import public_keys
 from .client_keys import secret_key
+from .client_metadata import is_web_url
 from .keys import active_key_set
 from .keys import active_kid
 from .keys import private_key_set
@@ -35,6 +39,8 @@ from .models import Client
 from .models import ClientAssertion
 from .models import Token
 from .models import db
+from .outbound import OutboundError
+from .outbound import fetch
 from .personas import find_by_username
 from .personas import user_info
 from .registration import ConfigurationEndpoint
@@ -152,8 +158,8 @@ class PlaygroundUserInfoEndpoint(UserInfoEndpoint):
         return active_key_set()
 
 
-class PlaygroundJWTAuthenticationRequest(JWTAuthenticationRequest):
-    """Accept signed and unsigned request objects."""
+class PlaygroundJWTAuthenticationRequest(OpenIDJWTAuthenticationRequest):
+    """Accept signed and unsigned request objects, by value or by reference."""
 
     def __init__(
         self,
@@ -162,13 +168,43 @@ class PlaygroundJWTAuthenticationRequest(JWTAuthenticationRequest):
         require_signed,
         allow_private_addresses,
         support_request,
+        support_request_uri,
+        require_request_uri_registration,
     ):
-        # Per RFC 9101 §10.4, fetching a request_uri exposes the server to SSRF.
-        super().__init__(support_request=support_request, support_request_uri=False)
+        super().__init__(
+            support_request=support_request, support_request_uri=support_request_uri
+        )
         self.issuer = issuer
         self.algorithms = algorithms
         self.require_signed = require_signed
         self.allow_private_addresses = allow_private_addresses
+        self.require_request_uri_registration = require_request_uri_registration
+
+    def get_client_request_uris(self, client):
+        return client.client_metadata.get("request_uris", [])
+
+    def validate_request_uri(self, request_uri, client):
+        # Per RFC 9101 §10.4, fetching a request_uri exposes the server to
+        # SSRF. outbound.fetch applies the address rule. The URL must use https,
+        # unless AUTHLIB_INSECURE_TRANSPORT is set.
+        return is_web_url(request_uri) and is_secure_transport(
+            request_uri, allow_loopback=False
+        )
+
+    def get_request_object(self, request_uri):
+        try:
+            body = fetch(
+                request_uri, allow_private_addresses=self.allow_private_addresses
+            )
+            document = body.decode()
+        except (OutboundError, UnicodeDecodeError):
+            return None
+
+        # Authlib fetches the object at each pass (Authlib #971). The
+        # authorization view compares the digest of the consent page with
+        # the digest of the answer.
+        g.request_object_digest = hashlib.sha256(body).hexdigest()
+        return document
 
     def resolve_client_public_key(self, client):
         # Authlib asks for the key before it reads the alg, even for alg none.
@@ -199,6 +235,7 @@ class PlaygroundJWTAuthenticationRequest(JWTAuthenticationRequest):
             "issuer": issuer_for(self.issuer),
             "request_object_signing_alg_values_supported": self.algorithms,
             "require_signed_request_object": self.require_signed,
+            "require_request_uri_registration": self.require_request_uri_registration,
         }
 
 
@@ -513,6 +550,8 @@ def build_server(document):
                 metadata["require_signed_request_object"],
                 settings["outbound_private_addresses"],
                 metadata["request_parameter_supported"],
+                metadata["request_uri_parameter_supported"],
+                metadata["require_request_uri_registration"],
             )
         )
 

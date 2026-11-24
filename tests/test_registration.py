@@ -194,6 +194,33 @@ def test_body_must_be_an_object(testapp):
     assert res.json["error"] == "invalid_request"
 
 
+def test_request_uris_are_stored(app, testapp):
+    uris = ["https://client.test/a.jwt", "https://client.test/b.jwt"]
+    body = register(testapp, {**REGISTRATION, "request_uris": uris}).json
+    assert body["request_uris"] == uris
+
+
+def test_request_uris_over_http_with_insecure_transport(testapp):
+    uris = ["http://client.test/a.jwt"]
+    body = register(testapp, {**REGISTRATION, "request_uris": uris}).json
+    assert body["request_uris"] == uris
+
+
+@pytest.mark.parametrize("insecure_transport", [False])
+@pytest.mark.parametrize(
+    "uris",
+    [
+        ["http://client.test/a.jwt"],
+        ["http://localhost/a.jwt"],
+        ["ftp://client.test/a.jwt"],
+        ["not a url"],
+    ],
+)
+def test_invalid_request_uris(testapp, uris):
+    res = register(testapp, {**REGISTRATION, "request_uris": uris}, status=400)
+    assert res.json["error"] == "invalid_client_metadata"
+
+
 def test_private_key_jwt_client_gets_no_secret(testapp, rsa_pool):
     key = RSAKey.import_key(rsa_pool[0]).as_dict(private=False)
     body = register(

@@ -8,6 +8,9 @@
     <h2>{{ title }}</h2>
     <div class="with-aside">
         {% call render_form(form, request.path, id="client") %}
+            {% for message in form.form_errors %}
+                <p role="alert" data-type="error">{{ message }}</p>
+            {% endfor %}
             {% if form.client_id %}{{ form.client_id() }}{% endif %}
             {{ form.client_name() }}
             <div class="grid">
@@ -36,6 +39,7 @@
                     {{ form.request_object_signing_alg() }}
                 </div>
                 {{ form.require_signed_request_object() }}
+                {{ form.request_uris() }}
             {% endif %}
             {{ form.contacts() }}
             <div class="grid">

@@ -68,12 +68,207 @@ def test_unsigned_request_object_sent_with_post(logged_in, client):
     assert "code" in params
 
 
-def test_request_uri_is_refused(logged_in, client):
+def test_request_uri_is_refused_by_default(logged_in, client):
     url = authorize_url(
         client_id=client["client_id"], request_uri="https://client.test/request.jwt"
     )
     res = logged_in.get(url, status=400)
     assert res.json["error"] == "request_uri_not_supported"
+
+
+REQUEST_URI = "https://client.test/request.jwt"
+
+
+@pytest.fixture
+def request_uri_client(app, configure):
+    configure(metadata={"request_uri_parameter_supported": True})
+    return make_client(
+        app,
+        client_id="request-uri-client",
+        client_secret="request-uri-secret",
+        metadata={
+            "scope": "openid profile",
+            "grant_types": ["authorization_code"],
+            "response_types": ["code"],
+            "token_endpoint_auth_method": "client_secret_basic",
+            "request_uris": [REQUEST_URI],
+        },
+    )
+
+
+def serve(outbound_urls, claims, url=REQUEST_URI):
+    outbound_urls.responses[url] = httpx2.Response(
+        200, content=unsigned(claims).encode()
+    )
+
+
+def request_uri_url(client, request_uri=REQUEST_URI):
+    return authorize_url(client_id=client["client_id"], request_uri=request_uri)
+
+
+def test_request_uri(logged_in, request_uri_client, outbound_urls):
+    serve(outbound_urls, request_claims(request_uri_client))
+    params = callback_params(consent(logged_in, request_uri_url(request_uri_client)))
+    assert params["state"] == "from-the-object"
+    assert outbound_urls.requested == [REQUEST_URI, REQUEST_URI]
+
+
+def test_request_uri_with_a_stored_consent(
+    logged_in, request_uri_client, outbound_urls
+):
+    serve(outbound_urls, request_claims(request_uri_client))
+    consent(logged_in, request_uri_url(request_uri_client))
+    outbound_urls.requested.clear()
+    # Authlib refuses a nonce that it has seen, for any authorization request.
+    serve(outbound_urls, request_claims(request_uri_client))
+    res = logged_in.get(request_uri_url(request_uri_client))
+    assert "code" in callback_params(res)
+    assert outbound_urls.requested == [REQUEST_URI]
+
+
+def test_request_uri_document_changed(logged_in, request_uri_client, outbound_urls):
+    serve(outbound_urls, request_claims(request_uri_client))
+    form = logged_in.get(request_uri_url(request_uri_client)).forms["consent"]
+    serve(outbound_urls, request_claims(request_uri_client, nonce="another-nonce"))
+    params = callback_params(form.submit("accept"))
+    assert params["error"] == "invalid_request_uri"
+    assert params["state"] == "from-the-object"
+
+
+def session_of(app, testapp):
+    serializer = app.session_interface.get_signing_serializer(app)
+    return serializer.loads(testapp.cookies[app.config["SESSION_COOKIE_NAME"]])
+
+
+def test_request_uri_denied(app, logged_in, request_uri_client, outbound_urls):
+    serve(outbound_urls, request_claims(request_uri_client))
+    form = logged_in.get(request_uri_url(request_uri_client)).forms["consent"]
+    assert session_of(app, logged_in)["request_uri"]
+    params = callback_params(form.submit("deny"))
+    assert params["error"] == "access_denied"
+    assert not session_of(app, logged_in).get("request_uri")
+
+
+def test_two_consent_pages(logged_in, request_uri_client, outbound_urls, configure):
+    configure(metadata={"require_request_uri_registration": False})
+    other = "https://client.test/other.jwt"
+    serve(outbound_urls, request_claims(request_uri_client))
+    serve(outbound_urls, request_claims(request_uri_client), other)
+    first = logged_in.get(request_uri_url(request_uri_client)).forms["consent"]
+    logged_in.get(request_uri_url(request_uri_client, other))
+    # A consent page without request_uri does not clear the others.
+    plain = authorize_url(
+        client_id=request_uri_client["client_id"],
+        response_type="code",
+        redirect_uri=REDIRECT_URI,
+        scope="openid profile",
+        state="plain",
+        code_challenge=create_s256_code_challenge(CODE_VERIFIER),
+        code_challenge_method="S256",
+    )
+    assert logged_in.get(plain).forms["consent"]
+    assert "code" in callback_params(first.submit("accept"))
+
+
+def test_request_uri_document_changed_with_the_implicit_grant(
+    logged_in, app, outbound_urls, configure, legacy_grants
+):
+    configure(metadata={"request_uri_parameter_supported": True})
+    client = make_client(
+        app,
+        client_id="implicit-request-uri-client",
+        client_secret="",
+        metadata={
+            "scope": "openid profile",
+            "grant_types": ["implicit"],
+            "response_types": ["token"],
+            "token_endpoint_auth_method": "none",
+            "request_uris": [REQUEST_URI],
+        },
+    )
+    claims = request_claims(client, response_type="token")
+    for key in ("code_challenge", "code_challenge_method", "nonce"):
+        del claims[key]
+
+    serve(outbound_urls, claims)
+    form = logged_in.get(request_uri_url(client)).forms["consent"]
+    serve(outbound_urls, {**claims, "scope": "profile"})
+    # The implicit grant answers in the fragment.
+    params = callback_params(form.submit("accept"), fragment=True)
+    assert params["error"] == "invalid_request_uri"
+    assert params["state"] == "from-the-object"
+
+
+def test_unregistered_request_uri(logged_in, request_uri_client, outbound_urls):
+    url = request_uri_url(request_uri_client, "https://client.test/other.jwt")
+    res = logged_in.get(url, status=400)
+    assert res.json["error"] == "invalid_request_uri"
+    assert outbound_urls.requested == []
+
+
+def test_unregistered_request_uri_without_registration(
+    logged_in, request_uri_client, outbound_urls, configure
+):
+    configure(metadata={"require_request_uri_registration": False})
+    other = "https://client.test/other.jwt"
+    serve(outbound_urls, request_claims(request_uri_client), other)
+    res = consent(logged_in, request_uri_url(request_uri_client, other))
+    assert "code" in callback_params(res)
+
+
+@pytest.mark.parametrize("insecure_transport", [False])
+def test_request_uri_over_http_without_insecure_transport(
+    logged_in, request_uri_client, outbound_urls, configure
+):
+    configure(metadata={"require_request_uri_registration": False})
+    other = "http://client.test/request.jwt"
+    serve(outbound_urls, request_claims(request_uri_client), other)
+    res = logged_in.get(request_uri_url(request_uri_client, other), status=400)
+    assert res.json["error"] == "invalid_request_uri"
+    assert outbound_urls.requested == []
+
+
+def test_request_uri_over_http_with_insecure_transport(
+    logged_in, request_uri_client, outbound_urls, configure
+):
+    configure(metadata={"require_request_uri_registration": False})
+    other = "http://client.test/request.jwt"
+    serve(outbound_urls, request_claims(request_uri_client), other)
+    res = consent(logged_in, request_uri_url(request_uri_client, other))
+    assert "code" in callback_params(res)
+
+
+@pytest.mark.parametrize("insecure_transport", [False])
+def test_request_uri_to_loopback_over_http(
+    logged_in, request_uri_client, outbound_urls, configure
+):
+    configure(metadata={"require_request_uri_registration": False})
+    other = "http://localhost/request.jwt"
+    serve(outbound_urls, request_claims(request_uri_client), other)
+    res = logged_in.get(request_uri_url(request_uri_client, other), status=400)
+    assert res.json["error"] == "invalid_request_uri"
+    assert outbound_urls.requested == []
+
+
+def test_request_uri_without_host(
+    logged_in, request_uri_client, outbound_urls, configure
+):
+    configure(metadata={"require_request_uri_registration": False})
+    url = request_uri_url(request_uri_client, "https:///request.jwt")
+    res = logged_in.get(url, status=400)
+    assert res.json["error"] == "invalid_request_uri"
+    assert outbound_urls.requested == []
+
+
+def test_request_uri_fetch_error(logged_in, request_uri_client, outbound_urls):
+    res = logged_in.get(request_uri_url(request_uri_client), status=400)
+    assert res.json["error"] == "invalid_request_uri"
+
+
+def test_request_uri_that_is_not_text(logged_in, request_uri_client, outbound_urls):
+    outbound_urls.responses[REQUEST_URI] = httpx2.Response(200, content=b"\xff\xfe")
+    res = logged_in.get(request_uri_url(request_uri_client), status=400)
+    assert res.json["error"] == "invalid_request_uri"
 
 
 def test_claims_member_of_the_request_object(logged_in, client):

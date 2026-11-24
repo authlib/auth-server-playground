@@ -318,6 +318,8 @@ def test_save_the_remaining_metadata(app, testapp):
     form["ui_locales_supported"] = ["fr"]
     form["claims_parameter_supported"] = False
     form["request_parameter_supported"] = False
+    form["request_uri_parameter_supported"] = True
+    form["require_request_uri_registration"] = False
     form.submit().follow()
     with app.app_context():
         metadata = current_document()["metadata"]
@@ -329,3 +331,5 @@ def test_save_the_remaining_metadata(app, testapp):
     assert metadata["ui_locales_supported"] == ["fr"]
     assert metadata["claims_parameter_supported"] is False
     assert metadata["request_parameter_supported"] is False
+    assert metadata["request_uri_parameter_supported"] is True
+    assert metadata["require_request_uri_registration"] is False

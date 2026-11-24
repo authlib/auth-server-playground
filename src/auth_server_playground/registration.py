@@ -13,6 +13,7 @@ from flask import request as flask_request
 from flask import url_for
 
 from .client_keys import client_key_errors
+from .client_metadata import client_metadata_errors
 from .metadata import current_metadata
 from .models import Client
 from .models import db
@@ -70,7 +71,7 @@ def checked_metadata(metadata, server_metadata):
     ):
         raise InvalidClientMetadataError("The server does not sign UserInfo responses.")
 
-    if errors := client_key_errors(metadata):
+    if errors := {**client_key_errors(metadata), **client_metadata_errors(metadata)}:
         raise InvalidClientMetadataError(" ".join(errors.values()))
 
     return metadata

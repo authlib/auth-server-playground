@@ -6,7 +6,6 @@ import secrets
 import time
 import uuid
 import zoneinfo
-from urllib.parse import urlsplit
 
 from authlib.oauth2.rfc7591 import ClientMetadataClaims
 from babel import localedata
@@ -42,6 +41,8 @@ from wtforms.widgets import HiddenInput
 from wtforms.widgets import ListWidget
 
 from .client_keys import client_key_errors
+from .client_metadata import client_metadata_errors
+from .client_metadata import is_web_url
 from .models import Client
 from .models import Persona
 from .models import db
@@ -255,6 +256,15 @@ class ServerForm(BaseForm):
         _("Accept the request parameter"),
         render_kw={"role": "switch", "param": "request_parameter_supported"},
     )
+    request_uri_parameter_supported = BooleanField(
+        _("Accept the request_uri parameter"),
+        description=_("The server fetches the request object at this URL."),
+        render_kw={"role": "switch", "param": "request_uri_parameter_supported"},
+    )
+    require_request_uri_registration = BooleanField(
+        _("Accept registered request URIs only"),
+        render_kw={"role": "switch", "param": "require_request_uri_registration"},
+    )
     prompt_values_supported = MultiCheckboxField(
         _("Prompt values"),
         choices=[SelectChoice(value, value) for value in PROMPT_VALUES],
@@ -343,6 +353,12 @@ class ServerForm(BaseForm):
                 "ui_locales_supported": self.ui_locales_supported.data,
                 "claims_parameter_supported": self.claims_parameter_supported.data,
                 "request_parameter_supported": self.request_parameter_supported.data,
+                "request_uri_parameter_supported": (
+                    self.request_uri_parameter_supported.data
+                ),
+                "require_request_uri_registration": (
+                    self.require_request_uri_registration.data
+                ),
                 "revocation_endpoint_auth_methods_supported": (
                     self.revocation_endpoint_auth_methods_supported.data
                 ),
@@ -372,15 +388,6 @@ class ActionForm(FlaskForm):
 
 def lines(text):
     return [line.strip() for line in (text or "").splitlines() if line.strip()]
-
-
-def is_web_url(url):
-    try:
-        parts = urlsplit(url)
-    except ValueError:
-        return False
-
-    return parts.scheme in ("http", "https") and bool(parts.hostname)
 
 
 def check_url(form, field):
@@ -512,6 +519,11 @@ class ClientForm(BaseForm):
         _("Refuse unsigned request objects"),
         render_kw={"role": "switch", "param": "require_signed_request_object"},
     )
+    request_uris = TextAreaField(
+        _("Request URIs"),
+        description=_("One per line. The URLs of the request objects."),
+        render_kw={"param": "request_uris", "rows": 2},
+    )
     save = SubmitField(_("Save"))
 
     OIDC_METADATA = (
@@ -539,11 +551,17 @@ class ClientForm(BaseForm):
         ),
     }
 
+    #: The messages of the errors that client_metadata_errors returns.
+    RULE_ERRORS = {
+        "request_uris": _("Each line must be an https URL."),
+    }
+
     def __init__(self, document, client=None, **kwargs):
         if client is not None:
             data = dict(client.client_metadata)
             data["redirect_uris"] = "\n".join(data.get("redirect_uris", []))
             data["contacts"] = "\n".join(data.get("contacts", []))
+            data["request_uris"] = "\n".join(data.get("request_uris", []))
             data["jwks"] = (
                 json.dumps(data["jwks"], indent=2) if data.get("jwks") else ""
             )
@@ -589,6 +607,7 @@ class ClientForm(BaseForm):
             del self.default_max_age
             del self.request_object_signing_alg
             del self.require_signed_request_object
+            del self.request_uris
             return
 
         supported = metadata["id_token_signing_alg_values_supported"]
@@ -651,11 +670,20 @@ class ClientForm(BaseForm):
         if not super().validate(extra_validators):
             return False
 
-        errors = client_key_errors(self.client_metadata())
-        for key in errors:
+        metadata = self.client_metadata()
+        key_errors = client_key_errors(metadata)
+        for key in key_errors:
             self[key].errors.append(self.KEY_ERRORS[key])
 
-        return not errors
+        rule_errors = client_metadata_errors(metadata)
+        for key in rule_errors:
+            message = self.RULE_ERRORS[key]
+            if key in self._fields:
+                self[key].errors.append(message)
+            else:
+                self.form_errors.append(message)
+
+        return not key_errors and not rule_errors
 
     def client_metadata(self):
         """Return the metadata of the client, updated with the form.
@@ -687,6 +715,10 @@ class ClientForm(BaseForm):
         metadata.pop("require_signed_request_object", None)
         if self.require_signed_request_object.data:
             metadata["require_signed_request_object"] = True
+
+        metadata.pop("request_uris", None)
+        if uris := lines(self.request_uris.data):
+            metadata["request_uris"] = uris
 
         return metadata
 

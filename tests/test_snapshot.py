@@ -532,6 +532,10 @@ def test_dynamic_client_survives_export_and_import(app, dynamic_client):
             "request_object_signing_alg",
         ),
         (
+            {"client_metadata": {"request_uris": ["ftp://client.test/r"]}},
+            "request_uris",
+        ),
+        (
             {"client_metadata": {"require_signed_request_object": "yes"}},
             "require_signed_request_object",
         ),

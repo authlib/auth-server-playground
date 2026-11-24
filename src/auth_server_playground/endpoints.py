@@ -2,6 +2,7 @@ from urllib.parse import urlencode
 
 from authlib.integrations.flask_oauth2 import current_token
 from authlib.oauth2 import OAuth2Error
+from authlib.oauth2.rfc9101.errors import InvalidRequestUriError
 from flask import Blueprint
 from flask import Response
 from flask import abort
@@ -16,6 +17,7 @@ from flask import url_for
 from flask_babel import gettext as _
 
 from .forms import ConsentForm
+from .interaction import SESSION_REQUEST_URI
 from .interaction import PlaygroundSession
 from .interaction import current_persona
 from .interaction import extra_claims
@@ -84,13 +86,67 @@ def authorize():
         return consent_page(form, grant, persona, params)
 
     if not form.accept.data:
+        forget_request_object(grant)
         return server.create_authorization_response(grant=grant)
+
+    if request_object_changed(grant):
+        error = InvalidRequestUriError(
+            description="The request_uri gave another document after the consent page.",
+            state=grant.request.payload.state,
+            redirect_uri=grant.redirect_uri,
+        )
+        # Authlib has no public way to send a custom error with the response
+        # mode of the grant. Its own code uses a private function.
+        error.response_mode = grant.response_mode or grant.RESPONSE_MODE
+        return server.handle_error_response(request, error)
 
     grant_consent(persona, grant.client.client_id, grant.request.scope)
     return server.create_authorization_response(grant=grant, grant_user=persona)
 
 
+def remember_request_object(grant):
+    """Keep the digest of the request object of the consent page (Authlib #971).
+
+    The digests are kept by client and request_uri, so that two open consent
+    pages do not clash.
+    """
+    digest = g.get("request_object_digest")
+    if digest is None:
+        return
+
+    digests = session.get(SESSION_REQUEST_URI, {})
+    digests.setdefault(grant.client.client_id, {})[request.args.get("request_uri")] = (
+        digest
+    )
+    session[SESSION_REQUEST_URI] = digests
+    # The session does not see the change of a nested dict.
+    session.modified = True
+
+
+def forget_request_object(grant):
+    """Remove the digest of this request, and return it."""
+    digests = session.get(SESSION_REQUEST_URI, {})
+    by_uri = digests.get(grant.client.client_id, {})
+    digest = by_uri.pop(request.args.get("request_uri"), None)
+    if not by_uri:
+        digests.pop(grant.client.client_id, None)
+
+    session.modified = True
+    return digest
+
+
+def request_object_changed(grant):
+    """Tell whether the request_uri gave another document than on the consent page."""
+    stored = forget_request_object(grant)
+    digest = g.get("request_object_digest")
+    if digest is None:
+        return False
+
+    return stored != digest
+
+
 def consent_page(form, grant, persona, params):
+    remember_request_object(grant)
     return render_template(
         "interaction/consent.html",
         form=form,
