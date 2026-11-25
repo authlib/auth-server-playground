@@ -714,24 +714,25 @@ class ClientForm(BaseForm):
         for key in key_errors:
             self[key].errors.append(self.KEY_ERRORS[key])
 
-        rule_errors = client_metadata_errors(metadata)
+        # The rules of client_metadata_errors apply to OpenID Connect keys, and
+        # the form hides their fields without OpenID Connect. The sector
+        # identifier URI is fetched only with OpenID Connect.
+        rule_errors = client_metadata_errors(metadata) if self.oidc else {}
         for key in rule_errors:
-            message = self.RULE_ERRORS[key]
-            if key in self._fields:
-                self[key].errors.append(message)
-            else:
-                self.form_errors.append(message)
+            self[key].errors.append(self.RULE_ERRORS[key])
 
         if key_errors or rule_errors:
             return False
 
-        # sector_identifier_uri is an OpenID Connect key: no fetch without it.
         if not self.oidc:
             return True
 
         # After the other rules: it makes a request.
         allow_private = self.document["settings"]["outbound_private_addresses"]
-        errors = sector_errors(metadata, allow_private_addresses=allow_private)
+        previous = self.client.client_metadata if self.client else None
+        errors = sector_errors(
+            metadata, allow_private_addresses=allow_private, previous=previous
+        )
         for message in errors.values():
             self.sector_identifier_uri.errors.append(
                 _(

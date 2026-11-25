@@ -58,7 +58,7 @@ def bearer_token(request):
     return token
 
 
-def checked_metadata(metadata, server_metadata, allow_private_addresses):
+def checked_metadata(metadata, server_metadata, allow_private_addresses, previous=None):
     """Add the RFC 7591 defaults, and apply the rules that Authlib does not apply."""
     metadata = {**DEFAULT_METADATA, **metadata}
     if unsupported := [key for key in UNSUPPORTED_CLIENT_METADATA if key in metadata]:
@@ -77,7 +77,7 @@ def checked_metadata(metadata, server_metadata, allow_private_addresses):
 
     # After the other rules: it makes a request.
     if errors := sector_errors(
-        metadata, allow_private_addresses=allow_private_addresses
+        metadata, allow_private_addresses=allow_private_addresses, previous=previous
     ):
         raise InvalidClientMetadataError(
             " ".join(f"sector_identifier_uri: {reason}" for reason in errors.values())
@@ -138,9 +138,9 @@ class RegistrationEndpoint(ClientRegistrationEndpoint):
         info = super().generate_client_info(request)
         # Per RFC 7591 §3.2.1, client_secret_expires_at goes with a client_secret.
         # Authlib sends both, with a null secret. Authlib main fixes it (PR #1071).
-        if info["client_secret"] is None:
-            del info["client_secret"]
-            del info["client_secret_expires_at"]
+        if info.get("client_secret") is None:
+            info.pop("client_secret", None)
+            info.pop("client_secret_expires_at", None)
 
         return info
 
@@ -207,13 +207,17 @@ class ConfigurationEndpoint(ClientConfigurationEndpoint):
             super().extract_client_metadata(request),
             self.get_server_metadata(),
             self.allow_private_addresses,
+            # Authlib sets request.client before it reads the metadata.
+            previous=request.client.client_metadata,
         )
 
     def introspect_client(self, client):
         info = super().introspect_client(client)
         # The client mixin returns an empty secret for a public client.
+        # Per RFC 7591 §3.2.1, client_secret_expires_at goes with the secret.
         if not client.client_secret:
             info.pop("client_secret", None)
+            info.pop("client_secret_expires_at", None)
 
         return info
 

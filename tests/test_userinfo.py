@@ -1,6 +1,5 @@
 import pytest
 from joserfc import jwt
-from joserfc.errors import UnsupportedAlgorithmError
 from joserfc.jwk import KeySet
 
 from auth_server_playground.keys import active_kid
@@ -94,14 +93,22 @@ def test_userinfo_is_json_without_the_client_metadata(logged_in, client):
     assert res.content_type == "application/json"
 
 
-def test_stale_userinfo_algorithm_raises(app, logged_in):
-    """Authlib signs without checking the published list, so the request raises."""
+@pytest.mark.parametrize("published", [["RS256"], []])
+def test_userinfo_keeps_the_algorithm_when_the_server_list_changes(
+    app, logged_in, configure, published
+):
+    """The published list limits registration, not signing. ID tokens do the same."""
+    configure(metadata={"userinfo_signing_alg_values_supported": ["RS256", "PS256"]})
     client = make_client(
         app,
         client_id="stale-client",
         client_secret="stale-secret",
-        metadata={**SIGNED_CLIENT, "userinfo_signed_response_alg": "ES256"},
+        metadata={**SIGNED_CLIENT, "userinfo_signed_response_alg": "PS256"},
     )
+    configure(metadata={"userinfo_signing_alg_values_supported": published})
     token = access_token(logged_in, client, "openid profile")
-    with pytest.raises(UnsupportedAlgorithmError):
-        logged_in.get("/oauth/userinfo", headers=bearer(token))
+    res = logged_in.get("/oauth/userinfo", headers=bearer(token))
+    assert res.content_type == "application/jwt"
+    key_set = KeySet.import_key_set(logged_in.get("/oauth/jwks").json)
+    signed = jwt.decode(res.text, key_set, algorithms=["PS256"])
+    assert signed.header["alg"] == "PS256"

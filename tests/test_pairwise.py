@@ -80,6 +80,19 @@ def test_public_client_gets_the_persona_sub(logged_in, client):
     assert subjects(logged_in, client) == (COMPLETE_SUB,) * 3
 
 
+def test_pairwise_only_server_gives_pairwise_subs_by_default(app, logged_in, configure):
+    configure(metadata={"subject_types_supported": ["pairwise"]})
+    client = pairwise_client(app, "default-client", subject_type=None)
+    assert subjects(logged_in, client) == (expected_sub(app, "client.test"),) * 3
+
+
+def test_public_and_pairwise_server_gives_public_subs_by_default(
+    app, logged_in, pairwise_server
+):
+    client = pairwise_client(app, "default-client", subject_type=None)
+    assert subjects(logged_in, client) == (COMPLETE_SUB,) * 3
+
+
 def test_id_token_hint_of_a_pairwise_client(app, logged_in, pairwise_server):
     client = pairwise_client(app, "pairwise-client")
     code = callback_params(consent(logged_in, oidc_url(client)))["code"]

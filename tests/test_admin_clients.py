@@ -521,7 +521,9 @@ def test_invalid_request_uris(testapp, value):
     assert res.html.select_one("#request_uris-error")
 
 
-def test_stored_request_uris_without_openid(app, testapp, client, configure):
+def test_stored_request_uris_do_not_block_a_save_without_openid(
+    app, testapp, client, configure
+):
     with app.app_context():
         stored = Client.query.filter_by(client_id=client["client_id"]).one()
         stored.set_client_metadata(
@@ -530,8 +532,12 @@ def test_stored_request_uris_without_openid(app, testapp, client, configure):
         db.session.commit()
 
     configure(metadata={"scopes_supported": ["profile"]})
-    res = testapp.get(f"/en/clients/{client['client_id']}").forms["client"].submit()
-    assert "Each line must be an https URL." in res.text
+    form = testapp.get(f"/en/clients/{client['client_id']}").forms["client"]
+    # The OpenID Connect rules do not apply: the form hides request_uris.
+    form.submit().follow()
+    assert metadata_of(app, client["client_id"])["request_uris"] == [
+        "ftp://client.test/a.jwt"
+    ]
 
 
 def test_unsigned_request_objects_by_default(app, testapp, client):
@@ -697,3 +703,51 @@ def test_stored_sector_identifier_uri_is_not_fetched_without_openid(
     form = testapp.get("/en/clients/pairwise-client").forms["client"]
     form.submit().follow()
     assert outbound_urls.requested == []
+
+
+def test_hidden_openid_rules_do_not_block_a_save(app, testapp, configure):
+    make_client(
+        app,
+        client_id="pairwise-client",
+        client_secret="pairwise-secret",
+        metadata={"subject_type": "pairwise", "redirect_uris": ["https://a.test/cb"]},
+    )
+    configure(metadata={"scopes_supported": ["profile"]})
+    form = testapp.get("/en/clients/pairwise-client").forms["client"]
+    form["redirect_uris"] = "https://a.test/cb\nhttps://b.test/cb"
+    form.submit().follow()
+    uris = metadata_of(app, "pairwise-client")["redirect_uris"]
+    assert uris == ["https://a.test/cb", "https://b.test/cb"]
+
+
+@pytest.fixture
+def sector_client(app, pairwise_server, outbound_urls):
+    """Return a pairwise client whose sector host is down."""
+    make_client(
+        app,
+        client_id="pairwise-client",
+        client_secret="pairwise-secret",
+        metadata={
+            "subject_type": "pairwise",
+            "sector_identifier_uri": SECTOR_URI,
+            "redirect_uris": ["https://client.test/callback"],
+        },
+    )
+
+
+def test_unchanged_sector_is_not_fetched(app, testapp, sector_client, outbound_urls):
+    form = testapp.get("/en/clients/pairwise-client").forms["client"]
+    form["client_name"] = "Renamed"
+    form.submit().follow()
+    assert metadata_of(app, "pairwise-client")["client_name"] == "Renamed"
+    assert outbound_urls.requested == []
+
+
+def test_changed_redirect_uris_fetch_the_sector(testapp, sector_client, outbound_urls):
+    form = testapp.get("/en/clients/pairwise-client").forms["client"]
+    form["redirect_uris"] = "https://client.test/other"
+    res = form.submit()
+    assert "The sector identifier document is refused" in text(
+        res, "#sector_identifier_uri-error"
+    )
+    assert outbound_urls.requested == [SECTOR_URI]

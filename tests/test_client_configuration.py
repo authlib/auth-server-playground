@@ -1,9 +1,11 @@
+import httpx2
 import pytest
 
 from auth_server_playground.models import Client
 from auth_server_playground.models import Token
 from tests.test_registration import REGISTRATION
 from tests.test_registration import register
+from tests.utils import REDIRECT_URI
 from tests.utils import bearer
 from tests.utils import client_credentials_token
 
@@ -30,6 +32,17 @@ def test_read_the_registration(testapp, registered):
     assert body["contacts"] == ["dev@client.test"]
     assert body["registration_access_token"] == registered["registration_access_token"]
     assert body["registration_client_uri"].endswith(configuration_url(registered))
+
+
+def test_read_a_public_client_has_no_secret_keys(testapp):
+    registered = register(
+        testapp, {**REGISTRATION, "token_endpoint_auth_method": "none"}
+    ).json
+    body = testapp.get(
+        configuration_url(registered), headers=headers_of(registered)
+    ).json
+    assert "client_secret" not in body
+    assert "client_secret_expires_at" not in body
 
 
 def test_read_needs_the_token(testapp, registered):
@@ -161,3 +174,50 @@ def test_read_refuses_another_scheme(testapp, registered):
         status=401,
     )
     assert res.json["error"] == "invalid_token"
+
+
+@pytest.fixture
+def sector_client(testapp, pairwise_server, outbound_urls):
+    sector = "https://sector.test/uris.json"
+    outbound_urls.responses[sector] = httpx2.Response(200, json=[REDIRECT_URI])
+    metadata = {
+        **REGISTRATION,
+        "subject_type": "pairwise",
+        "sector_identifier_uri": sector,
+    }
+    registered = register(testapp, metadata).json
+    # The sector host is down from now on.
+    del outbound_urls.responses[sector]
+    outbound_urls.requested.clear()
+    return registered, metadata
+
+
+def test_replace_does_not_fetch_an_unchanged_sector(
+    testapp, sector_client, outbound_urls
+):
+    registered, metadata = sector_client
+    res = testapp.put_json(
+        configuration_url(registered),
+        {**metadata, "client_id": registered["client_id"], "client_name": "Renamed"},
+        headers=headers_of(registered),
+    )
+    assert res.json["client_name"] == "Renamed"
+    assert outbound_urls.requested == []
+
+
+def test_replace_fetches_the_sector_when_the_redirect_uris_change(
+    testapp, sector_client, outbound_urls
+):
+    registered, metadata = sector_client
+    res = testapp.put_json(
+        configuration_url(registered),
+        {
+            **metadata,
+            "client_id": registered["client_id"],
+            "redirect_uris": [REDIRECT_URI, REDIRECT_URI + "2"],
+        },
+        headers=headers_of(registered),
+        status=400,
+    )
+    assert res.json["error"] == "invalid_client_metadata"
+    assert outbound_urls.requested == ["https://sector.test/uris.json"]

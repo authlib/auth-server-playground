@@ -46,6 +46,7 @@ from .registration import ConfigurationEndpoint
 from .registration import RegistrationEndpoint
 from .settings import HMAC_ALGORITHMS
 from .settings import JWT_AUTH_METHODS
+from .settings import USERINFO_ALGORITHMS
 from .settings import is_oidc_enabled
 from .snapshot import MAX_TIMESTAMP
 from .store import settings_row
@@ -135,10 +136,9 @@ class PlaygroundOpenIDCode(OpenIDCode):
 
 
 class PlaygroundUserInfoEndpoint(UserInfoEndpoint):
-    def __init__(self, issuer, algorithms, resource_protector):
+    def __init__(self, issuer, resource_protector):
         super().__init__(resource_protector=resource_protector)
         self.issuer = issuer
-        self.algorithms = algorithms
 
     def generate_user_info(self, user, scope, claims):
         return user_info(user.persona, scope, claims, user.client)
@@ -156,7 +156,9 @@ class PlaygroundUserInfoEndpoint(UserInfoEndpoint):
         return issuer_for(self.issuer)
 
     def get_supported_algorithms(self):
-        return self.algorithms
+        # The published list limits registration, not signing. ID tokens
+        # behave the same way: Authlib signs with the client algorithm.
+        return USERINFO_ALGORITHMS
 
     def resolve_private_key(self):
         # With a key set, joserfc picks the key of the algorithm and writes
@@ -537,7 +539,6 @@ def build_server(document):
         server.register_endpoint(
             PlaygroundUserInfoEndpoint(
                 metadata["issuer"],
-                metadata["userinfo_signing_alg_values_supported"],
                 resource_protector=require_oauth,
             )
         )

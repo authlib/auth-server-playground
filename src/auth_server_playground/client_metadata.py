@@ -53,13 +53,21 @@ def client_metadata_errors(metadata):
     return errors
 
 
-def sector_errors(metadata, *, allow_private_addresses):
+def sector_errors(metadata, *, allow_private_addresses, previous=None):
     """Fetch sector_identifier_uri, and check that it lists every redirect URI.
 
-    Per OIDC Registration §5.
+    Per OIDC Registration §5. With the stored metadata of the client as
+    `previous`, it fetches nothing when the URL and the redirect URIs did not
+    change. So a down sector host does not block the other changes.
     """
     uri = metadata.get("sector_identifier_uri")
     if not uri:
+        return {}
+
+    if previous is not None and all(
+        previous.get(key) == metadata.get(key)
+        for key in ("sector_identifier_uri", "redirect_uris")
+    ):
         return {}
 
     try:

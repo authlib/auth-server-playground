@@ -1,5 +1,6 @@
 import httpx2
 import pytest
+from authlib.oauth2.rfc7591 import ClientRegistrationEndpoint
 from joserfc.jwk import RSAKey
 
 from auth_server_playground.models import Client
@@ -82,6 +83,28 @@ def test_client_scope_is_kept(testapp):
 
 
 def test_public_client_gets_no_secret(testapp):
+    body = register(
+        testapp, {**REGISTRATION, "token_endpoint_auth_method": "none"}
+    ).json
+    assert "client_secret" not in body
+    assert "client_secret_expires_at" not in body
+
+
+def test_public_client_registers_when_authlib_sends_no_secret_keys(
+    testapp, monkeypatch
+):
+    """Authlib PR #1071 stops sending client_secret and client_secret_expires_at."""
+    original = ClientRegistrationEndpoint.generate_client_info
+
+    def generate_client_info(self, request):
+        info = original(self, request)
+        info.pop("client_secret", None)
+        info.pop("client_secret_expires_at", None)
+        return info
+
+    monkeypatch.setattr(
+        ClientRegistrationEndpoint, "generate_client_info", generate_client_info
+    )
     body = register(
         testapp, {**REGISTRATION, "token_endpoint_auth_method": "none"}
     ).json

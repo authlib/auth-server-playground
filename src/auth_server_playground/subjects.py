@@ -39,9 +39,22 @@ def pairwise_sub(sector, sub, salt):
 
 
 def subject_for(persona, client):
-    """Return the sub of the persona for the client."""
-    if client is None or client.client_metadata.get("subject_type") != "pairwise":
+    """Return the sub of the persona for the client.
+
+    Per OIDC Registration §2, the server picks the subject type of a client
+    without one: pairwise when the server does not list public.
+    """
+    if client is None:
         return persona.sub
 
-    salt = db.session.get(Settings, SETTINGS_ID).document["settings"]["pairwise_salt"]
+    document = db.session.get(Settings, SETTINGS_ID).document
+    subject_type = client.client_metadata.get("subject_type")
+    if subject_type is None:
+        listed = document["metadata"]["subject_types_supported"]
+        subject_type = "public" if "public" in listed else "pairwise"
+
+    if subject_type != "pairwise":
+        return persona.sub
+
+    salt = document["settings"]["pairwise_salt"]
     return pairwise_sub(sector_of(client.client_metadata), persona.sub, salt)
