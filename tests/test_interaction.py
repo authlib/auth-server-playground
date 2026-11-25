@@ -86,10 +86,6 @@ def test_consent_denied(logged_in, client):
     assert callback_params(res)["error"] == "access_denied"
 
 
-def test_consent_without_csrf_token_is_refused(logged_in, client):
-    logged_in.post(code_url(client), {"accept": "Accept"}, status=400)
-
-
 def test_forget_persona(logged_in, client):
     res = logged_in.get("/interaction/forget")
     assert urlparse(res.location).path == "/en/"

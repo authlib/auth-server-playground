@@ -12,6 +12,7 @@ from . import admin
 from . import endpoints
 from . import interaction
 from .client_metadata import is_web_url
+from .csrf import setup_csrf
 from .highlighting import highlight
 from .highlighting import stylesheet
 from .i18n import preferred_language
@@ -69,6 +70,7 @@ def create_app(config=None):
 
 def setup_app(app):
     setup_i18n(app)
+    setup_csrf(app)
 
     version = {
         "app_version": importlib.metadata.version("auth-server-playground"),

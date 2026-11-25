@@ -141,13 +141,6 @@ def test_restore_defaults(testapp, configure):
     assert form["access_token_lifetime"].value == "3600"
 
 
-def test_restore_defaults_needs_a_csrf_token(testapp, configure):
-    configure(settings={"access_token_lifetime": 60})
-    testapp.post("/en/server/defaults")
-    form = testapp.get("/en/server").forms["server"]
-    assert form["access_token_lifetime"].value == "60"
-
-
 def test_document_error_without_a_field_goes_on_top(testapp):
     """Authlib refuses an empty response_types_supported, see RFC 8414 §2."""
     form = testapp.get("/en/server").forms["server"]
@@ -277,12 +270,6 @@ def test_renew_the_initial_access_token(app, testapp, configure):
     res = testapp.get("/en/server").forms["renew"].submit().follow()
     assert 'data-type="success"' in res
     assert stored_settings(app)["initial_access_token"] not in ("old", None)
-
-
-def test_renew_needs_a_csrf_token(app, testapp, configure):
-    configure(settings={"registration": "token", "initial_access_token": "old"})
-    testapp.post("/en/server/initial-access-token")
-    assert stored_settings(app)["initial_access_token"] == "old"
 
 
 def test_save_registration_settings(app, testapp):

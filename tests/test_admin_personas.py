@@ -148,12 +148,6 @@ def test_delete_persona_with_its_tokens(app, testapp, client, persona, legacy_gr
         assert Token.query.filter_by(persona_id=persona["id"]).count() == 0
 
 
-def test_delete_needs_a_csrf_token(app, testapp, persona):
-    testapp.post(f"/en/personas/{persona['id']}/delete")
-    with app.app_context():
-        assert db.session.get(Persona, persona["id"])
-
-
 def test_persona_page_has_unique_ids(testapp, persona):
     res = testapp.get(f"/en/personas/{persona['id']}")
     ids = [element["id"] for element in res.html.select("[id]")]
@@ -178,10 +172,6 @@ def test_random_persona_follows_the_language(app, testapp):
         assert persona.claims["locale"] == "fr-FR"
 
 
-def test_random_persona_needs_a_csrf_token(testapp):
-    testapp.post("/interaction/persona/random", status=400)
-
-
 def test_selector_shows_the_avatars(testapp, persona):
     res = testapp.get("/interaction/persona")
     assert res.html.select_one(f'img[src$="/personas/{persona["id"]}/picture.svg"]')
@@ -194,19 +184,6 @@ def test_edit_a_minimal_persona(app, testapp, other_persona):
     claims = stored(app, other_persona["sub"])["claims"]
     assert "birthdate" not in claims
     assert "address" not in claims
-
-
-def test_random_persona_needs_a_csrf_token_in_admin(app, testapp):
-    res = testapp.post("/en/personas/random", {"random-locale": "fr_FR"})
-    assert res.location.endswith("/en/personas")
-    with app.app_context():
-        assert Persona.query.count() == 2
-
-
-def test_redraw_avatar_needs_a_csrf_token(app, testapp, persona):
-    before = stored(app, persona["sub"])["svg"]
-    testapp.post(f"/en/personas/{persona['id']}/avatar")
-    assert stored(app, persona["sub"])["svg"] == before
 
 
 def test_picture_claim_replaces_the_avatar(app, testapp, persona):

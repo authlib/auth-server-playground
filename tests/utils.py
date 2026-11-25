@@ -28,6 +28,11 @@ def authorize_url(**params):
     return "/oauth/authorize?" + urlencode(query)
 
 
+def csrf_token(testapp):
+    """Return a valid CSRF token. It works for every form of the session."""
+    return testapp.get("/en/server").forms["server"]["csrf_token"].value
+
+
 def select_persona(testapp, persona):
     """Choose the persona in the persona selector."""
     form = testapp.get("/interaction/persona").forms["select-persona"]

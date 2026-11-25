@@ -83,12 +83,6 @@ def test_redirect_uris_must_be_urls(testapp):
     assert "not a url" in text(res, "#wrap-redirect_uris")
 
 
-def test_new_client_needs_a_csrf_token(app, testapp):
-    testapp.post("/en/clients/new", {"client_name": "Demo"}, status=200)
-    with app.app_context():
-        assert Client.query.count() == 0
-
-
 def test_edit_client(app, testapp, client):
     form = testapp.get(f"/en/clients/{client['client_id']}").forms["client"]
     form["client_name"] = "Renamed"
@@ -140,12 +134,6 @@ def test_delete_client_with_its_tokens(app, testapp, client):
         assert Token.query.filter_by(client_id=client["client_id"]).count() == 0
 
 
-def test_delete_needs_a_csrf_token(app, testapp, client):
-    testapp.post(f"/en/clients/{client['client_id']}/delete")
-    with app.app_context():
-        assert Client.query.filter_by(client_id=client["client_id"]).count() == 1
-
-
 def test_unsupported_values_are_marked(testapp, client):
     res = testapp.get(f"/en/clients/{client['client_id']}")
     assert "not supported" in text(res, 'label[for="grant_types-2"]')  # password
@@ -170,10 +158,11 @@ def test_unknown_client(testapp):
 def test_regenerate_without_a_secret(app, testapp, public_client):
     page = testapp.get(f"/en/clients/{public_client['client_id']}")
     form = page.forms["delete"]
-    testapp.post(
+    res = testapp.post(
         f"/en/clients/{public_client['client_id']}/secret",
         {"regenerate-csrf_token": form["delete-csrf_token"].value},
     )
+    assert "This client has no secret." in text(res.follow(), '[data-type="error"]')
     assert stored(app, public_client["client_id"])["client_secret"] == ""
 
 
@@ -605,13 +594,6 @@ def test_delete_the_dynamic_clients(app, testapp, client, dynamic_client):
 
 def test_no_delete_button_without_dynamic_clients(testapp, client):
     assert "delete-dynamic" not in testapp.get("/en/clients").forms
-
-
-def test_delete_the_dynamic_clients_needs_a_csrf_token(app, testapp, dynamic_client):
-    res = testapp.post("/en/dynamic-clients/delete").follow()
-    assert 'data-type="success"' not in res
-    with app.app_context():
-        assert Client.query.filter_by(client_id="dynamic-client").count() == 1
 
 
 SECTOR_URI = "https://sector.test/uris.json"

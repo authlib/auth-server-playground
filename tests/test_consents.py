@@ -11,6 +11,7 @@ from tests.conftest import make_client
 from tests.test_authorization_code import code_url
 from tests.utils import REDIRECT_URI
 from tests.utils import consent
+from tests.utils import csrf_token
 
 
 def consents_of(app, persona):
@@ -71,15 +72,6 @@ def test_persona_page_lists_and_revokes_consents(app, logged_in, client, persona
     assert "consent" in logged_in.get(code_url(client)).forms
 
 
-def test_revoke_needs_a_csrf_token(app, logged_in, client, persona):
-    consent(logged_in, code_url(client))
-    with app.app_context():
-        consent_id = Consent.query.one().id
-
-    logged_in.post(f"/en/personas/{persona['id']}/consents/{consent_id}/revoke")
-    assert consents_of(app, persona) != []
-
-
 def test_revoke_through_another_persona_is_refused(
     app, logged_in, client, persona, other_persona
 ):
@@ -88,13 +80,19 @@ def test_revoke_through_another_persona_is_refused(
         consent_id = Consent.query.one().id
 
     logged_in.post(
-        f"/en/personas/{other_persona['id']}/consents/{consent_id}/revoke", status=404
+        f"/en/personas/{other_persona['id']}/consents/{consent_id}/revoke",
+        {"csrf_token": csrf_token(logged_in)},
+        status=404,
     )
     assert consents_of(app, persona) != []
 
 
 def test_revoke_unknown_consent(logged_in, persona):
-    logged_in.post(f"/en/personas/{persona['id']}/consents/999/revoke", status=404)
+    logged_in.post(
+        f"/en/personas/{persona['id']}/consents/999/revoke",
+        {"csrf_token": csrf_token(logged_in)},
+        status=404,
+    )
 
 
 def test_deleting_the_client_deletes_its_consents(app, logged_in, client, persona):

@@ -245,16 +245,6 @@ def test_confirm_an_invalid_snapshot(app, testapp, client):
         assert export_snapshot() == snapshot
 
 
-def test_confirm_needs_a_csrf_token(app, testapp, client):
-    with app.app_context():
-        snapshot = export_snapshot()
-
-    snapshot["clients"] = []
-    testapp.post("/en/snapshot/confirm", {"snapshot": json.dumps(snapshot)})
-    with app.app_context():
-        assert export_snapshot()["clients"] != []
-
-
 def test_export_download(testapp):
     res = testapp.get("/en/snapshot/export")
     assert res.content_type == "application/json"

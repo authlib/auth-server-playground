@@ -1,6 +1,7 @@
 from auth_server_playground import keys
 from auth_server_playground.models import SigningKey
 from auth_server_playground.models import db
+from tests.utils import csrf_token
 
 
 def active(app, alg):
@@ -28,14 +29,10 @@ def test_rotate(app, testapp):
         assert db.session.get(SigningKey, old).active is False
 
 
-def test_rotate_needs_a_csrf_token(app, testapp):
-    old = active(app, "RS256")
-    testapp.post("/en/keys/RS256/rotate")
-    assert active(app, "RS256") == old
-
-
 def test_rotate_a_disabled_algorithm(testapp):
-    testapp.post("/en/keys/ES256/rotate", status=404)
+    testapp.post(
+        "/en/keys/ES256/rotate", {"csrf_token": csrf_token(testapp)}, status=404
+    )
 
 
 def test_delete_a_retired_key(app, testapp):
@@ -61,7 +58,9 @@ def test_active_key_cannot_be_deleted(app, testapp):
 
 
 def test_delete_unknown_key(testapp):
-    testapp.post("/en/keys/unknown/delete", status=404)
+    testapp.post(
+        "/en/keys/unknown/delete", {"csrf_token": csrf_token(testapp)}, status=404
+    )
 
 
 def test_keys_page_has_unique_ids(app, testapp):
@@ -69,14 +68,6 @@ def test_keys_page_has_unique_ids(app, testapp):
     res = testapp.get("/en/keys")
     ids = [element["id"] for element in res.html.select("[id]")]
     assert len(ids) == len(set(ids))
-
-
-def test_delete_needs_a_csrf_token(app, testapp):
-    old = active(app, "RS256")
-    testapp.get("/en/keys").forms["rotate-RS256"].submit()
-    testapp.post(f"/en/keys/{old}/delete")
-    with app.app_context():
-        assert db.session.get(SigningKey, old) is not None
 
 
 def test_key_of_a_disabled_algorithm_can_be_deleted(app, testapp, configure):

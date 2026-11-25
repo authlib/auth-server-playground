@@ -16,6 +16,7 @@ from flask import session
 from flask import url_for
 from flask_babel import gettext as _
 
+from .csrf import csrf
 from .forms import ConsentForm
 from .interaction import SESSION_REQUEST_URI
 from .interaction import PlaygroundSession
@@ -41,12 +42,18 @@ CONSENT_FIELDS = {"csrf_token", "persona_id", "accept", "deny"}
 
 
 @bp.route("/oauth/authorize", methods=["GET", "POST"])
+@csrf.exempt
 def authorize():
     # Per OIDC Core §3.1.2.1, the request may come as a POST. The selector
     # and the consent form need its parameters in the URL.
     if request.method == "POST" and not CONSENT_FIELDS & request.form.keys():
         query = urlencode(list(request.values.items(multi=True)))
         return redirect(f"{url_for('oauth.authorize')}?{query}", 303)
+
+    # A client may send the authorization request itself by POST, without a
+    # token (OIDC Core §3.1.2.1). Only the consent POST is checked.
+    if request.method == "POST":
+        csrf.protect()
 
     persona = current_persona()
     # The client of the URL. Authlib checks it later.
@@ -83,6 +90,7 @@ def authorize():
 
         return consent_page(form, grant, persona, params)
 
+    # Only a field can be wrong now: CSRFProtect checked the token.
     if not form.validate():
         abort(400)
 
@@ -169,11 +177,13 @@ def consent_page(form, grant, persona, params):
 
 
 @bp.route("/oauth/token", methods=["POST"])
+@csrf.exempt
 def issue_token():
     return get_server().create_token_response()
 
 
 @bp.route("/oauth/revoke", methods=["POST"])
+@csrf.exempt
 def revoke_token():
     if not current_document()["settings"]["revocation_enabled"]:
         abort(404)
@@ -186,6 +196,7 @@ def registration_enabled():
 
 
 @bp.route("/oauth/register", methods=["POST"])
+@csrf.exempt
 def register_client():
     if not registration_enabled():
         abort(404)
@@ -194,6 +205,7 @@ def register_client():
 
 
 @bp.route("/oauth/register/<client_id>", methods=["GET", "PUT", "DELETE"])
+@csrf.exempt
 def client_configuration(client_id):
     # ConfigurationEndpoint reads the client_id from the URL.
     if not registration_enabled():
@@ -203,6 +215,7 @@ def client_configuration(client_id):
 
 
 @bp.route("/oauth/userinfo", methods=["GET", "POST"])
+@csrf.exempt
 def userinfo():
     if not is_oidc_enabled(current_document()):
         abort(404)

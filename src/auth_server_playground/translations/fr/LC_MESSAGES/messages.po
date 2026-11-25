@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-24 19:04+0100\n"
+"POT-Creation-Date: 2026-11-25 16:18+0100\n"
 "PO-Revision-Date: 2026-11-13 15:51+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -18,93 +18,101 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: src/auth_server_playground/admin.py:101
-msgid "The page expired. Reload it and try again."
-msgstr "La page a expiré. Rechargez-la et réessayez."
-
-#: src/auth_server_playground/admin.py:139
+#: src/auth_server_playground/admin.py:130
 msgid "The server configuration is saved."
 msgstr "La configuration du serveur est enregistrée."
 
-#: src/auth_server_playground/admin.py:169
+#: src/auth_server_playground/admin.py:157
 msgid "A new initial access token replaces the old one."
 msgstr "Un nouveau jeton d'accès initial remplace l'ancien."
 
-#: src/auth_server_playground/admin.py:193
+#: src/auth_server_playground/admin.py:178
 msgid "The default configuration is restored."
 msgstr "La configuration par défaut est rétablie."
 
-#: src/auth_server_playground/admin.py:230
+#: src/auth_server_playground/admin.py:212
 #, python-format
 msgid "A new %(alg)s key is active."
 msgstr "Une nouvelle clé %(alg)s est active."
 
-#: src/auth_server_playground/admin.py:244
+#: src/auth_server_playground/admin.py:223
 msgid "This key is active. Rotate it first."
 msgstr "Cette clé est active. Renouvelez-la d'abord."
 
-#: src/auth_server_playground/admin.py:246
+#: src/auth_server_playground/admin.py:225
 msgid "The key is deleted."
 msgstr "La clé est supprimée."
 
-#: src/auth_server_playground/admin.py:271
+#: src/auth_server_playground/admin.py:247
 #, python-format
 msgid "%(num)d dynamic client is deleted."
 msgid_plural "%(num)d dynamic clients are deleted."
 msgstr[0] "%(num)d client dynamique est supprimé."
 msgstr[1] "%(num)d clients dynamiques sont supprimés."
 
-#: src/auth_server_playground/admin.py:287
+#: src/auth_server_playground/admin.py:263
 msgid "The client is created."
 msgstr "Le client est créé."
 
-#: src/auth_server_playground/admin.py:316
+#: src/auth_server_playground/admin.py:292
 msgid "The client is saved."
 msgstr "Le client est enregistré."
 
-#: src/auth_server_playground/admin.py:328
+#: src/auth_server_playground/admin.py:301
 msgid "This client has no secret."
 msgstr "Ce client n'a pas de secret."
 
-#: src/auth_server_playground/admin.py:333
+#: src/auth_server_playground/admin.py:306
 msgid "The client secret is regenerated."
 msgstr "Le secret du client est régénéré."
 
-#: src/auth_server_playground/admin.py:344
+#: src/auth_server_playground/admin.py:314
 msgid "The client is deleted."
 msgstr "Le client est supprimé."
 
-#: src/auth_server_playground/admin.py:366
+#: src/auth_server_playground/admin.py:336
 msgid "The persona is created."
 msgstr "La persona est créée."
 
-#: src/auth_server_playground/admin.py:377
+#: src/auth_server_playground/admin.py:344
+msgid "Choose a locale from the list."
+msgstr "Choisissez une langue dans la liste."
+
+#: src/auth_server_playground/admin.py:348
 msgid "A random persona is created."
 msgstr "Une persona aléatoire est créée."
 
-#: src/auth_server_playground/admin.py:404
+#: src/auth_server_playground/admin.py:375
 msgid "The persona is saved."
 msgstr "La persona est enregistrée."
 
-#: src/auth_server_playground/admin.py:435
+#: src/auth_server_playground/admin.py:400
 msgid "The consent is revoked."
 msgstr "Le consentement est révoqué."
 
-#: src/auth_server_playground/admin.py:448
+#: src/auth_server_playground/admin.py:410
 msgid "The persona is deleted."
 msgstr "La persona est supprimée."
 
-#: src/auth_server_playground/admin.py:463
-#: src/auth_server_playground/admin.py:479
+#: src/auth_server_playground/admin.py:425
+#: src/auth_server_playground/admin.py:438
 #, python-format
 msgid "This snapshot cannot be imported: %(error)s"
 msgstr "Impossible d'importer cet instantané : %(error)s"
 
-#: src/auth_server_playground/admin.py:481
+#: src/auth_server_playground/admin.py:440
 msgid "The snapshot is imported."
 msgstr "L'instantané est importé."
 
-#: src/auth_server_playground/endpoints.py:90
+#: src/auth_server_playground/csrf.py:27
+msgid ""
+"The form token is not valid. Check that cookies are allowed, then reload "
+"the page."
+msgstr ""
+"Le jeton du formulaire n'est pas valide. Vérifiez que les cookies sont "
+"autorisés, puis rechargez la page."
+
+#: src/auth_server_playground/endpoints.py:98
 msgid "The persona changed since this page was shown."
 msgstr "La persona a changé depuis l'affichage de cette page."
 
@@ -309,7 +317,7 @@ msgstr "Par exemple jwks_uri. Adresses privées, de bouclage et link-local."
 
 #: src/auth_server_playground/forms.py:302
 #: src/auth_server_playground/forms.py:547
-#: src/auth_server_playground/forms.py:895
+#: src/auth_server_playground/forms.py:896
 msgid "Save"
 msgstr "Enregistrer"
 
@@ -508,171 +516,171 @@ msgstr "Renseignez les clés ou l'URL du jeu de clés, pas les deux."
 msgid "Use a JSON Web Key Set of public keys."
 msgstr "Utilisez un jeu de clés JSON Web de clés publiques."
 
-#: src/auth_server_playground/forms.py:738
+#: src/auth_server_playground/forms.py:739
 #, python-format
 msgid "The sector identifier document is refused: %(reason)s"
 msgstr "Le document d'identifiant de secteur est refusé : %(reason)s"
 
-#: src/auth_server_playground/forms.py:821
+#: src/auth_server_playground/forms.py:822
 msgid "Use YYYY-MM-DD, YYYY or 0000-MM-DD."
 msgstr "Utilisez AAAA-MM-JJ, AAAA ou 0000-MM-JJ."
 
-#: src/auth_server_playground/forms.py:831
+#: src/auth_server_playground/forms.py:832
 msgid "This date does not exist."
 msgstr "Cette date n'existe pas."
 
-#: src/auth_server_playground/forms.py:836
+#: src/auth_server_playground/forms.py:837
 msgid "Subject"
 msgstr "Sujet"
 
-#: src/auth_server_playground/forms.py:837
+#: src/auth_server_playground/forms.py:838
 msgid "Leave empty to generate one."
 msgstr "Laisser vide pour en générer un."
 
-#: src/auth_server_playground/forms.py:841
+#: src/auth_server_playground/forms.py:842
 msgid "Full name"
 msgstr "Nom complet"
 
-#: src/auth_server_playground/forms.py:843
+#: src/auth_server_playground/forms.py:844
 msgid "Username"
 msgstr "Identifiant"
 
-#: src/auth_server_playground/forms.py:845
+#: src/auth_server_playground/forms.py:846
 msgid "Given name"
 msgstr "Prénom"
 
-#: src/auth_server_playground/forms.py:846
+#: src/auth_server_playground/forms.py:847
 msgid "Family name"
 msgstr "Nom de famille"
 
-#: src/auth_server_playground/forms.py:847
+#: src/auth_server_playground/forms.py:848
 msgid "Middle name"
 msgstr "Deuxième prénom"
 
-#: src/auth_server_playground/forms.py:848
+#: src/auth_server_playground/forms.py:849
 msgid "Nickname"
 msgstr "Surnom"
 
-#: src/auth_server_playground/forms.py:849
+#: src/auth_server_playground/forms.py:850
 msgid "Gender"
 msgstr "Genre"
 
-#: src/auth_server_playground/forms.py:851
+#: src/auth_server_playground/forms.py:852
 msgid "Birth date"
 msgstr "Date de naissance"
 
-#: src/auth_server_playground/forms.py:853
+#: src/auth_server_playground/forms.py:854
 msgid "YYYY-MM-DD, YYYY or 0000-MM-DD."
 msgstr "AAAA-MM-JJ, AAAA ou 0000-MM-JJ."
 
-#: src/auth_server_playground/forms.py:857
+#: src/auth_server_playground/forms.py:858
 msgid "Profile page"
 msgstr "Page de profil"
 
-#: src/auth_server_playground/forms.py:860
+#: src/auth_server_playground/forms.py:861
 msgid "Website"
 msgstr "Site web"
 
-#: src/auth_server_playground/forms.py:863
+#: src/auth_server_playground/forms.py:864
 msgid "Picture"
 msgstr "Image"
 
-#: src/auth_server_playground/forms.py:865
+#: src/auth_server_playground/forms.py:866
 msgid "Leave empty to use the generated avatar."
 msgstr "Laisser vide pour utiliser l'avatar généré."
 
-#: src/auth_server_playground/forms.py:868
+#: src/auth_server_playground/forms.py:869
 msgid "Email"
 msgstr "E-mail"
 
-#: src/auth_server_playground/forms.py:870
+#: src/auth_server_playground/forms.py:871
 msgid "Email verified"
 msgstr "E-mail vérifié"
 
-#: src/auth_server_playground/forms.py:872
+#: src/auth_server_playground/forms.py:873
 msgid "Phone number"
 msgstr "Numéro de téléphone"
 
-#: src/auth_server_playground/forms.py:874
+#: src/auth_server_playground/forms.py:875
 msgid "Phone number verified"
 msgstr "Numéro de téléphone vérifié"
 
-#: src/auth_server_playground/forms.py:876
+#: src/auth_server_playground/forms.py:877
 msgid "Time zone"
 msgstr "Fuseau horaire"
 
-#: src/auth_server_playground/forms.py:877
-#: src/auth_server_playground/forms.py:1012
+#: src/auth_server_playground/forms.py:878
+#: src/auth_server_playground/forms.py:1013
 msgid "Locale"
 msgstr "Langue"
 
-#: src/auth_server_playground/forms.py:879
+#: src/auth_server_playground/forms.py:880
 msgid "Formatted address"
 msgstr "Adresse mise en forme"
 
-#: src/auth_server_playground/forms.py:882
+#: src/auth_server_playground/forms.py:883
 msgid "Street address"
 msgstr "Rue"
 
-#: src/auth_server_playground/forms.py:884
+#: src/auth_server_playground/forms.py:885
 msgid "Locality"
 msgstr "Ville"
 
-#: src/auth_server_playground/forms.py:885
+#: src/auth_server_playground/forms.py:886
 msgid "Region"
 msgstr "Région"
 
-#: src/auth_server_playground/forms.py:887
+#: src/auth_server_playground/forms.py:888
 msgid "Postal code"
 msgstr "Code postal"
 
-#: src/auth_server_playground/forms.py:889
+#: src/auth_server_playground/forms.py:890
 msgid "Country"
 msgstr "Pays"
 
-#: src/auth_server_playground/forms.py:891
+#: src/auth_server_playground/forms.py:892
 msgid "Other claims"
 msgstr "Autres claims"
 
-#: src/auth_server_playground/forms.py:892
+#: src/auth_server_playground/forms.py:893
 msgid "A JSON object. Standard claims have their own field."
 msgstr "Un objet JSON. Les claims standard ont leur propre champ."
 
-#: src/auth_server_playground/forms.py:934
+#: src/auth_server_playground/forms.py:935
 msgid "Use at most 255 printable ASCII characters."
 msgstr "Utilisez au plus 255 caractères ASCII imprimables."
 
-#: src/auth_server_playground/forms.py:938
+#: src/auth_server_playground/forms.py:939
 msgid "A persona already uses this subject."
 msgstr "Une persona utilise déjà ce sujet."
 
-#: src/auth_server_playground/forms.py:943
+#: src/auth_server_playground/forms.py:944
 msgid "A persona already uses this username."
 msgstr "Une persona utilise déjà cet identifiant."
 
-#: src/auth_server_playground/forms.py:952
+#: src/auth_server_playground/forms.py:953
 msgid "The claims must be a JSON object."
 msgstr "Les claims doivent être un objet JSON."
 
-#: src/auth_server_playground/forms.py:958
+#: src/auth_server_playground/forms.py:959
 #, python-format
 msgid "These standard claims have their own field: %(claims)s"
 msgstr "Ces claims standard ont leur propre champ : %(claims)s"
 
-#: src/auth_server_playground/forms.py:1015
+#: src/auth_server_playground/forms.py:1016
 msgid "Random persona"
 msgstr "Persona aléatoire"
 
-#: src/auth_server_playground/forms.py:1019
+#: src/auth_server_playground/forms.py:1020
 msgid "Snapshot file"
 msgstr "Fichier d'instantané"
 
-#: src/auth_server_playground/forms.py:1020
+#: src/auth_server_playground/forms.py:1021
 #: src/auth_server_playground/templates/admin/snapshot.html:16
 msgid "Import"
 msgstr "Importer"
 
-#: src/auth_server_playground/forms.py:1025
+#: src/auth_server_playground/forms.py:1026
 msgid "Replace everything"
 msgstr "Tout remplacer"
 
@@ -1192,4 +1200,3 @@ msgstr ""
 #: src/auth_server_playground/templates/interaction/select_persona.html:53
 msgid "Continue with a new random persona"
 msgstr "Nouvelle persona aléatoire"
-

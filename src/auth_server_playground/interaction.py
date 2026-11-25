@@ -7,7 +7,6 @@ from authlib.oauth2.rfc6749.util import scope_to_list
 from authlib.oidc.core import AuthorizationSessionMixin
 from authlib.oidc.core import get_requested_acr_values
 from flask import Blueprint
-from flask import abort
 from flask import redirect
 from flask import render_template
 from flask import request
@@ -213,9 +212,6 @@ def act_as(persona_id):
 
 @bp.route("/interaction/persona/random", methods=["POST"])
 def random_persona():
-    if not ActionForm(prefix="random").validate_on_submit():
-        abort(400)
-
     locale = personas.random_locale_for(get_locale().language)
     act_as(personas.create_random_persona(locale).id)
     return after_interaction()
