@@ -13,4 +13,5 @@ dist
 *.mo
 node_modules
 conformance/.cache/
+conformance/tls/
 conformance/results/

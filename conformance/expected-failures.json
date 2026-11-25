@@ -34,5 +34,73 @@
     "condition": "EnsureIdTokenDoesNotContainEmailForScopeEmail",
     "expected-result": "warning",
     "comment": "The playground follows the documented example of OpenIDCode.generate_user_info in Authlib. The example filters the claims by the token scope, so the ID token of the code flow gets the email claims. Per OIDC Core §5.4, they belong to the userinfo response when an access token is issued. Reported to Authlib."
+  },
+  {
+    "test-name": "oidcc-discovery-endpoint-verification",
+    "variant": {
+      "server_metadata": "discovery",
+      "response_type": "code",
+      "client_registration": "dynamic_client"
+    },
+    "configuration-filename": "dynamic.json",
+    "current-block": "",
+    "condition": "OIDCCCheckDiscEndpointResponseTypesSupportedDynamic",
+    "expected-result": "failure",
+    "comment": "The Dynamic profile requires the id_token and token id_token response types. The playground does not support the implicit flow yet."
+  },
+  {
+    "test-name": "oidcc-discovery-endpoint-verification",
+    "variant": {
+      "server_metadata": "discovery",
+      "response_type": "code",
+      "client_registration": "dynamic_client"
+    },
+    "configuration-filename": "dynamic.json",
+    "current-block": "",
+    "condition": "OIDCCCheckDiscEndpointGrantTypesSupportedDynamic",
+    "expected-result": "failure",
+    "comment": "The Dynamic profile requires the implicit grant. The playground does not support the implicit flow yet."
+  },
+  {
+    "test-name": "oidcc-ensure-redirect-uri-in-authorization-request",
+    "variant": {
+      "client_auth_type": "private_key_jwt",
+      "server_metadata": "discovery",
+      "response_type": "code",
+      "client_registration": "dynamic_client",
+      "response_mode": "default"
+    },
+    "configuration-filename": "dynamic.json",
+    "current-block": "",
+    "condition": "WebRunner",
+    "expected-result": "failure",
+    "comment": "Authlib accepts an OpenID request without redirect_uri (Authlib #712). Per OIDC Core §3.1.2.1, it is REQUIRED. The browser never sees the expected error page."
+  },
+  {
+    "test-name": "oidcc-ensure-redirect-uri-in-authorization-request",
+    "variant": {
+      "client_auth_type": "private_key_jwt",
+      "server_metadata": "discovery",
+      "response_type": "code",
+      "client_registration": "dynamic_client",
+      "response_mode": "default"
+    },
+    "configuration-filename": "dynamic.json",
+    "current-block": "",
+    "condition": "oidcc-ensure-redirect-uri-in-authorization-request",
+    "expected-result": "failure",
+    "comment": "Authlib accepts an OpenID request without redirect_uri (Authlib #712). Per OIDC Core §3.1.2.1, it is REQUIRED."
+  },
+  {
+    "test-name": "oidcc-server-rotate-keys",
+    "variant": {
+      "server_metadata": "discovery",
+      "response_type": "code"
+    },
+    "configuration-filename": "dynamic.json",
+    "current-block": "",
+    "condition": "VerifyNewJwksHasNewSigningKey",
+    "expected-result": "failure",
+    "comment": "The module needs a key rotation before it starts, and the runner starts it at once. The suite's own CI expects this failure."
   }
 ]

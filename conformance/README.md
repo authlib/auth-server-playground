@@ -6,7 +6,7 @@ The `check` job needs it, so a failed run blocks a merge.
 
 This page is for the maintainers of the playground.
 It explains how to run the bench, read its results, and update the suite version and the expected results.
-It assumes Docker with Compose, [uv](https://docs.astral.sh/uv/), and basic knowledge of OpenID Connect.
+It assumes Docker with Compose, [uv](https://docs.astral.sh/uv/), OpenSSL 1.1.1 or later, and basic knowledge of OpenID Connect.
 It does not explain the test modules: see the [suite documentation](https://gitlab.com/openid/conformance-suite/-/wikis/home).
 
 ## Run the bench
@@ -20,11 +20,12 @@ conformance/run.sh
 The script does these steps:
 
 1. Download the suite runner, `run-test-plan.py` and its two modules, into `conformance/.cache/`.
-2. Build the playground image from the `Dockerfile`, and start the suite, its database, its nginx proxy, the playground and Caddy.
-3. Wait for the suite.
-4. Run the Config plan, and the Basic plan with discovery and static clients.
-5. Compare the results with `expected-failures.json` and `expected-skips.json`.
-6. Stop and remove the containers.
+2. Make a TLS certificate for the suite nginx, into `conformance/tls/`.
+3. Build the playground image from the `Dockerfile`, and start the suite, its database, its nginx proxy, the playground and Caddy.
+4. Wait for the suite.
+5. Run the Config plan, the Basic plan with discovery and static clients, and the Dynamic plan with the `code` response type.
+6. Compare the results with `expected-failures.json` and `expected-skips.json`.
+7. Stop and remove the containers.
 
 The script refuses to start when the containers of a previous run still exist, for example after `--keep`.
 It prints the command that stops them.
@@ -48,6 +49,12 @@ Caddy serves the playground over HTTPS, as `Caddyfile` sets:
   The CA stays in the `caddy` container, and nothing installs it in a trust store.
 - The suite accepts any certificate, so no trust setup is needed, on the host or in the suite.
 - The playground runs with `PROXY_FIX=true`, so its issuer and endpoint URLs start with `https://playground`.
+
+The playground also fetches URLs of the suite, for example the `jwks_uri`, the `sector_identifier_uri` and the `request_uri` of a client.
+The certificate of the suite nginx has no subject alternative name, so the playground would refuse it.
+`run.sh` makes a new certificate at each run, with the name `localhost.emobix.co.uk` as SAN, in `conformance/tls/`.
+Compose mounts it in the suite nginx, and in the playground container, which trusts it through `SSL_CERT_FILE`.
+No private key is committed: `conformance/tls/` is ignored by git.
 
 ## Read the results
 
@@ -74,8 +81,14 @@ docker compose -f conformance/compose.yaml down --volumes
 ```
 
 Some modules need a screenshot that a person reviews for a certification.
-The browser commands of `config.json` capture the page, and these modules end with `REVIEW`.
+The browser commands of `config.json` and `dynamic.json` capture the page, and these modules end with `REVIEW`.
 The runner counts `REVIEW` as passed.
+
+The Dynamic plan has five of them.
+A person must check their screenshots for a certification:
+
+- `oidcc-redirect-uri-query-mismatch` and `oidcc-redirect-uri-query-added`: the playground shows an error page.
+- `oidcc-registration-logo-uri`, `oidcc-registration-policy-uri` and `oidcc-registration-tos-uri`: the persona page shows the client details.
 
 ## Update the suite version
 
@@ -105,7 +118,7 @@ Remove the folder to free the space.
 `expected-failures.json` lists the known failures and warnings, in the format of the suite runner.
 Each entry gives the test module, its variant, the block, the condition and the expected result.
 Its `comment` says why the result happens.
-It only lists Authlib gaps, limits of the bench, and the features that the playground leaves out on purpose, such as `request_uri`.
+It only lists Authlib gaps, limits of the bench, and the features that the playground does not support yet, such as the implicit flow.
 Any other failure that comes from the playground gets a fix, not an entry.
 
 When an Authlib release fixes a finding:
@@ -116,6 +129,15 @@ When an Authlib release fixes a finding:
 3. Remove these entries from `expected-failures.json`.
 4. Run `conformance/run.sh` again. It exits with 0.
 
+The Dynamic plan has these expected failures:
+
+- `oidcc-discovery-endpoint-verification`, two conditions: the Dynamic profile requires the `id_token` and `token id_token` response types and the implicit grant.
+  The playground does not support the implicit flow yet.
+- `oidcc-ensure-redirect-uri-in-authorization-request`, two entries: Authlib accepts an OpenID request without `redirect_uri` (Authlib #712).
+  The browser never sees the expected error page.
+- `oidcc-server-rotate-keys`: the module needs a key rotation before it starts, and the runner starts it at once.
+  The suite's own CI expects this failure.
+
 To add an entry, copy the template that the script prints, and replace its `comment`.
 
 `expected-skips.json` lists the modules that the suite is expected to skip, in the same format.
@@ -124,5 +146,7 @@ To add an entry, copy the template that the script prints, and replace its `comm
 
 `snapshot.json` is the state of the playground under test.
 It holds the configuration, one persona, the three clients of `config.json`, and a signing key.
+The configuration turns on the registration endpoint, with the initial access token that `dynamic.json` uses.
+The static clients have the `offline_access` scope, so the suite can refresh with the scope it asked for.
 The client secrets and the private key are public test values.
 Never use them outside this bench.

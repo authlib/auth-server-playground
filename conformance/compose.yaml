@@ -33,6 +33,9 @@ services:
         aliases:
           # The suite calls its own public host name.
           - localhost.emobix.co.uk
+    volumes:
+      - ./tls/suite.crt:/etc/ssl/certs/nginx-selfsigned.crt:ro
+      - ./tls/suite.key:/etc/ssl/private/nginx-selfsigned.key:ro
     depends_on:
       - server
 
@@ -61,5 +64,7 @@ services:
     environment:
       PROXY_FIX: "true"
       INITIAL_SNAPSHOT: /conformance/snapshot.json
+      SSL_CERT_FILE: /conformance/suite.crt
     volumes:
       - ./snapshot.json:/conformance/snapshot.json:ro
+      - ./tls/suite.crt:/conformance/suite.crt:ro

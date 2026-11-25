@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run the OpenID Foundation Config and Basic plans against the playground.
+# Run the OpenID Foundation Config, Basic and Dynamic plans against the playground.
 # Usage: conformance/run.sh [--keep]
 # --keep leaves the containers running, to read the logs at
 # https://localhost.emobix.co.uk:8443.
@@ -50,8 +50,8 @@ if [ -n "$(docker compose ps --all --quiet)" ]; then
     exit 1
 fi
 
-# The runner loads the client certificates of this folder. The Config and
-# Basic plans need none.
+# The runner loads the client certificates of this folder. The Config, Basic
+# and Dynamic plans need none.
 mkdir -p "$CACHE/certs-keys"
 for file in run-test-plan.py conformance.py test_plan_parser.py; do
     if [ ! -f "$CACHE/$file" ]; then
@@ -60,6 +60,18 @@ for file in run-test-plan.py conformance.py test_plan_parser.py; do
         mv "$CACHE/$file.tmp" "$CACHE/$file"
     fi
 done
+
+# The suite nginx certificate has no SAN, so the playground cannot fetch
+# the suite URLs (jwks_uri, sector_identifier_uri, request_uri). Each run
+# makes a new certificate. The playground trusts it with SSL_CERT_FILE.
+mkdir -p tls
+if ! output=$(openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+    -subj "/CN=localhost.emobix.co.uk" \
+    -addext "subjectAltName=DNS:localhost.emobix.co.uk" \
+    -keyout tls/suite.key -out tls/suite.crt 2>&1); then
+    printf '%s\n' "$output" >&2
+    exit 1
+fi
 
 # The runner does not create its export folder.
 rm -rf results
@@ -107,4 +119,5 @@ uv run --only-group conformance python "$CACHE/run-test-plan.py" \
     --export-dir results \
     --verbose \
     "oidcc-config-certification-test-plan" config.json \
-    "oidcc-basic-certification-test-plan[server_metadata=discovery][client_registration=static_client]" config.json
+    "oidcc-basic-certification-test-plan[server_metadata=discovery][client_registration=static_client]" config.json \
+    "oidcc-dynamic-certification-test-plan[response_type=code]" dynamic.json
