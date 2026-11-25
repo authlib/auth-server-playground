@@ -43,6 +43,7 @@ from wtforms.widgets import ListWidget
 from .client_keys import client_key_errors
 from .client_metadata import client_metadata_errors
 from .client_metadata import is_web_url
+from .client_metadata import sector_errors
 from .models import Client
 from .models import Persona
 from .models import db
@@ -64,6 +65,7 @@ from .settings import PKCE_METHODS
 from .settings import PROMPT_VALUES
 from .settings import REQUEST_OBJECT_ALGORITHMS
 from .settings import RESPONSE_TYPES
+from .settings import SUBJECT_TYPES
 from .settings import UI_LOCALES
 from .settings import USERINFO_ALGORITHMS
 from .settings import is_oidc_enabled
@@ -228,6 +230,12 @@ class ServerForm(BaseForm):
         description=_("RS256 is required."),
         render_kw={"param": "id_token_signing_alg_values_supported"},
     )
+    subject_types_supported = MultiCheckboxField(
+        _("Subject types"),
+        choices=[SelectChoice(value, value) for value in SUBJECT_TYPES],
+        description=_("A pairwise client gets its own sub for each persona."),
+        render_kw={"param": "subject_types_supported"},
+    )
     userinfo_signing_alg_values_supported = MultiCheckboxField(
         _("UserInfo signing algorithms"),
         choices=[SelectChoice(alg, alg) for alg in USERINFO_ALGORITHMS],
@@ -311,7 +319,7 @@ class ServerForm(BaseForm):
         data["scopes_supported"] = " ".join(data["scopes_supported"])
         return cls(data=data)
 
-    def to_document(self, initial_access_token):
+    def to_document(self, initial_access_token, pairwise_salt):
         """Return the document of the form.
 
         The token mode gets a new initial access token if it has none.
@@ -322,6 +330,7 @@ class ServerForm(BaseForm):
             initial_access_token = secrets.token_urlsafe(32)
 
         settings["initial_access_token"] = initial_access_token
+        settings["pairwise_salt"] = pairwise_salt
         return {
             "metadata": {
                 "issuer": self.issuer.data or None,
@@ -340,6 +349,7 @@ class ServerForm(BaseForm):
                 "id_token_signing_alg_values_supported": (
                     self.id_token_signing_alg_values_supported.data
                 ),
+                "subject_types_supported": self.subject_types_supported.data,
                 "userinfo_signing_alg_values_supported": (
                     self.userinfo_signing_alg_values_supported.data
                 ),
@@ -505,6 +515,16 @@ class ClientForm(BaseForm):
         _("UserInfo signing algorithm"),
         render_kw={"param": "userinfo_signed_response_alg"},
     )
+    subject_type = SelectField(_("Subject type"), render_kw={"param": "subject_type"})
+    sector_identifier_uri = URLField(
+        _("Sector identifier URI"),
+        validators=[check_url],
+        description=_(
+            "An https URL that lists the redirect URIs. "
+            "Its host is the sector of pairwise subjects."
+        ),
+        render_kw={"param": "sector_identifier_uri"},
+    )
     default_max_age = IntegerField(
         _("Maximum authentication age"),
         validators=[Optional(), NumberRange(min=0)],
@@ -529,6 +549,8 @@ class ClientForm(BaseForm):
     OIDC_METADATA = (
         "id_token_signed_response_alg",
         "userinfo_signed_response_alg",
+        "subject_type",
+        "sector_identifier_uri",
         "default_max_age",
         "request_object_signing_alg",
     )
@@ -554,6 +576,11 @@ class ClientForm(BaseForm):
     #: The messages of the errors that client_metadata_errors returns.
     RULE_ERRORS = {
         "request_uris": _("Each line must be an https URL."),
+        "sector_identifier_uri": _("Use an https URL."),
+        "redirect_uris": _(
+            "A pairwise client without sector identifier URI needs all its "
+            "redirect URIs on one host."
+        ),
     }
 
     def __init__(self, document, client=None, **kwargs):
@@ -569,6 +596,7 @@ class ClientForm(BaseForm):
 
         super().__init__(**kwargs)
         self.client = client
+        self.document = document
         if client is not None:
             del self.client_id
 
@@ -604,6 +632,8 @@ class ClientForm(BaseForm):
         if not self.oidc:
             del self.id_token_signed_response_alg
             del self.userinfo_signed_response_alg
+            del self.subject_type
+            del self.sector_identifier_uri
             del self.default_max_age
             del self.request_object_signing_alg
             del self.require_signed_request_object
@@ -624,6 +654,15 @@ class ClientForm(BaseForm):
             *marked_options(
                 with_stored(userinfo_supported, [userinfo_alg] if userinfo_alg else []),
                 userinfo_supported,
+            ),
+        ]
+        subject_types = metadata["subject_types_supported"]
+        subject_type = stored.get("subject_type")
+        self.subject_type.choices = [
+            SelectChoice("", _("Default (public)")),
+            *marked_options(
+                with_stored(subject_types, [subject_type] if subject_type else []),
+                subject_types,
             ),
         ]
         request_alg = stored.get("request_object_signing_alg")
@@ -683,7 +722,25 @@ class ClientForm(BaseForm):
             else:
                 self.form_errors.append(message)
 
-        return not key_errors and not rule_errors
+        if key_errors or rule_errors:
+            return False
+
+        # sector_identifier_uri is an OpenID Connect key: no fetch without it.
+        if not self.oidc:
+            return True
+
+        # After the other rules: it makes a request.
+        allow_private = self.document["settings"]["outbound_private_addresses"]
+        errors = sector_errors(metadata, allow_private_addresses=allow_private)
+        for message in errors.values():
+            self.sector_identifier_uri.errors.append(
+                _(
+                    "The sector identifier document is refused: %(reason)s",
+                    reason=message,
+                )
+            )
+
+        return not errors
 
     def client_metadata(self):
         """Return the metadata of the client, updated with the form.

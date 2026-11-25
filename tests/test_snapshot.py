@@ -574,3 +574,74 @@ def test_registration_access_tokens_are_unique(app):
     ]
     with pytest.raises(SnapshotError, match="registration_access_token"):
         check_snapshot(data)
+
+
+def snapshot_with(**metadata):
+    return {"client_id": "c", "client_metadata": metadata}
+
+
+def test_pairwise_client_with_a_sector_is_imported_without_a_request(
+    app, outbound_urls
+):
+    with app.app_context():
+        data = export_snapshot()
+
+    data["configuration"]["metadata"]["subject_types_supported"] = [
+        "public",
+        "pairwise",
+    ]
+    data["clients"] = [
+        snapshot_with(
+            subject_type="pairwise",
+            sector_identifier_uri="https://sector.test/uris.json",
+            redirect_uris=["https://a.test/cb", "https://b.test/cb"],
+        )
+    ]
+    with app.app_context():
+        import_snapshot(data)
+
+    assert outbound_urls.requested == []
+
+
+@pytest.mark.parametrize("insecure_transport", [False])
+def test_http_sector_identifier_uri_is_refused(app):
+    with app.app_context():
+        data = export_snapshot()
+
+    data["clients"] = [
+        snapshot_with(sector_identifier_uri="http://sector.test/uris.json")
+    ]
+    with pytest.raises(SnapshotError, match="sector_identifier_uri"):
+        check_snapshot(data)
+
+
+def test_unknown_subject_type_is_refused(app):
+    with app.app_context():
+        data = export_snapshot()
+
+    data["clients"] = [snapshot_with(subject_type="shared")]
+    with pytest.raises(SnapshotError, match="subject_type"):
+        check_snapshot(data)
+
+
+def test_pairwise_client_on_two_hosts_without_a_sector_is_refused(app):
+    with app.app_context():
+        data = export_snapshot()
+
+    data["clients"] = [
+        snapshot_with(
+            subject_type="pairwise",
+            redirect_uris=["https://a.test/cb", "https://b.test/cb"],
+        )
+    ]
+    with pytest.raises(SnapshotError, match="redirect URIs on one host"):
+        check_snapshot(data)
+
+
+@pytest.mark.parametrize("key", ["redirect_uris", "request_uris"])
+def test_null_uri_lists_are_accepted(app, key):
+    with app.app_context():
+        data = export_snapshot()
+
+    data["clients"] = [snapshot_with(**{key: None})]
+    check_snapshot(data)

@@ -28,6 +28,7 @@ from .settings import CLIENT_JWT_ALGORITHMS
 from .settings import ID_TOKEN_ALGORITHMS
 from .settings import MAX_LIFETIME
 from .settings import REQUEST_OBJECT_ALGORITHMS
+from .settings import SUBJECT_TYPES
 from .settings import USERINFO_ALGORITHMS
 from .settings import InvalidDocument
 from .settings import signing_algorithms
@@ -232,6 +233,12 @@ def check_openid_values(client_id, metadata):
         raise SnapshotError(
             f"Client {client_id!r}: userinfo_signed_response_alg is one of "
             f"{', '.join(USERINFO_ALGORITHMS)}."
+        )
+
+    subject_type = metadata.get("subject_type")
+    if subject_type is not None and subject_type not in SUBJECT_TYPES:
+        raise SnapshotError(
+            f"Client {client_id!r}: subject_type is one of {', '.join(SUBJECT_TYPES)}."
         )
 
 

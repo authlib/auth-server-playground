@@ -1,3 +1,4 @@
+import httpx2
 import pytest
 from joserfc.jwk import RSAKey
 
@@ -255,3 +256,74 @@ def test_private_key_jwt_client_gets_no_secret(testapp, rsa_pool):
 def test_invalid_key_metadata(testapp, metadata):
     res = register(testapp, {**REGISTRATION, **metadata}, status=400)
     assert res.json["error"] == "invalid_client_metadata"
+
+
+SECTOR_URI = "https://sector.test/uris.json"
+PAIRWISE = {**REGISTRATION, "subject_type": "pairwise"}
+
+
+def serve_sector(outbound_urls, content):
+    outbound_urls.responses[SECTOR_URI] = httpx2.Response(200, content=content)
+
+
+def test_pairwise_client_registers(testapp, pairwise_server):
+    body = register(testapp, PAIRWISE).json
+    assert body["subject_type"] == "pairwise"
+
+
+def test_pairwise_is_refused_when_the_server_publishes_only_public(testapp):
+    res = register(testapp, PAIRWISE, status=400)
+    assert res.json["error"] == "invalid_client_metadata"
+
+
+def test_sector_identifier_uri_that_lists_the_redirect_uri(
+    testapp, pairwise_server, outbound_urls
+):
+    serve_sector(outbound_urls, f'["{REDIRECT_URI}"]'.encode())
+    metadata = {**PAIRWISE, "sector_identifier_uri": SECTOR_URI}
+    body = register(testapp, metadata).json
+    assert body["sector_identifier_uri"] == SECTOR_URI
+    assert outbound_urls.requested == [SECTOR_URI]
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        b'["http://other.test/callback"]',
+        b"not json",
+        b'{"uris": []}',
+        b"[42]",
+        None,
+    ],
+)
+def test_invalid_sector_document_is_refused(
+    testapp, pairwise_server, outbound_urls, content
+):
+    if content is not None:
+        serve_sector(outbound_urls, content)
+
+    metadata = {**PAIRWISE, "sector_identifier_uri": SECTOR_URI}
+    res = register(testapp, metadata, status=400)
+    assert res.json["error"] == "invalid_client_metadata"
+
+
+@pytest.mark.parametrize("insecure_transport", [False])
+def test_http_sector_identifier_uri_is_refused(testapp, pairwise_server, outbound_urls):
+    metadata = {**PAIRWISE, "sector_identifier_uri": "http://sector.test/uris.json"}
+    res = register(testapp, metadata, status=400)
+    assert res.json["error"] == "invalid_client_metadata"
+    assert outbound_urls.requested == []
+
+
+def test_pairwise_client_on_two_hosts_needs_a_sector(testapp, pairwise_server):
+    metadata = {
+        **PAIRWISE,
+        "redirect_uris": [REDIRECT_URI, "http://other.test/callback"],
+    }
+    res = register(testapp, metadata, status=400)
+    assert res.json["error"] == "invalid_client_metadata"
+
+
+def test_public_client_on_two_hosts_registers(testapp, pairwise_server):
+    metadata = {**REGISTRATION, "redirect_uris": [REDIRECT_URI, "http://other.test/"]}
+    register(testapp, metadata)

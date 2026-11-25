@@ -1,5 +1,6 @@
 import json
 
+import httpx2
 import pytest
 from joserfc.jwk import RSAKey
 
@@ -605,3 +606,94 @@ def test_delete_the_dynamic_clients_needs_a_csrf_token(app, testapp, dynamic_cli
     assert 'data-type="success"' not in res
     with app.app_context():
         assert Client.query.filter_by(client_id="dynamic-client").count() == 1
+
+
+SECTOR_URI = "https://sector.test/uris.json"
+
+
+def test_client_form_saves_the_subject_type(
+    app, testapp, pairwise_server, outbound_urls
+):
+    outbound_urls.responses[SECTOR_URI] = httpx2.Response(
+        200, json=["https://client.test/callback"]
+    )
+    form = new_client_form(
+        testapp,
+        client_id="pairwise-client",
+        subject_type="pairwise",
+        sector_identifier_uri=SECTOR_URI,
+    )
+    form.submit().follow()
+    metadata = metadata_of(app, "pairwise-client")
+    assert metadata["subject_type"] == "pairwise"
+    assert metadata["sector_identifier_uri"] == SECTOR_URI
+
+
+def test_subject_type_is_optional(app, testapp, pairwise_server):
+    new_client_form(testapp, client_id="public-client").submit().follow()
+    metadata = metadata_of(app, "public-client")
+    assert "subject_type" not in metadata
+    assert "sector_identifier_uri" not in metadata
+
+
+def test_unpublished_subject_type_is_marked(app, testapp):
+    make_client(
+        app,
+        client_id="pairwise-client",
+        client_secret="pairwise-secret",
+        metadata={"subject_type": "pairwise"},
+    )
+    res = testapp.get("/en/clients/pairwise-client")
+    assert "pairwise (not supported by the server)" in res
+    assert "subject_type" in testapp.get("/en/clients")
+
+
+def test_sector_document_must_list_the_redirect_uris(
+    testapp, pairwise_server, outbound_urls
+):
+    outbound_urls.responses[SECTOR_URI] = httpx2.Response(
+        200, json=["https://other.test/callback"]
+    )
+    form = new_client_form(
+        testapp, subject_type="pairwise", sector_identifier_uri=SECTOR_URI
+    )
+    res = form.submit()
+    assert "The sector identifier document is refused" in text(
+        res, "#sector_identifier_uri-error"
+    )
+
+
+def test_pairwise_client_on_two_hosts_needs_a_sector(testapp, pairwise_server):
+    form = new_client_form(
+        testapp,
+        subject_type="pairwise",
+        redirect_uris="https://a.test/cb\nhttps://b.test/cb",
+    )
+    res = form.submit()
+    assert "needs all its redirect URIs on one host" in text(
+        res, "#redirect_uris-error"
+    )
+
+
+@pytest.mark.parametrize("insecure_transport", [False])
+def test_sector_identifier_uri_must_be_https(testapp, pairwise_server):
+    form = new_client_form(
+        testapp, sector_identifier_uri="http://sector.test/uris.json"
+    )
+    res = form.submit()
+    assert "Use an https URL." in text(res, "#sector_identifier_uri-error")
+
+
+def test_stored_sector_identifier_uri_is_not_fetched_without_openid(
+    app, testapp, configure, pairwise_server, outbound_urls
+):
+    make_client(
+        app,
+        client_id="pairwise-client",
+        client_secret="pairwise-secret",
+        metadata={"subject_type": "pairwise", "sector_identifier_uri": SECTOR_URI},
+    )
+    configure(metadata={"scopes_supported": ["profile"]})
+    form = testapp.get("/en/clients/pairwise-client").forms["client"]
+    form.submit().follow()
+    assert outbound_urls.requested == []

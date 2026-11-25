@@ -8,6 +8,7 @@ from auth_server_playground.personas import RANDOM_LOCALES
 from auth_server_playground.personas import random_locale_for
 from auth_server_playground.personas import random_persona
 from auth_server_playground.personas import render_avatar
+from auth_server_playground.personas import user_info
 from auth_server_playground.personas import username_from
 
 
@@ -69,3 +70,9 @@ def test_default_personas_pictures(app):
 def test_random_locale_for():
     assert random_locale_for("fr") == "fr_FR"
     assert random_locale_for("xx") == "en_US"
+
+
+def test_user_info_without_client_keeps_the_persona_sub(app):
+    with app.test_request_context():
+        persona = Persona.query.filter_by(sub=COMPLETE_SUB).one()
+        assert user_info(persona, "openid")["sub"] == COMPLETE_SUB

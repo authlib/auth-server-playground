@@ -3,7 +3,6 @@
 import hashlib
 import time
 
-from authlib.common.security import is_secure_transport
 from authlib.integrations.flask_oauth2 import AuthorizationServer
 from authlib.integrations.flask_oauth2 import ResourceProtector
 from authlib.integrations.sqla_oauth2 import create_bearer_token_validator
@@ -29,7 +28,7 @@ from sqlalchemy.exc import IntegrityError
 from .client_keys import ClientKeysError
 from .client_keys import public_keys
 from .client_keys import secret_key
-from .client_metadata import is_web_url
+from .client_metadata import is_fetchable_url
 from .keys import active_key_set
 from .keys import active_kid
 from .keys import private_key_set
@@ -50,6 +49,7 @@ from .settings import JWT_AUTH_METHODS
 from .settings import is_oidc_enabled
 from .snapshot import MAX_TIMESTAMP
 from .store import settings_row
+from .subjects import ClientPersona
 
 CACHE_KEY = "auth_server_playground.server"
 
@@ -87,7 +87,7 @@ class AuthorizationCodeGrant(grants.AuthorizationCodeGrant):
         db.session.commit()
 
     def authenticate_user(self, authorization_code):
-        return authorization_code.persona
+        return ClientPersona(authorization_code.persona, self.request.client)
 
     def revoke_authorization_code_tokens(self, code, client):
         """Revoke every token based on the code (RFC 6749 §4.1.2)."""
@@ -131,7 +131,7 @@ class PlaygroundOpenIDCode(OpenIDCode):
         return header
 
     def generate_user_info(self, user, scope, claims):
-        return user_info(user, scope, claims)
+        return user_info(user.persona, scope, claims, user.client)
 
 
 class PlaygroundUserInfoEndpoint(UserInfoEndpoint):
@@ -141,7 +141,13 @@ class PlaygroundUserInfoEndpoint(UserInfoEndpoint):
         self.algorithms = algorithms
 
     def generate_user_info(self, user, scope, claims):
-        return user_info(user, scope, claims)
+        return user_info(user.persona, scope, claims, user.client)
+
+    def get_token_user(self, token):
+        if token.persona is None:
+            return None
+
+        return ClientPersona(token.persona, token.get_client())
 
     def get_token_claims_request(self, token):
         return token.claims_request
@@ -187,9 +193,7 @@ class PlaygroundJWTAuthenticationRequest(OpenIDJWTAuthenticationRequest):
         # Per RFC 9101 §10.4, fetching a request_uri exposes the server to
         # SSRF. outbound.fetch applies the address rule. The URL must use https,
         # unless AUTHLIB_INSECURE_TRANSPORT is set.
-        return is_web_url(request_uri) and is_secure_transport(
-            request_uri, allow_loopback=False
-        )
+        return is_fetchable_url(request_uri)
 
     def get_request_object(self, request_uri):
         try:
@@ -559,9 +563,16 @@ def build_server(document):
     if registration != "disabled":
         oidc = is_oidc_enabled(document)
         server.register_endpoint(
-            RegistrationEndpoint(registration, settings["initial_access_token"], oidc)
+            RegistrationEndpoint(
+                registration,
+                settings["initial_access_token"],
+                oidc,
+                settings["outbound_private_addresses"],
+            )
         )
-        server.register_endpoint(ConfigurationEndpoint(oidc))
+        server.register_endpoint(
+            ConfigurationEndpoint(oidc, settings["outbound_private_addresses"])
+        )
 
     return server
 

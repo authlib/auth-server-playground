@@ -102,16 +102,15 @@ def action_confirmed(form):
     return False
 
 
-def stored_token():
-    return current_document()["settings"]["initial_access_token"]
-
-
 def preview_of(form):
     """Return the metadata the form would publish, and the errors."""
     if not form.validate():
         return None, form.errors
 
-    document = form.to_document(stored_token())
+    settings = current_document()["settings"]
+    document = form.to_document(
+        settings["initial_access_token"], settings["pairwise_salt"]
+    )
     try:
         validate_document(document)
     except InvalidDocument as error:
@@ -128,7 +127,10 @@ def server():
     if form.validate_on_submit():
         try:
             save_document(
-                form.to_document(document["settings"]["initial_access_token"])
+                form.to_document(
+                    document["settings"]["initial_access_token"],
+                    document["settings"]["pairwise_salt"],
+                )
             )
         except InvalidDocument as error:
             form.add_document_errors(error.errors)
@@ -182,7 +184,12 @@ def server_defaults():
     if not action_confirmed(ActionForm()):
         return redirect(back)
 
-    save_document(default_document())
+    document = default_document()
+    # A new salt would change the sub of every pairwise client.
+    document["settings"]["pairwise_salt"] = current_document()["settings"][
+        "pairwise_salt"
+    ]
+    save_document(document)
     flash(_("The default configuration is restored."), "success")
     return redirect(back)
 

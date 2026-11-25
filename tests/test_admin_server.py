@@ -333,3 +333,28 @@ def test_save_the_remaining_metadata(app, testapp):
     assert metadata["request_parameter_supported"] is False
     assert metadata["request_uri_parameter_supported"] is True
     assert metadata["require_request_uri_registration"] is False
+
+
+def test_save_and_restore_keep_the_pairwise_salt(app, testapp):
+    salt = stored_settings(app)["pairwise_salt"]
+    form = testapp.get("/en/server").forms["server"]
+    form["access_token_lifetime"] = "60"
+    form.submit().follow()
+    assert stored_settings(app)["pairwise_salt"] == salt
+    testapp.get("/en/server").forms["defaults"].submit().follow()
+    assert stored_settings(app)["pairwise_salt"] == salt
+
+
+def test_server_page_does_not_show_the_pairwise_salt(app, testapp):
+    salt = stored_settings(app)["pairwise_salt"]
+    assert salt not in testapp.get("/en/server")
+
+
+def test_server_form_saves_the_subject_types(app, testapp):
+    form = testapp.get("/en/server").forms["server"]
+    form["subject_types_supported"] = ["public", "pairwise"]
+    form.submit().follow()
+    with app.app_context():
+        document = current_document()
+
+    assert document["metadata"]["subject_types_supported"] == ["public", "pairwise"]

@@ -120,6 +120,11 @@ def legacy_grants(configure):
     )
 
 
+@pytest.fixture
+def pairwise_server(configure):
+    configure(metadata={"subject_types_supported": ["public", "pairwise"]})
+
+
 def persona_dict(persona):
     return {
         "id": persona.id,

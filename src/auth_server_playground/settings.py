@@ -5,6 +5,7 @@ document.
 """
 
 import copy
+import secrets
 
 from authlib.oauth2.rfc8414 import AuthorizationServerMetadata
 from authlib.oidc.core import UserInfo
@@ -38,6 +39,7 @@ CLIENT_JWT_ALGORITHMS = [*ASYMMETRIC_ALGORITHMS, *HMAC_ALGORITHMS]
 REQUEST_OBJECT_ALGORITHMS = ["none", *CLIENT_JWT_ALGORITHMS]
 
 REGISTRATION_MODES = ["disabled", "open", "token"]
+SUBJECT_TYPES = ["public", "pairwise"]
 
 #: The issuer used to validate a document whose issuer comes from requests.
 DEFAULT_ISSUER = "http://localhost"
@@ -58,6 +60,7 @@ PROMPT_VALUES = ["none", "login", "consent", "select_account"]
 #: The stored metadata that only OpenID Connect publishes.
 OIDC_METADATA = (
     "id_token_signing_alg_values_supported",
+    "subject_types_supported",
     "userinfo_signing_alg_values_supported",
     "request_object_signing_alg_values_supported",
     "require_signed_request_object",
@@ -95,6 +98,7 @@ DEFAULT_DOCUMENT = {
         "token_endpoint_auth_signing_alg_values_supported": list(CLIENT_JWT_ALGORITHMS),
         "code_challenge_methods_supported": ["S256"],
         "id_token_signing_alg_values_supported": ["RS256"],
+        "subject_types_supported": ["public"],
         "userinfo_signing_alg_values_supported": ["RS256"],
         "request_object_signing_alg_values_supported": list(REQUEST_OBJECT_ALGORITHMS),
         "require_signed_request_object": False,
@@ -116,6 +120,7 @@ DEFAULT_DOCUMENT = {
         "registration": "open",
         "initial_access_token": None,
         "outbound_private_addresses": False,
+        "pairwise_salt": None,
     },
 }
 
@@ -126,6 +131,7 @@ LIST_CHOICES = {
     "token_endpoint_auth_signing_alg_values_supported": CLIENT_JWT_ALGORITHMS,
     "code_challenge_methods_supported": PKCE_METHODS,
     "id_token_signing_alg_values_supported": ID_TOKEN_ALGORITHMS,
+    "subject_types_supported": SUBJECT_TYPES,
     "userinfo_signing_alg_values_supported": USERINFO_ALGORITHMS,
     "request_object_signing_alg_values_supported": REQUEST_OBJECT_ALGORITHMS,
     "prompt_values_supported": PROMPT_VALUES,
@@ -143,7 +149,10 @@ class InvalidDocument(ValueError):
 
 
 def default_document():
-    return copy.deepcopy(DEFAULT_DOCUMENT)
+    """Return the default document, with a new pairwise salt."""
+    document = copy.deepcopy(DEFAULT_DOCUMENT)
+    document["settings"]["pairwise_salt"] = secrets.token_urlsafe(32)
+    return document
 
 
 def response_types_for(grant_types):
@@ -238,7 +247,6 @@ def published_metadata(document, issuer, endpoint_urls):
     if oidc:
         metadata.update(
             {
-                "subject_types_supported": ["public"],
                 "claims_supported": claims_supported(stored["scopes_supported"]),
             }
         )
@@ -378,6 +386,10 @@ def _metadata_errors(metadata):
         if not isinstance(value, list) or not all(item in choices for item in value):
             errors[key] = f"A list of values among {choices}."
 
+    # Per OIDC Discovery §3, the list is required.
+    if metadata.get("subject_types_supported") == []:
+        errors["subject_types_supported"] = "At least one subject type."
+
     scopes = metadata.get("scopes_supported")
     if not isinstance(scopes, list) or not all(
         isinstance(scope, str) and scope and " " not in scope for scope in scopes
@@ -444,6 +456,10 @@ def _settings_errors(settings):
     elif settings.get("registration") == "token" and not token:
         errors["initial_access_token"] = "The token mode needs a token."
 
+    salt = settings.get("pairwise_salt")
+    if not isinstance(salt, str) or not salt:
+        errors["pairwise_salt"] = "A non-empty string."
+
     return errors
 
 
@@ -488,6 +504,7 @@ def unsupported_values(client_metadata, document):
     auth_alg = client_metadata.get("token_endpoint_auth_signing_alg")
     userinfo_alg = client_metadata.get("userinfo_signed_response_alg")
     request_alg = client_metadata.get("request_object_signing_alg")
+    subject_type = client_metadata.get("subject_type")
     result = {
         "grant_types": [
             grant
@@ -522,6 +539,13 @@ def unsupported_values(client_metadata, document):
             if userinfo_alg
             and is_oidc_enabled(document)
             and userinfo_alg not in metadata["userinfo_signing_alg_values_supported"]
+            else []
+        ),
+        "subject_type": (
+            [subject_type]
+            if subject_type
+            and is_oidc_enabled(document)
+            and subject_type not in metadata["subject_types_supported"]
             else []
         ),
         "token_endpoint_auth_signing_alg": (

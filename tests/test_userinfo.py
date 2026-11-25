@@ -9,6 +9,7 @@ from auth_server_playground.settings import USERINFO_ALGORITHMS
 from tests.conftest import make_client
 from tests.utils import bearer
 from tests.utils import callback_params
+from tests.utils import client_credentials_token
 from tests.utils import consent
 from tests.utils import exchange_code
 from tests.utils import oidc_url
@@ -45,6 +46,14 @@ def test_userinfo_needs_the_openid_scope(logged_in, client):
     token = access_token(logged_in, client, "profile")
     res = logged_in.get("/oauth/userinfo", headers=bearer(token), status=403)
     assert res.json["error"] == "insufficient_scope"
+
+
+def test_userinfo_refuses_a_token_without_persona(testapp, client):
+    token = client_credentials_token(testapp, client, scope="openid").json
+    res = testapp.get(
+        "/oauth/userinfo", headers=bearer(token["access_token"]), status=401
+    )
+    assert res.json["error"] == "invalid_token"
 
 
 def test_userinfo_needs_a_token(testapp):

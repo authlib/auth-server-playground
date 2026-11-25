@@ -774,3 +774,55 @@ def test_signed_request_objects_need_an_algorithm_other_than_none():
             "Signed request objects need an algorithm other than none."
         )
     }
+
+
+def test_default_document_has_a_random_pairwise_salt():
+    first = default_document()["settings"]["pairwise_salt"]
+    assert first
+    assert first != default_document()["settings"]["pairwise_salt"]
+
+
+@pytest.mark.parametrize("salt", ["", None, 42])
+def test_invalid_pairwise_salt_is_refused(salt):
+    assert "pairwise_salt" in errors_of(changed(settings={"pairwise_salt": salt}))
+
+
+def test_subject_types_are_public_by_default():
+    document = default_document()
+    assert document["metadata"]["subject_types_supported"] == ["public"]
+    metadata = published_metadata(document, "https://server.test", URLS)
+    assert metadata["subject_types_supported"] == ["public"]
+
+
+def test_pairwise_subject_type_is_published():
+    document = changed(metadata={"subject_types_supported": ["public", "pairwise"]})
+    metadata = published_metadata(document, "https://server.test", URLS)
+    assert metadata["subject_types_supported"] == ["public", "pairwise"]
+
+
+@pytest.mark.parametrize("value", [[], ["unknown"], "public"])
+def test_invalid_subject_types_are_refused(value):
+    document = changed(metadata={"subject_types_supported": value})
+    assert "subject_types_supported" in errors_of(document)
+
+
+def test_subject_types_are_hidden_without_openid():
+    document = changed(metadata={"scopes_supported": ["profile"]})
+    metadata = published_metadata(document, "https://server.test", URLS)
+    assert "subject_types_supported" not in metadata
+
+
+def test_pairwise_client_is_unsupported_when_only_public_is_published():
+    assert unsupported_values({"subject_type": "pairwise"}, default_document()) == {
+        "subject_type": ["pairwise"]
+    }
+
+
+def test_pairwise_client_is_supported_when_published():
+    document = changed(metadata={"subject_types_supported": ["public", "pairwise"]})
+    assert unsupported_values({"subject_type": "pairwise"}, document) == {}
+
+
+def test_subject_type_is_supported_without_openid():
+    document = changed(metadata={"scopes_supported": ["profile"]})
+    assert unsupported_values({"subject_type": "pairwise"}, document) == {}

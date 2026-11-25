@@ -24,12 +24,15 @@ from .interaction import extra_claims
 from .interaction import grant_consent
 from .keys import public_jwks
 from .metadata import current_metadata
+from .models import Client
 from .models import Persona
 from .models import db
 from .server import get_server
 from .server import require_oauth
 from .settings import is_oidc_enabled
 from .store import current_document
+from .subjects import ClientPersona
+from .subjects import subject_for
 
 bp = Blueprint("oauth", __name__)
 
@@ -46,9 +49,12 @@ def authorize():
         return redirect(f"{url_for('oauth.authorize')}?{query}", 303)
 
     persona = current_persona()
+    # The client of the URL. Authlib checks it later.
+    client = Client.query.filter_by(client_id=request.args.get("client_id")).first()
+    user = ClientPersona(persona, client) if persona else None
     server = get_server()
     try:
-        grant = server.get_consent_grant(session=PlaygroundSession(persona, session))
+        grant = server.get_consent_grant(session=PlaygroundSession(user, session))
     except OAuth2Error as error:
         return server.handle_error_response(request, error)
 
@@ -73,7 +79,7 @@ def authorize():
     form = ConsentForm(persona_id=persona.id)
     if request.method != "POST":
         if "consent" not in grant.interactions:
-            return server.create_authorization_response(grant=grant, grant_user=persona)
+            return server.create_authorization_response(grant=grant, grant_user=user)
 
         return consent_page(form, grant, persona, params)
 
@@ -101,7 +107,7 @@ def authorize():
         return server.handle_error_response(request, error)
 
     grant_consent(persona, grant.client.client_id, grant.request.scope)
-    return server.create_authorization_response(grant=grant, grant_user=persona)
+    return server.create_authorization_response(grant=grant, grant_user=user)
 
 
 def remember_request_object(grant):
@@ -225,7 +231,7 @@ def resource():
     token = current_token
     data = {"scope": token.scope, "client_id": token.client_id}
     if token.persona is not None:
-        data["sub"] = token.persona.sub
+        data["sub"] = subject_for(token.persona, token.get_client())
 
     return jsonify(data)
 

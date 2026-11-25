@@ -10,6 +10,7 @@ from faker import Faker
 
 from .models import Persona
 from .models import db
+from .subjects import subject_for
 
 #: The Faker locales offered for random personas, with their time zone.
 RANDOM_LOCALES = {
@@ -162,9 +163,9 @@ def default_personas():
     return [complete, minimal]
 
 
-def user_info(persona, scope, claims=None):
+def user_info(persona, scope, claims=None, client=None):
     """Return the claims of the persona that the scope and the claims request give."""
-    info = UserInfo(persona.claims, sub=persona.sub)
+    info = UserInfo(persona.claims, sub=subject_for(persona, client))
     if persona.picture_url:
         info["picture"] = persona.picture_url
 

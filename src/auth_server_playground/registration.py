@@ -14,6 +14,7 @@ from flask import url_for
 
 from .client_keys import client_key_errors
 from .client_metadata import client_metadata_errors
+from .client_metadata import sector_errors
 from .metadata import current_metadata
 from .models import Client
 from .models import db
@@ -57,7 +58,7 @@ def bearer_token(request):
     return token
 
 
-def checked_metadata(metadata, server_metadata):
+def checked_metadata(metadata, server_metadata, allow_private_addresses):
     """Add the RFC 7591 defaults, and apply the rules that Authlib does not apply."""
     metadata = {**DEFAULT_METADATA, **metadata}
     if unsupported := [key for key in UNSUPPORTED_CLIENT_METADATA if key in metadata]:
@@ -74,6 +75,14 @@ def checked_metadata(metadata, server_metadata):
     if errors := {**client_key_errors(metadata), **client_metadata_errors(metadata)}:
         raise InvalidClientMetadataError(" ".join(errors.values()))
 
+    # After the other rules: it makes a request.
+    if errors := sector_errors(
+        metadata, allow_private_addresses=allow_private_addresses
+    ):
+        raise InvalidClientMetadataError(
+            " ".join(f"sector_identifier_uri: {reason}" for reason in errors.values())
+        )
+
     return metadata
 
 
@@ -87,10 +96,11 @@ def registration_info(client):
 
 
 class RegistrationEndpoint(ClientRegistrationEndpoint):
-    def __init__(self, mode, initial_access_token, oidc):
+    def __init__(self, mode, initial_access_token, oidc, allow_private_addresses):
         super().__init__(claims_classes=claims_classes(oidc, DefaultScopeClaims))
         self.mode = mode
         self.initial_access_token = initial_access_token
+        self.allow_private_addresses = allow_private_addresses
 
     def authenticate_token(self, request):
         if self.mode == "open":
@@ -106,7 +116,9 @@ class RegistrationEndpoint(ClientRegistrationEndpoint):
 
     def extract_client_metadata(self, request):
         metadata = checked_metadata(
-            super().extract_client_metadata(request), self.get_server_metadata()
+            super().extract_client_metadata(request),
+            self.get_server_metadata(),
+            self.allow_private_addresses,
         )
         # Authlib does not pass the metadata to generate_client_secret.
         request.client_metadata = metadata
@@ -163,8 +175,9 @@ class RegistrationToken:
 
 
 class ConfigurationEndpoint(ClientConfigurationEndpoint):
-    def __init__(self, oidc):
+    def __init__(self, oidc, allow_private_addresses):
         super().__init__(claims_classes=claims_classes(oidc))
+        self.allow_private_addresses = allow_private_addresses
 
     def authenticate_token(self, request):
         token = bearer_token(request)
@@ -191,7 +204,9 @@ class ConfigurationEndpoint(ClientConfigurationEndpoint):
 
     def extract_client_metadata(self, request):
         return checked_metadata(
-            super().extract_client_metadata(request), self.get_server_metadata()
+            super().extract_client_metadata(request),
+            self.get_server_metadata(),
+            self.allow_private_addresses,
         )
 
     def introspect_client(self, client):
