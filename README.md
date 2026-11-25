@@ -12,8 +12,8 @@ It does not explain how to build a server with Authlib: for that, read the [Auth
 
 The web interface has five sections:
 
-- **Server**: the published metadata, the grants, the client authentication methods, PKCE, the token lifetimes, the scopes and the ID token algorithms. The defaults follow RFC 9700.
-- **Keys**: the keys that sign the ID tokens, one active key per algorithm. A rotation creates a new active key. The old key stays in the JWKS until it is deleted, so clients can still verify the tokens it signed.
+- **Server**: the published metadata, the grants, the client authentication methods, PKCE, the token lifetimes, the scopes, the ID token and UserInfo algorithms, the subject types and the request object settings. The defaults follow RFC 9700.
+- **Keys**: the keys that sign the ID tokens and the UserInfo responses, one active key per algorithm. A rotation creates a new active key. The old key stays in the JWKS until it is deleted, so clients can still verify the tokens it signed.
 - **Clients**: create and edit the clients by hand, and see the clients that registered themselves. A client can have keys, as a key set or a key set URL. The form marks the values that the server does not support.
 - **Personas**: the users of the server. The server checks no password: at the authorization endpoint, pick the persona to act as. Each persona has the standard claims of OpenID Connect. The persona page lists the consents of the persona, and revokes them.
 - **Snapshot**: export the configuration, the personas, the clients and the signing keys to a JSON file, and import such a file. The file holds the client secrets and the private keys: keep it private.
@@ -30,13 +30,17 @@ The server supports these grants and endpoints:
 - Dynamic client registration (RFC 7591) and client configuration (RFC 7592), at `/oauth/register`.
 - Client authentication with `client_secret_basic`, `client_secret_post`, `private_key_jwt` and `client_secret_jwt` (RFC 7523 §2.2, OpenID Connect Core §9), and public clients with `none`.
 - Authorization server metadata (RFC 8414), at `/.well-known/oauth-authorization-server`.
-- A protected resource, `/api/resource`, that returns the scope, the client and the persona of the access token.
+- A protected resource, `/api/resource`, that returns the scope, the client ID and the `sub` of the persona of the access token.
 
 OpenID Connect is on when the scopes of the server hold `openid`, as in the default configuration.
 The server then supports:
 
 - ID tokens in the authorization code flow, signed with RS256, PS256, ES256 or Ed25519.
+  A client can ask for unsigned ID tokens (`alg` `none`): the server must list `none` in **ID token signing algorithms**, and the client sets **ID token signing algorithm** to `none`. The default configuration lists RS256 only.
 - The UserInfo endpoint, at `/oauth/userinfo`.
+  It answers in JSON.
+  A client that sets **UserInfo signing algorithm** gets a signed JWT instead (OIDC Core §5.3.2).
+  The default configuration lists RS256.
 - Discovery, at `/.well-known/openid-configuration`, and the public keys at `/oauth/jwks`.
 - The `prompt`, `max_age`, `login_hint`, `ui_locales` and `acr_values` parameters.
   `login_hint` preselects a persona, and `ui_locales` sets the language of the persona and consent pages.
@@ -45,7 +49,9 @@ The server then supports:
 - The `claims` parameter. The consent page lists the claims that the scopes do not give.
 - Request objects in the `request` parameter (RFC 9101), unsigned (`alg` `none`) or signed with RS256, PS256, ES256, Ed25519 or HS256.
   A client verifies a signed object with its keys. HS256 uses the client secret, so a public client cannot send one.
-  The `request_uri` parameter is not supported.
+- Request objects by reference, in the `request_uri` parameter (RFC 9101 §5.2). This is off by default.
+- Pairwise subject identifiers (OIDC Core §8.1), for the clients that ask for them. The default configuration lists `public` only.
+- The `offline_access` scope, as any other scope: it is published when the **Scopes** setting holds it. The server does not apply OIDC Core §11 to it: the scope changes neither the consent nor the refresh tokens.
 - Registration of the OpenID Connect client metadata (OpenID Connect Registration).
 - The client logo and links (`logo_uri`, `client_uri`, `policy_uri`, `tos_uri`) on the persona and consent pages. Only `http` and `https` URLs show.
 
@@ -136,6 +142,9 @@ $ curl -s -H "Authorization: Bearer <REGISTRATION_ACCESS_TOKEN>" http://127.0.0.
 ```
 
 The server applies the defaults of RFC 7591 §2: the `authorization_code` grant and the `code` response type.
+A client that registers without `scope` gets the scopes of the server, as in the response above: they are the **Scopes** setting of **Server**.
+Without scopes in the setting, the client gets none.
+An update at the configuration endpoint that sends no `scope` gives the client no scope.
 It refuses invalid metadata, such as `private_key_jwt` without `jwks` or `jwks_uri`:
 
 ```console
@@ -229,7 +238,81 @@ $ curl -s -H "Authorization: Bearer $(jq -r .access_token token.json)" http://12
 {"name": "Alice Martin", "given_name": "Alice", "family_name": "Martin", "middle_name": "Claire", "nickname": "Ali", "preferred_username": "alice", "profile": "https://alice.example/profile", "website": "https://alice.example", "gender": "female", "birthdate": "1990-12-10", "zoneinfo": "Europe/Paris", "locale": "fr-FR", "updated_at": 1794764773, "sub": "c0a1e3d2-7b5f-4e7a-9d2c-1f6b8a4e5c3d", "picture": "http://127.0.0.1:3000/personas/1/picture.svg"}
 ```
 
-The server passes the Config and Basic plans of the OpenID Foundation conformance suite, with a few warnings.
+### Sign the UserInfo response
+
+The default configuration lets a client ask for a signed UserInfo response.
+A client sets `userinfo_signed_response_alg` at registration, or **UserInfo signing algorithm** in the client form:
+
+```console
+$ curl -s -X POST -H 'Content-Type: application/json' -d '{"redirect_uris":["http://127.0.0.1:8000/callback"],"scope":"openid profile","userinfo_signed_response_alg":"RS256"}' http://127.0.0.1:3000/oauth/register
+{"grant_types": ["authorization_code"], "response_types": ["code"], "redirect_uris": ["http://127.0.0.1:8000/callback"], "token_endpoint_auth_method": "client_secret_basic", "scope": "openid profile", "application_type": "web", "id_token_signed_response_alg": "RS256", "userinfo_signed_response_alg": "RS256", "require_auth_time": false, "require_signed_request_object": false, "client_id": "R0TUuLJ5T6TpN3_j_Dwj5mPj", "client_secret": "_pydD2...OUJ", "client_id_issued_at": 1795614529, "client_secret_expires_at": 0, "registration_client_uri": "http://127.0.0.1:3000/oauth/register/R0TUuLJ5T6TpN3_j_Dwj5mPj", "registration_access_token": "AP7yR3...-Yg"}
+```
+
+With an access token of this client, the UserInfo response is a JWT with the content type `application/jwt`.
+The payload holds `iss`, `aud` and the claims of the persona:
+
+```console
+$ curl -s -H "Authorization: Bearer <ACCESS_TOKEN>" http://127.0.0.1:3000/oauth/userinfo | jq -R 'split(".")[1] | gsub("-";"+") | gsub("_";"/") | @base64d | fromjson | {iss, aud, sub, name}'
+{
+  "iss": "http://127.0.0.1:3000",
+  "aud": "R0TUuLJ5T6TpN3_j_Dwj5mPj",
+  "sub": "c0a1e3d2-7b5f-4e7a-9d2c-1f6b8a4e5c3d",
+  "name": "Alice Martin"
+}
+```
+
+The key of the response is the active key of the algorithm.
+Its `kid` is in the JWT header, and `/oauth/jwks` publishes the key.
+The registration endpoints refuse `userinfo_signed_response_alg` when **UserInfo signing algorithms** holds no algorithm.
+A client keeps its algorithm when the list changes, even when the list becomes empty: the server still signs its responses, as it does for ID tokens.
+
+### Use pairwise subjects
+
+A pairwise client gets its own `sub` for each persona (OIDC Core §8.1).
+To enable them:
+
+1. In **Server**, check `pairwise` in **Subject types**, then save.
+2. In the client form, set **Subject type** to `pairwise`.
+
+The ID token, the UserInfo response and `/api/resource` give the same pairwise `sub`.
+The `sub` is the base64url encoding of the SHA-256 hash of the sector, the persona `sub` and a salt of the server.
+The sector is the host of **Sector identifier URI**, or the host of the redirect URIs when the field is empty.
+Without a sector identifier URI, all the redirect URIs of a pairwise client need the same host.
+Clients of one sector get the same `sub` for a persona.
+When **Subject types** holds `pairwise` only, a client without a subject type gets a pairwise `sub`.
+
+The sector identifier URI is a URL that returns a JSON array of strings.
+Per OIDC Registration §5, the array lists every redirect URI of the client.
+The server fetches the URL when it registers a client, creates one, or saves one whose sector identifier URI or redirect URIs changed. It refuses the client when the fetch fails or the array misses a redirect URI.
+The URL is `https`, or `http` when `AUTHLIB_INSECURE_TRANSPORT` is set.
+A loopback URL such as `http://127.0.0.1` follows the same rule.
+
+The salt is `pairwise_salt` in the configuration document, and a snapshot keeps it.
+**Restore the defaults** keeps the salt.
+A snapshot import replaces it.
+Changing the salt changes every pairwise `sub`.
+
+### Use request objects by reference
+
+A client can send a request object at a URL, in the `request_uri` parameter (RFC 9101 §5.2).
+To enable it:
+
+1. In **Server**, switch on **Accept the request_uri parameter**.
+2. In the client form, list the URLs in **Request URIs**, one per line.
+
+By default, **Accept registered request URIs only** is on: the server refuses a `request_uri` that is not in the list of the client.
+Switch it off to accept a URL that is not in the list.
+The URLs are `https`, or `http` when `AUTHLIB_INSECURE_TRANSPORT` is set.
+A loopback URL such as `http://127.0.0.1` follows the same rule.
+The server verifies and reads the object as it does for the `request` parameter.
+
+The server fetches the URL when it shows the consent page, and again when the persona accepts.
+If the document changed in between, the server redirects to the client with `invalid_request_uri`.
+An error before the server knows the redirect URI, such as an unregistered `request_uri` or a failed fetch, gives an HTTP 400 response with `invalid_request_uri`.
+
+### Conformance results
+
+The server passes the Config, Basic and Dynamic plans of the OpenID Foundation conformance suite, with a few failures and warnings.
 `conformance/expected-failures.json` lists them, with their reasons.
 [`conformance/README.md`](conformance/README.md) explains how to run the suite against the server.
 
@@ -245,7 +328,7 @@ Copy it to `.env`: the `auth-server-playground` command loads `.env` from the cu
 | `DATABASE_URL` | `sqlite:///db.sqlite` | SQLAlchemy database URL. A relative SQLite path goes in the Flask instance folder. |
 | `INITIAL_SNAPSHOT` | unset | Snapshot file loaded when the database is empty. An invalid file stops the server. |
 | `PROXY_FIX` | `false` | Set to `true` behind a reverse proxy. |
-| `AUTHLIB_INSECURE_TRANSPORT` | unset | Set to `1` to accept plain HTTP requests, and request objects at `http` URLs. |
+| `AUTHLIB_INSECURE_TRANSPORT` | unset | Set to `1` to accept plain HTTP requests, and `http` URLs for `request_uris` and `sector_identifier_uri`. |
 | `FLASK_RUN_HOST` | `127.0.0.1` | Address of the `auth-server-playground` command. |
 | `FLASK_RUN_PORT` | `3000` | Port of the `auth-server-playground` command. |
 | `FLASK_DEBUG` | `False` | Set to `True` to enable the Flask debug mode. |
@@ -297,10 +380,10 @@ An algorithm that the server does not support gives `invalid_request`.
 
 ### Private addresses
 
-The server fetches `jwks_uri` when it verifies a JWT.
+The server fetches `jwks_uri` when it verifies a JWT, `sector_identifier_uri` when a client is saved or registered, and the `request_uri` of an authorization request.
 The fetch accepts `http` and `https` only, follows no redirect, waits 5 seconds for each operation and 10 seconds in total, and reads 64 KiB at most.
 The **Fetch client URLs at private addresses** setting of **Server** controls the addresses.
-It is off by default: the server refuses `jwks_uri` URLs that resolve to private, loopback or link-local addresses.
+It is off by default: the server refuses URLs that resolve to private, loopback or link-local addresses.
 Switch it on to let a client on `localhost` work.
 The setting is `outbound_private_addresses` in the configuration document.
 
